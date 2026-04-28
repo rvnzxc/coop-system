@@ -187,7 +187,32 @@ html, body {
     .categories {
       margin-top: 20px;
       display: flex;
-      justify-content: space-between;
+      justify-content: flex-start;
+      overflow-x: scroll;
+      white-space: nowrap;
+      padding: 0 15px 15px 20px;
+      gap: 10px;
+      width: 100%;
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .categories::-webkit-scrollbar {
+      height: 8px;
+    }
+
+    .categories::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 10px;
+    }
+
+    .categories::-webkit-scrollbar-thumb {
+      background: #d0ff00;
+      border-radius: 10px;
+    }
+
+    .categories::-webkit-scrollbar-thumb:hover {
+      background: #b0cc00;
     }
 
     .category {
@@ -356,6 +381,8 @@ html, body {
   display: flex;
   gap: 10px;
   margin-bottom: 20px;
+  overflow-x: auto;
+  white-space: nowrap;
 }
 
 .category {
