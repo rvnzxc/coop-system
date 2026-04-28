@@ -74,4 +74,20 @@ class InventoryController extends Controller
         $item->delete();
         return redirect()->route('inventory.index')->with('success', 'Item deleted successfully!');
     }
+
+    public function lowStockNotifications()
+    {
+        $LOW_STOCK_THRESHOLD = 10;
+        
+        $lowStockItems = Item::where('quantity', '<=', $LOW_STOCK_THRESHOLD)
+                            ->select('id', 'item_name', 'quantity', 'category')
+                            ->orderBy('quantity', 'asc')
+                            ->get();
+        
+        return response()->json([
+            'low_stock_items' => $lowStockItems,
+            'count' => $lowStockItems->count(),
+            'threshold' => $LOW_STOCK_THRESHOLD
+        ]);
+    }
 }
