@@ -6,19 +6,7 @@
     <link rel="stylesheet" href="{{ asset('css/style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <style>
-        /* Override styles for centered header and bordered navigation */
-        header {
-            justify-content: center !important;
-        }
-        
-        .topnav {
-            justify-content: center !important;
-        }
-        
-        .topnav .title {
-            text-align: center !important;
-        }
-        
+        /* Override styles for bordered navigation */
         .sidebar-nav {
             display: flex !important;
             flex-direction: column !important;
@@ -90,7 +78,7 @@
             align-items: center !important;
             justify-content: flex-start !important;
             padding: 0 0 20px 0 !important;
-            margin-top: -565px !important;
+            margin-top: -415px !important;
         }
 
         /* Responsive Design for All Devices */
@@ -467,12 +455,15 @@
                 <a href="#" {{ request()->is('members*') ? 'class="active"' : '' }}><i class="fa fa-users"></i> Members</a>
             </nav>
         </aside>
-        <div class="content-area">
-            <header>
-                <div class="topnav" id="myTopnav">
-                    <div class="title">CCFMPC</div>
+        <header>
+            <div class="topnav" id="myTopnav">
+                <div class="logo-placeholder">
+                    <i class="fa fa-image" style="font-size: 40px; color: #d0ff00;"></i>
                 </div>
-            </header>
+                <div class="title">Cavite College of Fisheries Multi-Purpose Cooperative </div>
+            </div>
+        </header>
+        <div class="content-area">
             <main class="main-content">
                 @yield('content')
             </main>

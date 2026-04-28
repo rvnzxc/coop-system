@@ -13,15 +13,19 @@ html, body {
     header {
       background-color: #1b3a1b;
       color: #d0ff00;
-      padding: 15px 20px;
+      padding: 15px 10px 15px 10px;
       font-size: 32px;
       font-weight: bold;
-      position: relative;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
       display: flex;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
       height: 80px;
       box-sizing: border-box;
+      z-index: 100;
     }
 
     .topnav {
@@ -29,16 +33,29 @@ html, body {
       overflow: visible;
       position: relative;
       display: flex;
-      justify-content: center;
+      justify-content: flex-start;
       width: 100%;
+      align-items: center;
+    }
+
+    .topnav .logo-placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 50px;
+      height: 50px;
+      border: 2px dashed #d0ff00;
+      border-radius: 8px;
+      margin-right: 5px;
     }
 
     .topnav .title {
-      text-align: center;
-      font-size: 32px;
+      text-align: left;
+      font-size: 24px;
       font-weight: bold;
-      color: #d0ff00;
+      color: #ffffff;
       padding: 0;
+      margin-left: 165px;
     }
 
     /* Layout Container */
@@ -51,7 +68,8 @@ html, body {
     .content-area {
       flex: 1;
       margin-left: 250px;
-      min-height: 100vh;
+      margin-top: 80px;
+      min-height: calc(100vh - 80px);
     }
 
     /* Sidebar */
@@ -960,6 +978,10 @@ html, body {
     height: 60px;
   }
   
+  .topnav .title {
+    font-size: 14px;
+  }
+  
   .main-content {
     min-height: calc(100vh - 60px);
   }
@@ -1022,6 +1044,10 @@ html, body {
   
   .sidebar-nav a i {
     width: 16px;
+    font-size: 12px;
+  }
+  
+  .topnav .title {
     font-size: 12px;
   }
 }
