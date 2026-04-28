@@ -448,20 +448,58 @@
                 font-size: 9px !important;
             }
         }
+
+        /* Top Notification Styles */
+        .notification-top {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .notification-link-top {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: rgba(208, 255, 0, 0.1);
+            border-radius: 50%;
+            color: #ffffff;
+            text-decoration: none;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .notification-link-top:hover {
+            background: rgba(208, 255, 0, 0.2);
+            transform: scale(1.1);
+        }
+
+        .notification-top .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #ff0000;
+            color: #fff;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
     <div class="layout-container">
         <aside class="sidebar">
             <nav class="sidebar-nav">
-                <a href="{{ route('shop.index') }}" {{ request()->is('shop*') ? 'class="active"' : '' }}><i class="fa fa-shopping-cart"></i> POS</a>
-                <a href="{{ route('inventory.index') }}" {{ request()->is('inventory*') ? 'class="active"' : '' }}><i class="fa fa-archive"></i> Inventory</a>
-                <a href="#" onclick="toggleNotifications()" class="notification-link">
-                    <i class="fa fa-bell"></i> Notifications
-                    <span class="notification-badge" id="notificationBadge">0</span>
-                    <span id="redDotIndicator" style="display: none; position: absolute; top: 4px; right: 4px; width: 14px; height: 14px; background: #ff0000; border-radius: 50%; border: 2px solid #fff; animation: blink 1.5s infinite; z-index: 9999;"></span>
-                </a>
-                <a href="#" {{ request()->is('members*') ? 'class="active"' : '' }}><i class="fa fa-users"></i> Members</a>
+                <a href="{{ route('shop.index') }}" class="{{ request()->is('/') || request()->is('shop') || request()->is('shop/*') ? 'active' : '' }}"><i class="fa fa-shopping-cart"></i> POS</a>
+                <a href="{{ route('inventory.index') }}" class="{{ request()->is('inventory') || request()->is('inventory/*') ? 'active' : '' }}"><i class="fa fa-archive"></i> Inventory</a>
+                <a href="{{ route('members.index') }}" class="{{ request()->is('members') || request()->is('members/*') ? 'active' : '' }}"><i class="fa fa-users"></i> Members</a>
             </nav>
         </aside>
         <header>
@@ -470,6 +508,13 @@
                     <i class="fa fa-image" style="font-size: 40px; color: #d0ff00;"></i>
                 </div>
                 <div class="title">Cavite College of Fisheries Multi-Purpose Cooperative </div>
+                <div class="notification-top">
+                    <a href="#" onclick="toggleNotifications()" class="notification-link-top">
+                        <i class="fa fa-bell"></i>
+                        <span class="notification-badge" id="notificationBadge">0</span>
+                        <span id="redDotIndicator" style="display: none; position: absolute; top: -2px; right: -2px; width: 10px; height: 10px; background: #ff0000; border-radius: 50%; border: 1px solid #fff; animation: blink 1.5s infinite; z-index: 9999;"></span>
+                    </a>
+                </div>
             </div>
         </header>
         <div class="content-area">
@@ -505,7 +550,9 @@
         function updateNotificationBadge() {
             const badge = document.getElementById('notificationBadge');
             const redDot = document.getElementById('redDotIndicator');
-            const notificationLink = document.querySelector('.notification-link');
+            const notificationLink = document.querySelector('.notification-link-top');
+            
+            console.log('Updating notification badge. Low stock items:', lowStockItems.length);
             
             badge.textContent = lowStockItems.length;
             badge.style.display = lowStockItems.length > 0 ? 'flex' : 'none';
@@ -514,9 +561,11 @@
             if (lowStockItems.length > 0) {
                 redDot.style.display = 'block';
                 notificationLink.classList.add('has-notifications');
+                console.log('Showing red dot - items found:', lowStockItems.length);
             } else {
                 redDot.style.display = 'none';
                 notificationLink.classList.remove('has-notifications');
+                console.log('Hiding red dot - no items found');
             }
         }
 

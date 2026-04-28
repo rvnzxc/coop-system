@@ -41,6 +41,55 @@
     </div>
 
     <div class="checkout-section">
+        <!-- Member Scanner Section -->
+        <div id="memberScanSection" style="margin-bottom: 15px; border-bottom: 1px solid #e0e0e0; padding-bottom: 15px;">
+          
+          <!-- Selected member display (hidden by default) -->
+          <div id="selectedMemberDisplay" style="display: none; background: #e8f5e8; border: 1px solid #2d5a2d; border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <i class="fa fa-user-circle" style="color: #1b3a1b; font-size: 20px;"></i>
+              <div>
+                <div id="selectedMemberName" style="font-weight: bold; font-size: 13px; color: #1b3a1b;"></div>
+                <div id="selectedMemberID" style="font-size: 11px; color: #555;"></div>
+              </div>
+            </div>
+            <button onclick="clearMember()" style="background: none; border: none; color: #d32f2f; cursor: pointer; font-size: 18px; line-height: 1;">&#x2715;</button>
+          </div>
+
+          <!-- Scanner input -->
+          <div id="scannerInputSection">
+            <label style="font-size: 12px; font-weight: bold; color: #555; display: block; margin-bottom: 6px;">
+              <i class="fa fa-qrcode"></i> Scan Member QR / Barcode
+            </label>
+            <div style="display: flex; gap: 6px;">
+              <input 
+                type="text" 
+                id="memberScanInput" 
+                placeholder="Scan or type member ID..." 
+                style="flex: 1; padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px;"
+                onkeydown="if(event.key==='Enter') lookupMember()"
+                autofocus
+              />
+              <button onclick="lookupMember()" style="background: #1b3a1b; color: #d0ff00; border: none; border-radius: 6px; padding: 8px 10px; cursor: pointer; font-size: 13px; font-weight: bold;">
+                <i class="fa fa-search"></i>
+              </button>
+            </div>
+            <div id="memberScanError" style="color: #d32f2f; font-size: 11px; margin-top: 4px; display: none;">Member not found.</div>
+          </div>
+
+          <!-- Non-member toggle -->
+          <div style="margin-top: 10px; text-align: center;">
+            <button onclick="setNonMember()" id="nonMemberBtn" style="background: none; border: 1px solid #aaa; border-radius: 20px; padding: 4px 14px; font-size: 11px; color: #666; cursor: pointer;">
+              Continue as Non-Member
+            </button>
+            <div id="nonMemberBadge" style="display: none; background: #f5f5f5; border: 1px solid #ccc; border-radius: 8px; padding: 6px 10px; font-size: 12px; color: #666; align-items: center; justify-content: space-between;">
+              <span><i class="fa fa-user-o"></i> Non-Member</span>
+              <button onclick="clearMember()" style="background: none; border: none; color: #d32f2f; cursor: pointer; font-size: 16px;">&#x2715;</button>
+            </div>
+          </div>
+
+        </div>
+
         <h3>Check out</h3>
         <div class="checkout-items">
             <div class="empty-cart">No items in cart</div>
@@ -50,6 +99,10 @@
             <button class="btn-cancel" onclick="cancelCheckout()">CANCEL</button>
             <button class="btn-pay" onclick="processPayment()">PAY (P0.00)</button>
         </div>
+        
+        <!-- Hidden inputs for member tracking -->
+        <input type="hidden" id="selectedMemberIdInput" name="member_id" value="">
+        <input type="hidden" id="isNonMemberInput" name="is_non_member" value="0">
     </div>
 </div>
 
@@ -57,6 +110,10 @@
 // POS functionality
 let cart = [];
 let total = 0;
+
+// Member tracking
+let currentMember = null;
+let isNonMember = false;
 
 document.addEventListener('DOMContentLoaded', function() {
     // Search functionality
@@ -161,11 +218,18 @@ function cancelCheckout() {
     cart = [];
     total = 0;
     updateCart();
+    clearMember();
 }
 
 async function processPayment() {
     if (cart.length === 0) {
         alert('Your cart is empty!');
+        return;
+    }
+
+    // Check if member or non-member is selected
+    if (!currentMember && !isNonMember) {
+        alert('Please scan a member or select Non-Member before paying.');
         return;
     }
 
@@ -181,7 +245,9 @@ async function processPayment() {
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
             },
             body: JSON.stringify({
-                items: cart
+                items: cart,
+                member_id: document.getElementById('selectedMemberIdInput').value,
+                is_non_member: document.getElementById('isNonMemberInput').value
             })
         });
 
@@ -192,6 +258,7 @@ async function processPayment() {
             cart = [];
             total = 0;
             updateCart();
+            clearMember();
             // Refresh the page to show updated quantities
             setTimeout(() => {
                 window.location.reload();
@@ -205,6 +272,68 @@ async function processPayment() {
         payButton.disabled = false;
         payButton.textContent = `PAY (P${total.toFixed(2)})`;
     }
+}
+
+// Member lookup functions
+async function lookupMember() {
+  const query = document.getElementById('memberScanInput').value.trim();
+  console.log('Looking up member with query:', query);
+  
+  if (!query) return;
+
+  try {
+    const response = await fetch(`/members/lookup?q=${encodeURIComponent(query)}`);
+    const data = await response.json();
+    console.log('Lookup response:', data);
+
+    if (data.found) {
+      currentMember = data.member;
+      isNonMember = false;
+      console.log('Member found:', data.member);
+
+      document.getElementById('selectedMemberName').textContent = data.member.first_name + ' ' + data.member.last_name;
+      document.getElementById('selectedMemberID').textContent = 'ID: ' + data.member.member_number;
+      document.getElementById('selectedMemberDisplay').style.display = 'flex';
+      document.getElementById('scannerInputSection').style.display = 'none';
+      document.getElementById('nonMemberBtn').style.display = 'none';
+      document.getElementById('nonMemberBadge').style.display = 'none';
+      document.getElementById('memberScanError').style.display = 'none';
+      document.getElementById('selectedMemberIdInput').value = data.member.id;
+      document.getElementById('isNonMemberInput').value = '0';
+    } else {
+      console.log('Member not found');
+      document.getElementById('memberScanError').style.display = 'block';
+    }
+  } catch (e) {
+    console.error('Lookup error:', e);
+    document.getElementById('memberScanError').style.display = 'block';
+  }
+}
+
+function setNonMember() {
+  currentMember = null;
+  isNonMember = true;
+
+  document.getElementById('selectedMemberDisplay').style.display = 'none';
+  document.getElementById('scannerInputSection').style.display = 'none';
+  document.getElementById('nonMemberBtn').style.display = 'none';
+  document.getElementById('nonMemberBadge').style.display = 'flex';
+  document.getElementById('selectedMemberIdInput').value = '';
+  document.getElementById('isNonMemberInput').value = '1';
+}
+
+function clearMember() {
+  currentMember = null;
+  isNonMember = false;
+
+  document.getElementById('selectedMemberDisplay').style.display = 'none';
+  document.getElementById('nonMemberBadge').style.display = 'none';
+  document.getElementById('scannerInputSection').style.display = 'block';
+  document.getElementById('nonMemberBtn').style.display = 'block';
+  document.getElementById('memberScanInput').value = '';
+  document.getElementById('selectedMemberIdInput').value = '';
+  document.getElementById('isNonMemberInput').value = '0';
+  document.getElementById('memberScanError').style.display = 'none';
 }
 </script>
 @endsection

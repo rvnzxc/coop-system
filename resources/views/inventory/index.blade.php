@@ -37,7 +37,7 @@
                 @forelse($items as $item)
                 <tr>
                     <td>{{ $item->id }}</td>
-                    <td>{{ $item->item_name }}</td>
+                    <td>{{ ucfirst(strtolower($item->item_name)) }}</td>
                     <td>
                         <span class="quantity {{ $item->quantity <= 10 ? 'low-stock' : '' }}">
                             {{ $item->quantity }}

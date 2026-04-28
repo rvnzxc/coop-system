@@ -11,11 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('cache', function (Blueprint $table) {
-            $table->string('key')->primary();
-            $table->mediumText('value');
-            $table->integer('expiration');
-            $table->timestamps();
+        Schema::table('members', function (Blueprint $table) {
+            $table->dateTime('last_purchase_date')->nullable()->change();
         });
     }
 
@@ -24,6 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('cache');
+        Schema::table('members', function (Blueprint $table) {
+            $table->date('last_purchase_date')->nullable()->change();
+        });
     }
 };
