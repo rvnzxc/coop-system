@@ -78,7 +78,7 @@
             align-items: center !important;
             justify-content: flex-start !important;
             padding: 0 0 20px 0 !important;
-            margin-top: -415px !important;
+            margin-top: -370px !important;
         }
 
         /* Responsive Design for All Devices */
@@ -297,7 +297,9 @@
             .categories {
                 flex-wrap: nowrap !important;
                 gap: 8px !important;
-                justify-content: center !important;
+                justify-content: flex-start !important;
+                overflow-x: auto !important;
+                padding: 5px 0 10px 0 !important;
             }
         }
 
@@ -312,7 +314,9 @@
             .categories {
                 flex-wrap: nowrap !important;
                 gap: 6px !important;
-                justify-content: center !important;
+                justify-content: flex-start !important;
+                overflow-x: auto !important;
+                padding: 5px 0 10px 0 !important;
             }
         }
 
@@ -327,7 +331,7 @@
             .categories {
                 flex-wrap: wrap !important;
                 gap: 5px !important;
-                justify-content: center !important;
+                justify-content: flex-start !important;
             }
         }
 
@@ -344,7 +348,7 @@
             .categories {
                 flex-wrap: wrap !important;
                 gap: 4px !important;
-                justify-content: center !important;
+                justify-content: flex-start !important;
             }
         }
 
@@ -361,7 +365,7 @@
             .categories {
                 flex-wrap: wrap !important;
                 gap: 3px !important;
-                justify-content: center !important;
+                justify-content: flex-start !important;
             }
         }
 
@@ -378,7 +382,7 @@
             .categories {
                 flex-wrap: wrap !important;
                 gap: 2px !important;
-                justify-content: center !important;
+                justify-content: flex-start !important;
             }
         }
 
@@ -395,7 +399,7 @@
             .categories {
                 flex-wrap: wrap !important;
                 gap: 2px !important;
-                justify-content: center !important;
+                justify-content: flex-start !important;
             }
         }
 
@@ -452,6 +456,11 @@
             <nav class="sidebar-nav">
                 <a href="{{ route('shop.index') }}" {{ request()->is('shop*') ? 'class="active"' : '' }}><i class="fa fa-shopping-cart"></i> POS</a>
                 <a href="{{ route('inventory.index') }}" {{ request()->is('inventory*') ? 'class="active"' : '' }}><i class="fa fa-archive"></i> Inventory</a>
+                <a href="#" onclick="toggleNotifications()" class="notification-link">
+                    <i class="fa fa-bell"></i> Notifications
+                    <span class="notification-badge" id="notificationBadge">0</span>
+                    <span id="redDotIndicator" style="display: none; position: absolute; top: 4px; right: 4px; width: 14px; height: 14px; background: #ff0000; border-radius: 50%; border: 2px solid #fff; animation: blink 1.5s infinite; z-index: 9999;"></span>
+                </a>
                 <a href="#" {{ request()->is('members*') ? 'class="active"' : '' }}><i class="fa fa-users"></i> Members</a>
             </nav>
         </aside>
@@ -469,6 +478,111 @@
             </main>
         </div>
     </div>
+
+    <!-- Notification Modal -->
+    <div class="notif-overlay" id="notificationOverlay">
+        <div class="notif-box">
+            <span class="notif-close" onclick="toggleNotifications()">&times;</span>
+            <h2>Low Stock Notifications</h2>
+            <div class="notif-content" id="notificationContent">
+                <div class="no-notifications">No low stock items</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Notification System
+        let lowStockItems = [];
+        const LOW_STOCK_THRESHOLD = 10; // Items with stock <= 10 will trigger notification
+
+        // Toggle notification modal
+        function toggleNotifications() {
+            const overlay = document.getElementById('notificationOverlay');
+            overlay.style.display = overlay.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+        // Update notification badge
+        function updateNotificationBadge() {
+            const badge = document.getElementById('notificationBadge');
+            const redDot = document.getElementById('redDotIndicator');
+            const notificationLink = document.querySelector('.notification-link');
+            
+            badge.textContent = lowStockItems.length;
+            badge.style.display = lowStockItems.length > 0 ? 'flex' : 'none';
+            
+            // Show/hide red dot indicator element
+            if (lowStockItems.length > 0) {
+                redDot.style.display = 'block';
+                notificationLink.classList.add('has-notifications');
+            } else {
+                redDot.style.display = 'none';
+                notificationLink.classList.remove('has-notifications');
+            }
+        }
+
+        // Render notification content
+        function renderNotifications() {
+            const content = document.getElementById('notificationContent');
+            
+            if (lowStockItems.length === 0) {
+                content.innerHTML = '<div class="no-notifications">No low stock items</div>';
+            } else {
+                content.innerHTML = lowStockItems.map(item => `
+                    <div class="notif-item">
+                        <div>
+                            <div class="notif-item-name">${item.name}</div>
+                            <div class="notif-item-details">Category: ${item.category}</div>
+                        </div>
+                        <div class="notif-item-stock">${item.stock} units</div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // Check for low stock items
+        async function checkLowStock() {
+            try {
+                const response = await fetch('/inventory/low-stock');
+                const data = await response.json();
+                
+                if (data.low_stock_items) {
+                    lowStockItems = data.low_stock_items.map(item => ({
+                        name: item.item_name,
+                        category: item.category,
+                        stock: item.quantity,
+                        id: item.id
+                    }));
+                } else {
+                    lowStockItems = [];
+                }
+                
+                updateNotificationBadge();
+                renderNotifications();
+            } catch (error) {
+                console.error('Error fetching low stock data:', error);
+                // Fallback to empty array if API fails
+                lowStockItems = [];
+                updateNotificationBadge();
+                renderNotifications();
+            }
+        }
+
+        // Initialize notification system
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check low stock on page load
+            checkLowStock();
+            
+            // Set up periodic checking (every 30 seconds)
+            setInterval(checkLowStock, 30000);
+        });
+
+        // Close modal when clicking outside
+        document.getElementById('notificationOverlay').addEventListener('click', function(e) {
+            if (e.target === this) {
+                toggleNotifications();
+            }
+        });
+    </script>
 
 </body>
 </html>
