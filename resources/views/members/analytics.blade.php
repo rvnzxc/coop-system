@@ -251,7 +251,10 @@
 
 <script>
 // Use member analytics data from controller
-const memberAnalyticsData = @json($member_analytics ?? []);
+const memberAnalyticsData = @json($memberAnalytics ?? []);
+
+// Convert to array for easier filtering
+const allMembersData = Object.values(memberAnalyticsData);
 
 function filterMemberAnalytics() {
     const period = document.getElementById('periodFilter').value;
@@ -300,7 +303,7 @@ function filterMemberAnalytics() {
         memberCell.style.width = '25%';
         memberCell.innerHTML = `
             <div style="font-weight: bold;">${member.first_name} ${member.last_name}</div>
-            <div style="font-size: 12px; color: #666;">#${member.member_number}</div>
+            <div style="font-size: 12px; color: #666;">${member.member_number}</div>
         `;
         
         // Stats cells
@@ -370,5 +373,10 @@ function filterMemberAnalytics() {
     // Update summary display (you can add this to the page if needed)
     console.log(`Showing ${totalMembers} members with ${totalTransactions} total transactions`);
 }
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    filterMemberAnalytics();
+});
 </script>
 @endsection

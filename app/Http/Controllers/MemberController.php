@@ -101,27 +101,30 @@ class MemberController extends Controller
         $lastPurchaseDate = $member->last_purchase_date;
 
         // Get all members data for analytics
-        $allMembers = Member::withCount(['purchases as purchase_count'])
-            ->withSum('purchases as total_purchases', 'price')
-            ->get();
-
+        $allMembers = Member::with(['purchases' => function($query) {
+            $query->orderBy('purchase_date', 'desc');
+        }])->get();
+        
         // Calculate member analytics for all members
         $memberAnalytics = [];
-
+        
         foreach ($allMembers as $memberData) {
-
-            $total = $memberData->total_purchases ?? 0;
-            $count = $memberData->purchase_count ?? 0;
-
+            $purchases = $memberData->purchases;
+            $total = $purchases->sum('amount');
+            $count = $purchases->count();
             $average = $count > 0 ? $total / $count : 0;
-
+            
             $memberAnalytics[$memberData->id] = [
-                'member_name' => $memberData->first_name . ' ' . $memberData->last_name,
+                'id' => $memberData->id,
+                'first_name' => $memberData->first_name,
+                'last_name' => $memberData->last_name,
                 'member_number' => $memberData->member_number,
                 'total_purchases' => $total,
-                'transaction_count' => $count,
+                'purchase_count' => $count,
                 'average_purchase' => $average,
-                'last_purchase' => $memberData->last_purchase_date
+                'last_purchase_date' => $memberData->last_purchase_date,
+                'is_active' => $memberData->is_active,
+                'purchases' => $purchases->toArray()
             ];
         }
 
@@ -180,24 +183,29 @@ class MemberController extends Controller
     public function analyticsIndex()
     {
         // Get all members data for analytics
-        $allMembers = Member::withCount(['purchases as purchase_count'])
-            ->withSum('purchases.price as total_purchases')
-            ->get();
+        $allMembers = Member::with(['purchases' => function($query) {
+            $query->orderBy('purchase_date', 'desc');
+        }])->get();
         
         // Calculate member analytics for all members
         $memberAnalytics = [];
         foreach ($allMembers as $memberData) {
-            $total = $memberData->total_purchases;
-            $count = $memberData->purchase_count;
+            $purchases = $memberData->purchases;
+            $total = $purchases->sum('amount');
+            $count = $purchases->count();
             $average = $count > 0 ? $total / $count : 0;
             
             $memberAnalytics[$memberData->id] = [
-                'member_name' => $memberData->first_name . ' ' . $memberData->last_name,
+                'id' => $memberData->id,
+                'first_name' => $memberData->first_name,
+                'last_name' => $memberData->last_name,
                 'member_number' => $memberData->member_number,
                 'total_purchases' => $total,
-                'transaction_count' => $count,
+                'purchase_count' => $count,
                 'average_purchase' => $average,
-                'last_purchase' => $memberData->last_purchase_date,
+                'last_purchase_date' => $memberData->last_purchase_date,
+                'is_active' => $memberData->is_active,
+                'purchases' => $purchases->toArray()
             ];
         }
         
@@ -209,7 +217,7 @@ class MemberController extends Controller
         $member = Member::findOrFail($id);
         
         // Get member's purchase history
-        $purchases = $member->purchases()->with('product')->orderBy('created_at', 'desc')->get();
+        $purchases = $member->purchases()->orderBy('purchase_date', 'desc')->get();
         
         return view('members.member-analytics', compact('member', 'purchases'));
     }

@@ -131,9 +131,9 @@ function filterMemberAnalytics() {
         const now = new Date();
         
         filteredPurchases = memberPurchases.filter(purchase => {
-            if (!purchase.created_at) return false;
+            if (!purchase.purchase_date) return false;
             
-            const purchaseDate = new Date(purchase.created_at);
+            const purchaseDate = new Date(purchase.purchase_date);
             const diffTime = now - purchaseDate;
             const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
             
@@ -151,7 +151,7 @@ function filterMemberAnalytics() {
     }
     
     // Sort by date (newest first)
-    filteredPurchases.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    filteredPurchases.sort((a, b) => new Date(b.purchase_date) - new Date(a.purchase_date));
     
     // Populate table
     filteredPurchases.forEach(purchase => {
@@ -161,22 +161,22 @@ function filterMemberAnalytics() {
         // Date cell
         const dateCell = document.createElement('td');
         dateCell.style.cssText = 'padding: 12px; text-align: left; width: 25%;';
-        dateCell.textContent = purchase.created_at ? new Date(purchase.created_at).toLocaleDateString() : 'N/A';
+        dateCell.textContent = purchase.purchase_date ? new Date(purchase.purchase_date).toLocaleDateString() : 'N/A';
         
         // Product cell
         const productCell = document.createElement('td');
         productCell.style.cssText = 'padding: 12px; text-align: left; width: 40%;';
-        productCell.textContent = purchase.product ? purchase.product.name : 'N/A';
+        productCell.textContent = purchase.product_name || 'N/A';
         
         // Price cell
         const priceCell = document.createElement('td');
         priceCell.style.cssText = 'padding: 12px; text-align: right; width: 15%;';
-        priceCell.textContent = purchase.price ? `₱${parseFloat(purchase.price).toFixed(2)}` : '₱0.00';
+        priceCell.textContent = purchase.amount ? `₱${parseFloat(purchase.amount).toFixed(2)}` : '₱0.00';
         
         // Total cell (same as price for individual purchase)
         const totalCell = document.createElement('td');
         totalCell.style.cssText = 'padding: 12px; text-align: right; width: 20%;';
-        totalCell.textContent = purchase.price ? `₱${parseFloat(purchase.price).toFixed(2)}` : '₱0.00';
+        totalCell.textContent = purchase.amount ? `₱${parseFloat(purchase.amount).toFixed(2)}` : '₱0.00';
         
         // Append cells to row
         row.appendChild(dateCell);
@@ -193,7 +193,7 @@ function filterMemberAnalytics() {
 }
 
 function updatePurchaseSummary(purchases) {
-    const totalPurchases = purchases.reduce((sum, purchase) => sum + parseFloat(purchase.price || 0), 0);
+    const totalPurchases = purchases.reduce((sum, purchase) => sum + parseFloat(purchase.amount || 0), 0);
     const transactionCount = purchases.length;
     const averagePurchase = transactionCount > 0 ? totalPurchases / transactionCount : 0;
     

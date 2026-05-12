@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Item; // This tells Laravel to use your database model
 use App\Models\Member;
+use App\Models\Purchase;
 use Illuminate\Http\Request;
 
 class ShopController extends Controller
@@ -71,11 +72,32 @@ class ShopController extends Controller
                 // For now, we'll just log it or you could create a non-member accumulator
                 // This could be extended to create sales records, etc.
             } elseif ($memberId) {
-                // Update member purchase statistics
+                // Create individual purchase records for each item
                 $member = Member::find($memberId);
                 if ($member) {
+                    foreach ($cartItems as $cartItem) {
+                        $itemName = $cartItem['name'];
+                        $quantity = $cartItem['quantity'];
+                        
+                        // Find the item in database
+                        $item = Item::where('item_name', $itemName)->first();
+                        
+                        if ($item) {
+                            // Create purchase record
+                            Purchase::create([
+                                'member_id' => $memberId,
+                                'member_number' => $member->member_number,
+                                'amount' => $item->price * $quantity,
+                                'quantity' => $quantity,
+                                'product_name' => $itemName,
+                                'purchase_date' => now()->format('Y-m-d')
+                            ]);
+                        }
+                    }
+                    
+                    // Update member purchase statistics
                     $member->total_purchases += $totalAmount;
-                    $member->purchase_count += 1;
+                    $member->purchase_count += count($cartItems);
                     $member->last_purchase_date = now();
                     $member->save();
                 }
