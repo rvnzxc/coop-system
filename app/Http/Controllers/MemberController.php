@@ -11,6 +11,7 @@ class MemberController extends Controller
     public function index(Request $request)
     {
         $search = $request->input('search');
+
         $members = Member::when($search, function ($query, $search) {
             return $query->where('first_name', 'like', "%{$search}%")
                          ->orWhere('last_name', 'like', "%{$search}%")
@@ -29,25 +30,28 @@ class MemberController extends Controller
     {
         $request->validate([
             'first_name' => 'required|string|max:255',
-            'last_name' => 'required|string|max:255',
-            'email' => 'nullable|email|unique:members,email',
-            'phone' => 'nullable|string|max:20',
+            'last_name'  => 'required|string|max:255',
+            'email'      => 'nullable|email|unique:members,email',
+            'phone'      => 'nullable|string|max:20',
         ]);
 
         $member = Member::create([
-            'first_name' => $request->first_name,
-            'last_name' => $request->last_name,
-            'email' => $request->email,
-            'phone' => $request->phone,
-            'member_number' => 'MEM' . str_pad(Member::max('id') + 1, 5, '0', STR_PAD_LEFT),
+            'first_name'   => $request->first_name,
+            'last_name'    => $request->last_name,
+            'email'        => $request->email,
+            'phone'        => $request->phone,
+            'member_number'=> 'MEM' . str_pad(Member::max('id') + 1, 5, '0', STR_PAD_LEFT),
         ]);
 
-        return redirect()->route('members.index')->with('success', 'Member added successfully!');
+        return redirect()
+            ->route('members.index')
+            ->with('success', 'Member added successfully!');
     }
 
     public function edit($id)
     {
         $member = Member::findOrFail($id);
+
         return view('members.edit', compact('member'));
     }
 
@@ -55,66 +59,159 @@ class MemberController extends Controller
     {
         $request->validate([
             'first_name' => 'required|string|max:255',
-            'last_name' => 'required|string|max:255',
-            'email' => 'nullable|email|unique:members,email,' . $id,
-            'phone' => 'nullable|string|max:20',
-            'is_active' => 'boolean',
+            'last_name'  => 'required|string|max:255',
+            'email'      => 'nullable|email|unique:members,email,' . $id,
+            'phone'      => 'nullable|string|max:20',
+            'is_active'  => 'boolean',
         ]);
 
         $member = Member::findOrFail($id);
+
         $member->update([
             'first_name' => $request->first_name,
-            'last_name' => $request->last_name,
-            'email' => $request->email,
-            'phone' => $request->phone,
-            'is_active' => $request->has('is_active'),
+            'last_name'  => $request->last_name,
+            'email'      => $request->email,
+            'phone'      => $request->phone,
+            'is_active'  => $request->has('is_active'),
         ]);
 
-        return redirect()->route('members.index')->with('success', 'Member updated successfully!');
+        return redirect()
+            ->route('members.index')
+            ->with('success', 'Member updated successfully!');
     }
 
     public function destroy($id)
     {
         $member = Member::findOrFail($id);
+
         $member->delete();
-        return redirect()->route('members.index')->with('success', 'Member deleted successfully!');
+
+        return redirect()
+            ->route('members.index')
+            ->with('success', 'Member deleted successfully!');
     }
 
     public function analytics($id)
     {
         $member = Member::findOrFail($id);
-        
+
         // Get purchase statistics
         $totalPurchases = $member->total_purchases;
         $purchaseCount = $member->purchase_count;
         $lastPurchaseDate = $member->last_purchase_date;
-        
+
+        // Get all members data for analytics
+        $allMembers = Member::withCount(['purchases as purchase_count'])
+            ->withSum('purchases as total_purchases', 'price')
+            ->get();
+
+        // Calculate member analytics for all members
+        $memberAnalytics = [];
+
+        foreach ($allMembers as $memberData) {
+
+            $total = $memberData->total_purchases ?? 0;
+            $count = $memberData->purchase_count ?? 0;
+
+            $average = $count > 0 ? $total / $count : 0;
+
+            $memberAnalytics[$memberData->id] = [
+                'member_name' => $memberData->first_name . ' ' . $memberData->last_name,
+                'member_number' => $memberData->member_number,
+                'total_purchases' => $total,
+                'transaction_count' => $count,
+                'average_purchase' => $average,
+                'last_purchase' => $memberData->last_purchase_date
+            ];
+        }
+
         // Debug logging
         \Log::info('Member Analytics Debug', [
             'member_id' => $id,
             'last_purchase_date_raw' => $lastPurchaseDate,
-            'last_purchase_date_string' => $lastPurchaseDate ? $lastPurchaseDate->toDateTimeString() : 'null',
+            'last_purchase_date_string' => $lastPurchaseDate
+                ? $lastPurchaseDate->toDateTimeString()
+                : 'null',
             'current_time' => now()->toDateTimeString(),
-            'timezone' => config('app.timezone')
+            'timezone' => config('app.timezone'),
+            'all_members_count' => count($allMembers),
+            'member_analytics_data' => $memberAnalytics
         ]);
-        
-        $averagePurchase = $purchaseCount > 0 ? $totalPurchases / $purchaseCount : 0;
 
-        return view('members.analytics', compact('member', 'totalPurchases', 'purchaseCount', 'lastPurchaseDate', 'averagePurchase'));
+        $averagePurchase = $purchaseCount > 0
+            ? $totalPurchases / $purchaseCount
+            : 0;
+
+        return view('members.analytics', compact(
+            'member',
+            'totalPurchases',
+            'purchaseCount',
+            'lastPurchaseDate',
+            'averagePurchase',
+            'memberAnalytics'
+        ));
     }
 
     public function lookup(Request $request)
     {
         $q = $request->query('q');
+
         $member = Member::where('member_number', $q)
-                        ->orWhere('id', $q)
-                        ->orWhere(DB::raw("CONCAT(first_name, ' ', last_name)"), 'LIKE', "%{$q}%")
-                        ->first();
-        
+            ->orWhere('id', $q)
+            ->orWhere(
+                DB::raw("CONCAT(first_name, ' ', last_name)"),
+                'LIKE',
+                "%{$q}%"
+            )
+            ->first();
+
         if ($member) {
-            return response()->json(['found' => true, 'member' => $member]);
+            return response()->json([
+                'found' => true,
+                'member' => $member
+            ]);
         }
-        return response()->json(['found' => false]);
+
+        return response()->json([
+            'found' => false
+        ]);
+    }
+
+    public function analyticsIndex()
+    {
+        // Get all members data for analytics
+        $allMembers = Member::withCount(['purchases as purchase_count'])
+            ->withSum('purchases.price as total_purchases')
+            ->get();
+        
+        // Calculate member analytics for all members
+        $memberAnalytics = [];
+        foreach ($allMembers as $memberData) {
+            $total = $memberData->total_purchases;
+            $count = $memberData->purchase_count;
+            $average = $count > 0 ? $total / $count : 0;
+            
+            $memberAnalytics[$memberData->id] = [
+                'member_name' => $memberData->first_name . ' ' . $memberData->last_name,
+                'member_number' => $memberData->member_number,
+                'total_purchases' => $total,
+                'transaction_count' => $count,
+                'average_purchase' => $average,
+                'last_purchase' => $memberData->last_purchase_date,
+            ];
+        }
+        
+        return view('members.analytics', compact('memberAnalytics'));
+    }
+
+    public function memberAnalytics($id)
+    {
+        $member = Member::findOrFail($id);
+        
+        // Get member's purchase history
+        $purchases = $member->purchases()->with('product')->orderBy('created_at', 'desc')->get();
+        
+        return view('members.member-analytics', compact('member', 'purchases'));
     }
 
     public function card($id)

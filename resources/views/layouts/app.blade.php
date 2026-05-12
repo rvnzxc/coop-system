@@ -500,6 +500,7 @@
                 <a href="{{ route('shop.index') }}" class="{{ request()->is('/') || request()->is('shop') || request()->is('shop/*') ? 'active' : '' }}"><i class="fa fa-shopping-cart"></i> POS</a>
                 <a href="{{ route('inventory.index') }}" class="{{ request()->is('inventory') || request()->is('inventory/*') ? 'active' : '' }}"><i class="fa fa-archive"></i> Inventory</a>
                 <a href="{{ route('members.index') }}" class="{{ request()->is('members') || request()->is('members/*') ? 'active' : '' }}"><i class="fa fa-users"></i> Members</a>
+                <a href="{{ route('sales-analytics.index') }}" class="{{ request()->is('sales-analytics') || request()->is('sales-analytics/*') ? 'active' : '' }}"><i class="fa fa-chart-line"></i> Sales Analytics</a>
             </nav>
         </aside>
         <header>

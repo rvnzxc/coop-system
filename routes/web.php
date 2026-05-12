@@ -3,6 +3,7 @@
 use App\Http\Controllers\ShopController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\MemberController;
+use App\Http\Controllers\SalesAnalyticsController;
 
 // Shop / Home
 Route::get('/', [ShopController::class, 'index'])->name('shop.index');
@@ -28,6 +29,14 @@ Route::prefix('members')->group(function () {
     Route::put('/update/{id}', [MemberController::class, 'update'])->name('members.update');
     Route::delete('/delete/{id}', [MemberController::class, 'destroy'])->name('members.destroy');
     Route::get('/analytics/{id}', [MemberController::class, 'analytics'])->name('members.analytics');
+    Route::get('/analytics', [MemberController::class, 'analyticsIndex'])->name('members.analytics.index');
+Route::get('/analytics/{id}', [MemberController::class, 'memberAnalytics'])->name('members.analytics');
     Route::get('/lookup', [MemberController::class, 'lookup'])->name('members.lookup');
     Route::get('/card/{id}', [MemberController::class, 'card'])->name('members.card');
+});
+
+// Sales Analytics
+Route::prefix('sales-analytics')->group(function () {
+    Route::get('/', [SalesAnalyticsController::class, 'index'])->name('sales-analytics.index');
+    Route::get('/print', [SalesAnalyticsController::class, 'printReport'])->name('sales-analytics.print');
 });

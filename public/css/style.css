@@ -856,7 +856,7 @@ html, body {
 .inventory-table th {
   background: #1b3a1b;
   color: #fff;
-  padding: 15px;
+  padding: 8px 15px;
   text-align: left;
   font-weight: bold;
   font-size: 14px;
@@ -865,7 +865,7 @@ html, body {
 }
 
 .inventory-table td {
-  padding: 15px;
+  padding: 8px 15px;
   border-bottom: 1px solid #eee;
   vertical-align: middle;
 }
@@ -984,7 +984,7 @@ html, body {
   gap: 8px;
 }
 
-.btn-edit, .btn-delete {
+.btn-edit, .btn-delete, .btn-analytics, .btn-view {
   padding: 6px 12px;
   border: none;
   border-radius: 4px;
@@ -1013,6 +1013,26 @@ html, body {
 
 .btn-delete:hover {
   background: #d32f2f;
+}
+
+.btn-analytics {
+  background: #2196f3;
+  color: #fff;
+  border: 1px solid #1976d2;
+}
+
+.btn-analytics:hover {
+  background: #1976d2;
+}
+
+.btn-view {
+  background: #607d8b;
+  color: #fff;
+  border: 1px solid #546e7a;
+}
+
+.btn-view:hover {
+  background: #546e7a;
 }
 
 .delete-form {
@@ -1198,7 +1218,7 @@ html, body {
   
   .inventory-table th,
   .inventory-table td {
-    padding: 10px;
+    padding: 6px 12px;
   }
   
   .action-buttons {

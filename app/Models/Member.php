@@ -36,4 +36,9 @@ class Member extends Model
         $this->last_purchase_date = now();
         $this->save();
     }
+
+    public function purchases()
+    {
+        return $this->hasMany(Purchase::class);
+    }
 }
