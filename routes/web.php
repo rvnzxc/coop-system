@@ -3,7 +3,7 @@
 use App\Http\Controllers\ShopController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\MemberController;
-use App\Http\Controllers\SalesAnalyticsController;
+use App\Http\Controllers\AnalyticsController;
 
 // Shop / Home
 Route::get('/', [ShopController::class, 'index'])->name('shop.index');
@@ -35,8 +35,5 @@ Route::get('/analytics/{id}', [MemberController::class, 'memberAnalytics'])->nam
     Route::get('/card/{id}', [MemberController::class, 'card'])->name('members.card');
 });
 
-// Sales Analytics
-Route::prefix('sales-analytics')->group(function () {
-    Route::get('/', [SalesAnalyticsController::class, 'index'])->name('sales-analytics.index');
-    Route::get('/print', [SalesAnalyticsController::class, 'printReport'])->name('sales-analytics.print');
-});
+// Analytics
+Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics.index');

@@ -68,9 +68,26 @@ class ShopController extends Controller
             
             // Process member or non-member sale
             if ($isNonMember) {
-                // Handle non-member sale - you could create a separate table or use a special member record
-                // For now, we'll just log it or you could create a non-member accumulator
-                // This could be extended to create sales records, etc.
+                // Create purchase records for non-member sales
+                foreach ($cartItems as $cartItem) {
+                    $itemName = $cartItem['name'];
+                    $quantity = $cartItem['quantity'];
+                    
+                    // Find the item in database
+                    $item = Item::where('item_name', $itemName)->first();
+                    
+                    if ($item) {
+                        // Create purchase record for non-member (member_id = null)
+                        Purchase::create([
+                            'member_id' => null,
+                            'member_number' => null,
+                            'amount' => $item->price * $quantity,
+                            'quantity' => $quantity,
+                            'product_name' => $itemName,
+                            'purchase_date' => now()->format('Y-m-d')
+                        ]);
+                    }
+                }
             } elseif ($memberId) {
                 // Create individual purchase records for each item
                 $member = Member::find($memberId);

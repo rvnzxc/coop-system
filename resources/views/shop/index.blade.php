@@ -254,6 +254,21 @@ async function processPayment() {
         const result = await response.json();
 
         if (result.success) {
+            // Save sale to localStorage for analytics
+            const sale = {
+                id: Date.now().toString(),
+                date: new Date().toISOString(),
+                total: total,
+                items: [...cart]
+            };
+            
+            const existing = JSON.parse(localStorage.getItem("ccf_sales") || "[]");
+            existing.push(sale);
+            localStorage.setItem("ccf_sales", JSON.stringify(existing));
+            
+            console.log('Sale saved to localStorage:', sale);
+            console.log('Total sales in localStorage:', existing.length);
+            
             alert('Payment successful! Inventory updated.');
             cart = [];
             total = 0;
