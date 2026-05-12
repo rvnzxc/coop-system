@@ -78,7 +78,7 @@
             align-items: center !important;
             justify-content: flex-start !important;
             padding: 0 0 20px 0 !important;
-            margin-top: -370px !important;
+            margin-top: -220px !important;
         }
 
         /* Responsive Design for All Devices */
@@ -497,10 +497,20 @@
     <div class="layout-container">
         <aside class="sidebar">
             <nav class="sidebar-nav">
-                <a href="{{ route('shop.index') }}" class="{{ request()->is('/') || request()->is('shop') || request()->is('shop/*') ? 'active' : '' }}"><i class="fa fa-shopping-cart" style="margin-right: 10px;"></i> POS</a>
-                <a href="{{ route('inventory.index') }}" class="{{ request()->is('inventory') || request()->is('inventory/*') ? 'active' : '' }}"><i class="fa fa-archive" style="margin-right: 10px;"></i> Inventory</a>
-                <a href="{{ route('members.index') }}" class="{{ request()->is('members') || request()->is('members/*') ? 'active' : '' }}"><i class="fa fa-users" style="margin-right: 10px;"></i> Members</a>
-                <a href="{{ route('analytics.index') }}" class="{{ request()->is('analytics') ? 'active' : '' }}"><i class="fa fa-bar-chart" style="margin-right: 10px;"></i> Analytics</a>
+                @auth
+                    @if(Auth::user()->role === 'cashier')
+                        <a href="{{ route('shop.index') }}" class="{{ request()->is('/pos') ? 'active' : '' }}"><i class="fa fa-shopping-cart" style="margin-right: 10px;"></i> POS</a>
+                    @endif
+                    
+                    @if(Auth::user()->role === 'admin')
+                        <a href="{{ route('shop.index') }}" class="{{ request()->is('/pos') ? 'active' : '' }}"><i class="fa fa-shopping-cart" style="margin-right: 10px;"></i> POS</a>
+                        <a href="{{ route('inventory.index') }}" class="{{ request()->is('inventory') || request()->is('inventory/*') ? 'active' : '' }}"><i class="fa fa-archive" style="margin-right: 10px;"></i> Inventory</a>
+                        <a href="{{ route('members.index') }}" class="{{ request()->is('members') || request()->is('members/*') ? 'active' : '' }}"><i class="fa fa-users" style="margin-right: 10px;"></i> Members</a>
+                        <a href="{{ route('analytics.index') }}" class="{{ request()->is('analytics') ? 'active' : '' }}"><i class="fa fa-bar-chart" style="margin-right: 10px;"></i> Analytics</a>
+                    @endif
+                    
+                    <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" style="margin-top: auto; background: rgba(255,255,255,0.1);"><i class="fa fa-sign-out" style="margin-right: 10px;"></i> Logout</a>
+                @endauth
             </nav>
         </aside>
         <header>
@@ -524,6 +534,13 @@
             </main>
         </div>
     </div>
+
+    <!-- Logout Form -->
+    @auth
+        <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
+            @csrf
+        </form>
+    @endauth
 
     <!-- Notification Modal -->
     <div class="notif-overlay" id="notificationOverlay">
