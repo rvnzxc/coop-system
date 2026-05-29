@@ -428,7 +428,7 @@ html, body {
 .notif-close {
   position: absolute;
   top: 15px;
-  left: 20px;
+  right: 20px;
   font-size: 28px;
   cursor: pointer;
   color: #d0ff00;
