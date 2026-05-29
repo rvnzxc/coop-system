@@ -18,29 +18,21 @@ class RoleMiddleware
      */
     public function handle(Request $request, Closure $next, string $role)
     {
-        // Check if user is authenticated
         if (!Auth::check()) {
-            // Redirect to login page with session
             session(['url.intended' => $request->fullUrl()]);
             return redirect('/login');
         }
 
-        // Check if user has required role
-        if (Auth::user()->role !== $role) {
-            // Admin can access everything
-            if (Auth::user()->role === 'admin') {
-                return $next($request);
-            }
-            
-            // Cashier trying to access admin area
-            if ($role === 'admin' && Auth::user()->role === 'cashier') {
-                abort(403, 'Access denied. Admin access required.');
-            }
-            
-            // Cashier trying to access cashier area - allow
-            if ($role === 'cashier' && Auth::user()->role === 'cashier') {
-                return $next($request);
-            }
+        $userRole = Auth::user()->role;
+
+        // Admin can access everything
+        if ($userRole === 'admin') {
+            return $next($request);
+        }
+
+        // Non-admin trying to access admin area
+        if ($role === 'admin') {
+            abort(403, 'Access denied. Admin access required.');
         }
 
         return $next($request);

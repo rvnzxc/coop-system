@@ -31,6 +31,10 @@ Route::middleware(['auth', 'role.admin'])->prefix('inventory')->group(function (
     Route::get('/edit/{id}', [InventoryController::class, 'edit'])->name('inventory.edit');
     Route::put('/update/{id}', [InventoryController::class, 'update'])->name('inventory.update');
     Route::delete('/delete/{id}', [InventoryController::class, 'destroy'])->name('inventory.destroy');
+});
+
+// Low-stock notification endpoint - accessible to all authenticated users
+Route::middleware(['auth'])->prefix('inventory')->group(function () {
     Route::get('/low-stock', [InventoryController::class, 'lowStockNotifications'])->name('inventory.low-stock');
 });
 
