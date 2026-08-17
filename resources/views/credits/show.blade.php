@@ -58,6 +58,39 @@
     </div>
     @endif
 
+    {{-- Items purchased --}}
+    @if($credit->items_snapshot)
+    <div class="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h3 class="mb-3 text-sm font-semibold text-slate-900">Items Purchased on Credit</h3>
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-slate-100 text-xs uppercase tracking-wider text-slate-500">
+                    <th class="pb-2 text-left font-semibold">Product</th>
+                    <th class="pb-2 text-right font-semibold">Price</th>
+                    <th class="pb-2 text-right font-semibold">Qty</th>
+                    <th class="pb-2 text-right font-semibold">Subtotal</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                @foreach($credit->items_snapshot as $item)
+                <tr>
+                    <td class="py-2.5 font-medium text-slate-900">{{ $item['product_name'] }}</td>
+                    <td class="py-2.5 text-right text-slate-600">₱{{ number_format($item['price'], 2) }}</td>
+                    <td class="py-2.5 text-right text-slate-600">{{ $item['quantity'] }}</td>
+                    <td class="py-2.5 text-right font-semibold text-slate-900">₱{{ number_format($item['subtotal'], 2) }}</td>
+                </tr>
+                @endforeach
+            </tbody>
+            <tfoot>
+                <tr class="border-t border-slate-200">
+                    <td colspan="3" class="pt-2.5 text-right text-sm font-semibold text-slate-700">Total</td>
+                    <td class="pt-2.5 text-right text-base font-bold text-slate-900">₱{{ number_format($credit->amount, 2) }}</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+    @endif
+
     {{-- Payment history --}}
     <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">

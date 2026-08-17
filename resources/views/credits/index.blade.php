@@ -83,7 +83,7 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100">
                     @forelse($credits as $credit)
-                    <tr class="transition-colors hover:bg-slate-50" data-credit-id="{{ $credit->id }}" data-member-id="{{ $credit->member_id }}">
+                    <tr class="transition-colors hover:bg-slate-50 cursor-pointer" data-credit-id="{{ $credit->id }}" data-member-id="{{ $credit->member_id }}" onclick="toggleItems({{ $credit->id }})">
                         <td class="px-5 py-3.5">
                             <div class="font-medium text-slate-900">{{ $credit->member->first_name }} {{ $credit->member->last_name }}</div>
                             <div class="text-xs text-slate-400">{{ $credit->member->member_number }}</div>
@@ -104,16 +104,43 @@
                         <td class="whitespace-nowrap px-5 py-3.5 text-right">
                             <div class="flex items-center justify-end gap-1.5">
                                 @if($credit->status !== 'paid')
-                                <button onclick="openPayModal({{ $credit->id }}, '{{ $credit->member->first_name }} {{ $credit->member->last_name }}', {{ $credit->balance }})" class="cursor-pointer rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-brand-700">
+                                <button onclick="event.stopPropagation(); openPayModal({{ $credit->id }}, '{{ $credit->member->first_name }} {{ $credit->member->last_name }}', {{ $credit->balance }})" class="cursor-pointer rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-brand-700">
                                     <i class="fa fa-money"></i> Pay
                                 </button>
                                 @endif
-                                <a href="{{ route('credits.show', $credit->id) }}" class="cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50">
+                                <a href="{{ route('credits.show', $credit->id) }}" onclick="event.stopPropagation()" class="cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50">
                                     View
                                 </a>
                             </div>
                         </td>
                     </tr>
+                    @if($credit->items_snapshot)
+                    <tr id="items-{{ $credit->id }}" style="display: none;">
+                        <td colspan="7" class="bg-slate-50 px-5 py-3">
+                            <div class="text-xs font-semibold text-slate-500 mb-2">Items Purchased on Credit</div>
+                            <table class="w-full text-xs">
+                                <thead>
+                                    <tr class="text-slate-400">
+                                        <th class="pb-1 text-left font-medium">Product</th>
+                                        <th class="pb-1 text-right font-medium">Price</th>
+                                        <th class="pb-1 text-right font-medium">Qty</th>
+                                        <th class="pb-1 text-right font-medium">Subtotal</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-200">
+                                    @foreach($credit->items_snapshot as $item)
+                                    <tr>
+                                        <td class="py-1 text-slate-700 font-medium">{{ $item['product_name'] }}</td>
+                                        <td class="py-1 text-right text-slate-600">₱{{ number_format($item['price'], 2) }}</td>
+                                        <td class="py-1 text-right text-slate-600">{{ $item['quantity'] }}</td>
+                                        <td class="py-1 text-right text-slate-700 font-medium">₱{{ number_format($item['subtotal'], 2) }}</td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </td>
+                    </tr>
+                    @endif
                     @empty
                     <tr>
                         <td colspan="7" class="px-5 py-16 text-center">
@@ -153,6 +180,13 @@
 </div>
 
 <script>
+function toggleItems(creditId) {
+    const row = document.getElementById('items-' + creditId);
+    if (row) {
+        row.style.display = row.style.display === 'none' ? '' : 'none';
+    }
+}
+
 function openPayModal(creditId, memberName, balance) {
     document.getElementById('payModalMember').textContent = memberName + ' — Balance: ₱' + balance.toFixed(2);
     document.getElementById('payModalAmount').value = balance.toFixed(2);

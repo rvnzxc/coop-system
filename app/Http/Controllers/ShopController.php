@@ -130,6 +130,17 @@ class ShopController extends Controller
 
             // Create credit record if credit sale
             if ($paymentMethod === 'credit' && $memberId) {
+                $itemsSnapshot = [];
+                foreach ($cartItems as $cartItem) {
+                    $item = Item::where('item_name', $cartItem['name'])->first();
+                    $itemsSnapshot[] = [
+                        'product_name' => $cartItem['name'],
+                        'quantity'     => $cartItem['quantity'],
+                        'price'        => $item ? $item->price : 0,
+                        'subtotal'     => $item ? $item->price * $cartItem['quantity'] : 0,
+                    ];
+                }
+
                 Credit::create([
                     'member_id'      => $memberId,
                     'amount'         => $totalAmount,
@@ -137,6 +148,7 @@ class ShopController extends Controller
                     'status'         => 'unpaid',
                     'sale_reference' => $saleRef,
                     'notes'          => count($cartItems) . ' item(s) purchased on credit',
+                    'items_snapshot' => $itemsSnapshot,
                 ]);
             }
 

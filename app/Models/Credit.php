@@ -14,11 +14,13 @@ class Credit extends Model
         'status',
         'sale_reference',
         'notes',
+        'items_snapshot',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
         'amount_paid' => 'decimal:2',
+        'items_snapshot' => 'array',
     ];
 
     public function member()
