@@ -11,10 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('purchases', function (Blueprint $table) {
-            $table->id();
-            $table->timestamps();
-        });
+        // Scaffold superseded by 2026_05_12_213542 — no-op to avoid duplicate table creation in SQLite tests
     }
 
     /**
@@ -22,6 +19,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('purchases');
+        //
     }
 };

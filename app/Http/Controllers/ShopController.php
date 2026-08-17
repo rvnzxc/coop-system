@@ -81,6 +81,7 @@ class ShopController extends Controller
                         Purchase::create([
                             'member_id' => null,
                             'member_number' => null,
+                            'customer_type' => 'non_member',
                             'amount' => $item->price * $quantity,
                             'quantity' => $quantity,
                             'product_name' => $itemName,
@@ -104,6 +105,7 @@ class ShopController extends Controller
                             Purchase::create([
                                 'member_id' => $memberId,
                                 'member_number' => $member->member_number,
+                                'customer_type' => 'member',
                                 'amount' => $item->price * $quantity,
                                 'quantity' => $quantity,
                                 'product_name' => $itemName,
