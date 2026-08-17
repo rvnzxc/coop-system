@@ -168,12 +168,14 @@ class MemberController extends Controller
             ->orWhere('member_number', '#' . $paddedQ)
             ->orWhere('member_number', $paddedQ)
             ->orWhere('id', $q)
-            ->orWhere('member_number', 'LIKE', "%{$cleanQ}")
+            ->orWhere('member_number', 'LIKE', "%{$cleanQ}%")
             ->orWhere(
                 DB::raw("CONCAT(first_name, ' ', last_name)"),
                 'LIKE',
                 "%{$q}%"
             )
+            ->orWhere('email', 'LIKE', "%{$q}%")
+            ->orWhere('phone', 'LIKE', "%{$q}%")
             ->first();
 
         if ($member) {
