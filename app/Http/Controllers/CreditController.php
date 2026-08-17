@@ -23,13 +23,25 @@ class CreditController extends Controller
 
         $credits = $query->get();
 
+        $groupedCredits = $credits->groupBy('member_id')->map(function ($group) {
+            $member = $group->first()->member;
+            return [
+                'member'     => $member,
+                'credits'    => $group->values(),
+                'total'      => round($group->sum('amount'), 2),
+                'total_paid' => round($group->sum('amount_paid'), 2),
+                'balance'    => round($group->sum('amount') - $group->sum('amount_paid'), 2),
+                'has_unpaid' => $group->contains('status', 'unpaid') || $group->contains('status', 'partial'),
+            ];
+        });
+
         $totalOutstanding = Credit::outstanding()->sum(DB::raw('amount - amount_paid'));
         $unpaidCount = Credit::unpaid()->count();
         $partialCount = Credit::partial()->count();
         $membersWithDebt = Credit::outstanding()->distinct('member_id')->count('member_id');
 
         return view('credits.index', compact(
-            'credits',
+            'groupedCredits',
             'totalOutstanding',
             'unpaidCount',
             'partialCount',
