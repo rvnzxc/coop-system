@@ -44,123 +44,19 @@ class AnalyticsController extends Controller
         switch ($period) {
 
             case 'daily':
-                // Get date parameter, default to today
-                $dateParam = $request->query('date');
-                if (!$dateParam) {
-                    // If no date specified, use the most recent date with purchases
-                    $latestPurchase = Purchase::orderBy('created_at', 'desc')->first();
-                    if ($latestPurchase) {
-                        $selectedDate = Carbon::parse($latestPurchase->created_at)->startOfDay();
-                    } else {
-                        $selectedDate = Carbon::now()->startOfDay();
-                    }
-                } else {
-                    $selectedDate = Carbon::createFromFormat('Y-m-d', $dateParam)->startOfDay();
-                }
-                
-                \Log::info('Daily query date: ' . $selectedDate->format('Y-m-d H:i:s'));
-                
-                // Show hourly data for selected date using raw SQL to ensure it works
-                $dateStr = $selectedDate->format('Y-m-d');
-                $rows = DB::select("
-                    SELECT HOUR(created_at) as grp, SUM(amount) as value 
-                    FROM purchases 
-                    WHERE DATE(created_at) = ? 
-                    GROUP BY HOUR(created_at) 
-                    ORDER BY grp
-                ", [$dateStr]);
-                
-                // Convert to collection for consistency
-                $rows = collect($rows)->keyBy('grp');
-                
-                \Log::info('Daily query result count: ' . $rows->count());
-                if ($rows->count() > 0) {
-                    \Log::info('Sample daily result: ' . json_encode($rows->first()));
-                }
-
-                for ($i = 0; $i <= 23; $i++) {
-                    $hour = str_pad($i, 2, '0', STR_PAD_LEFT);
-                    $key = $i;
-                    $data[] = [
-                        'label' => $hour . ':00',
-                        'value' => isset($rows[$key]) ? (float)$rows[$key]->value : 0,
-                    ];
-                }
-                break;
-
-            case 'weekly':
-                // Get week parameter, default to current week (show last 7 days)
+                // Days within the selected ISO week (Mon–Sun), one point per day
                 $weekParam = $request->query('week');
                 if (!$weekParam) {
-                    // Default to last 7 days if no week specified
-                    $rows = DB::select("
-                        SELECT DATE(created_at) as grp, SUM(amount) as value 
-                        FROM purchases 
-                        WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-                        GROUP BY DATE(created_at) 
-                        ORDER BY grp
-                    ");
-                    
-                    // Convert to collection
-                    $rows = collect($rows)->keyBy('grp');
-
-                    for ($i = 6; $i >= 0; $i--) {
-                        $date = Carbon::now()->subDays($i);
-                        $key = $date->format('Y-m-d');
-                        $data[] = [
-                            'label' => $date->format('D, M j'),
-                            'value' => isset($rows[$key]) ? (float)$rows[$key]->value : 0,
-                        ];
-                    }
+                    // Default to the current ISO week
+                    $weekStart = Carbon::now()->startOfWeek();
                 } else {
-                    // Use specified week
                     list($year, $week) = explode('-', $weekParam);
-                    $selectedWeek = Carbon::now()->setISOWeekYear($year)->setISOWeek($week);
-                    
-                    $startDate = $selectedWeek->startOfWeek()->format('Y-m-d');
-                    $endDate = $selectedWeek->endOfWeek()->format('Y-m-d');
-                    
-                    $rows = DB::select("
-                        SELECT DATE(created_at) as grp, SUM(amount) as value 
-                        FROM purchases 
-                        WHERE created_at >= ? AND created_at <= ?
-                        GROUP BY DATE(created_at) 
-                        ORDER BY grp
-                    ", [$startDate, $endDate]);
-                    
-                    // Convert to collection
-                    $rows = collect($rows)->keyBy('grp');
-
-                    for ($i = 0; $i < 7; $i++) {
-                        $date = $selectedWeek->copy()->startOfWeek()->addDays($i);
-                        $key = $date->format('Y-m-d');
-                        $data[] = [
-                            'label' => $date->format('D, M j'),
-                            'value' => isset($rows[$key]) ? (float)$rows[$key]->value : 0,
-                        ];
-                    }
+                    $weekStart = Carbon::now()->setISODate((int)$year, (int)$week)->startOfWeek();
                 }
-                break;
 
-            case 'monthly':
-                // Get month parameter, default to current month
-                $monthParam = $request->query('month');
-                if (!$monthParam) {
-                    // If no month specified, use the most recent month with purchases
-                    $latestPurchase = Purchase::orderBy('created_at', 'desc')->first();
-                    if ($latestPurchase) {
-                        $selectedMonth = Carbon::parse($latestPurchase->created_at)->startOfMonth();
-                    } else {
-                        $selectedMonth = Carbon::now()->startOfMonth();
-                    }
-                } else {
-                    $selectedMonth = Carbon::createFromFormat('Y-m', $monthParam)->startOfMonth();
-                }
-                
-                $startDate = $selectedMonth->format('Y-m-d');
-                $endDate = $selectedMonth->copy()->endOfMonth()->format('Y-m-d');
-                
-                // Show all days in selected month
+                $startDate = $weekStart->format('Y-m-d');
+                $endDate = $weekStart->copy()->endOfWeek()->format('Y-m-d');
+
                 $rows = DB::select("
                     SELECT DATE(created_at) as grp, SUM(amount) as value 
                     FROM purchases 
@@ -168,40 +64,76 @@ class AnalyticsController extends Controller
                     GROUP BY DATE(created_at) 
                     ORDER BY grp
                 ", [$startDate, $endDate]);
-                
-                // Convert to collection
                 $rows = collect($rows)->keyBy('grp');
 
-                $daysInMonth = $selectedMonth->daysInMonth;
-                for ($i = 1; $i <= $daysInMonth; $i++) {
-                    $date = $selectedMonth->copy()->startOfMonth()->addDays($i - 1);
+                for ($i = 0; $i < 7; $i++) {
+                    $date = $weekStart->copy()->addDays($i);
                     $key = $date->format('Y-m-d');
                     $data[] = [
-                        'label' => $date->format('M j'),
+                        'label' => $date->format('D, M j'),
                         'value' => isset($rows[$key]) ? (float)$rows[$key]->value : 0,
                     ];
                 }
                 break;
 
-            case 'yearly':
-                // Get year parameter, default to current year
+            case 'weekly':
+                // ISO weeks within the selected month, summed per week
+                $monthParam = $request->query('month');
+                if (!$monthParam) {
+                    // Default to the most recent month with purchases
+                    $latestPurchase = Purchase::orderBy('created_at', 'desc')->first();
+                    $selectedMonth = $latestPurchase
+                        ? Carbon::parse($latestPurchase->created_at)->startOfMonth()
+                        : Carbon::now()->startOfMonth();
+                } else {
+                    $selectedMonth = Carbon::createFromFormat('Y-m', $monthParam)->startOfMonth();
+                }
+
+                $startDate = $selectedMonth->format('Y-m-d');
+                $endDate = $selectedMonth->copy()->endOfMonth()->format('Y-m-d');
+
+                // Daily totals for the selected month, then roll up into ISO weeks
+                $rows = DB::select("
+                    SELECT DATE(created_at) as grp, SUM(amount) as value 
+                    FROM purchases 
+                    WHERE created_at >= ? AND created_at <= ?
+                    GROUP BY DATE(created_at) 
+                    ORDER BY grp
+                ", [$startDate, $endDate]);
+                $rows = collect($rows)->keyBy('grp');
+
+                $weeks = [];
+                for ($i = 1; $i <= $selectedMonth->daysInMonth; $i++) {
+                    $date = $selectedMonth->copy()->startOfMonth()->addDays($i - 1);
+                    $key = $date->format('Y-m-d');
+                    $weekKey = $date->isoWeekYear() . '-' . str_pad((string)$date->isoWeek(), 2, '0', STR_PAD_LEFT);
+                    if (!isset($weeks[$weekKey])) {
+                        $weeks[$weekKey] = [
+                            'label' => 'W' . $date->isoWeek(),
+                            'value' => 0,
+                        ];
+                    }
+                    $weeks[$weekKey]['value'] += isset($rows[$key]) ? (float)$rows[$key]->value : 0;
+                }
+                $data = array_values($weeks);
+                break;
+
+            case 'monthly':
+                // Months within the selected year, one point per month
                 $yearParam = $request->query('year');
                 if (!$yearParam) {
-                    // If no year specified, use the most recent year with purchases
+                    // Default to the most recent year with purchases
                     $latestPurchase = Purchase::orderBy('created_at', 'desc')->first();
-                    if ($latestPurchase) {
-                        $selectedYear = Carbon::parse($latestPurchase->created_at)->startOfYear();
-                    } else {
-                        $selectedYear = Carbon::now()->startOfYear();
-                    }
+                    $selectedYear = $latestPurchase
+                        ? Carbon::parse($latestPurchase->created_at)->startOfYear()
+                        : Carbon::now()->startOfYear();
                 } else {
                     $selectedYear = Carbon::createFromDate($yearParam)->startOfYear();
                 }
-                
+
                 $startDate = $selectedYear->format('Y-m-d');
                 $endDate = $selectedYear->copy()->endOfYear()->format('Y-m-d');
-                
-                // Show monthly data for selected year
+
                 $rows = DB::select("
                     SELECT DATE_FORMAT(created_at, '%Y-%m') as grp, SUM(amount) as value 
                     FROM purchases 
@@ -209,8 +141,6 @@ class AnalyticsController extends Controller
                     GROUP BY DATE_FORMAT(created_at, '%Y-%m') 
                     ORDER BY grp
                 ", [$startDate, $endDate]);
-                
-                // Convert to collection
                 $rows = collect($rows)->keyBy('grp');
 
                 for ($i = 1; $i <= 12; $i++) {
@@ -219,6 +149,32 @@ class AnalyticsController extends Controller
                     $data[] = [
                         'label' => $month->format('M'),
                         'value' => isset($rows[$key]) ? (float)$rows[$key]->value : 0,
+                    ];
+                }
+                break;
+
+            case 'yearly':
+                // Annual totals across all years with purchases
+                $rows = DB::select("
+                    SELECT YEAR(created_at) as grp, SUM(amount) as value 
+                    FROM purchases 
+                    GROUP BY YEAR(created_at) 
+                    ORDER BY grp
+                ");
+                $rows = collect($rows)->keyBy('grp');
+
+                $years = $rows->keys()->map(function ($yr) {
+                    return (int)$yr;
+                });
+                if ($years->isEmpty()) {
+                    // No purchases at all yet; still show the current year as a zero point
+                    $years = collect([Carbon::now()->year]);
+                }
+
+                foreach ($years as $yr) {
+                    $data[] = [
+                        'label' => (string)$yr,
+                        'value' => isset($rows[$yr]) ? (float)$rows[$yr]->value : 0,
                     ];
                 }
                 break;

@@ -215,11 +215,45 @@ class MemberController extends Controller
     public function memberAnalytics($id)
     {
         $member = Member::findOrFail($id);
-        
-        // Get member's purchase history
-        $purchases = $member->purchases()->orderBy('purchase_date', 'desc')->get();
-        
-        return view('members.member-analytics', compact('member', 'purchases'));
+
+        // Fetch the member's purchase line items in a single query.
+        // There is no receipt/order column, but every item from the same
+        // checkout is inserted within a single request, so the rows share
+        // the exact same created_at timestamp - that is the grouping key.
+        $purchases = $member->purchases()
+            ->orderBy('created_at', 'desc')
+            ->orderBy('id', 'asc')
+            ->get();
+
+        $transactions = $purchases
+            ->groupBy(function ($purchase) {
+                return $purchase->created_at->format('Y-m-d H:i:s');
+            })
+            ->map(function ($group) {
+                $items = $group->sortBy('id')->values();
+
+                return [
+                    'datetime'   => $group->first()->created_at->format('Y-m-d H:i:s'),
+                    'item_count' => $items->sum(function ($item) {
+                        return (int) $item->quantity;
+                    }) ?: $items->count(),
+                    'total'      => (float) $group->sum('amount'),
+                    'items'      => $items->map(function ($item) {
+                        $quantity = (int) $item->quantity;
+
+                        return [
+                            'product_name' => $item->product_name,
+                            'price'        => (float) $item->amount / max(1, $quantity),
+                            'quantity'     => $quantity ?: 1,
+                            'amount'       => (float) $item->amount,
+                        ];
+                    }),
+                ];
+            })
+            ->sortByDesc('datetime')
+            ->values();
+
+        return view('members.member-analytics', compact('member', 'transactions'));
     }
 
     public function card($id)

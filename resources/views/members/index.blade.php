@@ -1,104 +1,157 @@
 @extends('layouts.app')
 
+@section('title', 'Members')
+
 @section('content')
-<div style="background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 30px; width: 90%; margin: 20px auto; max-width: none;">
+<div class="mx-auto max-w-7xl">
     @if(session('success'))
-        <div class="alert alert-success">
+        <div class="mb-6 flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+            <i class="fa fa-check-circle"></i>
             {{ session('success') }}
         </div>
     @endif
-    
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-        <h2 style="color: #1b3a1b; font-size: 28px; font-weight: bold; margin: 0;">Members Management</h2>
-        <div style="display: flex; gap: 15px; align-items: center;">
-            <form action="{{ route('members.index') }}" method="GET" style="display: flex; gap: 10px;">
-                <input type="text" name="search" placeholder="Search members..." value="{{ $search ?? '' }}" style="padding: 10px 15px; border: 1px solid #ddd; border-radius: 6px; width: 250px;">
-                <button type="submit" style="background: #1b3a1b; color: #fff; padding: 10px 20px; border-radius: 6px; font-weight: bold; border: none; cursor: pointer;">Search</button>
+
+    {{-- Page header --}}
+    <div class="mb-6 flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+        <div class="min-w-0">
+            <h2 class="text-xl font-bold text-slate-900">Members Management</h2>
+            <p class="mt-0.5 text-sm text-slate-500">Track member profiles, purchases, and loyalty</p>
+        </div>
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <form action="{{ route('members.index') }}" method="GET" class="flex gap-2">
+                <div class="relative">
+                    <i class="fa fa-search pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400"></i>
+                    <input type="text" name="search" placeholder="Search members..." value="{{ $search ?? '' }}" class="w-full rounded-lg border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 sm:w-64">
+                </div>
+                <x-button type="submit" color="secondary" size="sm">Search</x-button>
             </form>
-            <button onclick="location.href='{{ route('members.create') }}'" style="background: #27ae60; color: #fff; padding: 10px 20px; border-radius: 6px; font-weight: bold; border: none; cursor: pointer;">+ Add Member</button>
+            <x-button href="{{ route('members.create') }}" color="primary">
+                <i class="fa fa-user-plus"></i> Add Member
+            </x-button>
         </div>
     </div>
 
-    <div style="background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden; max-height: calc(100vh - 200px); overflow-y: auto; width: 100%; margin: 0;">
-        <table style="width: 100%; border-collapse: collapse; margin: 0;">
-            <thead>
-                <tr>
-                    <th style="background: #1b3a1b; color: #fff; padding: 15px; text-align: left; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Name</th>
-                    <th style="background: #1b3a1b; color: #fff; padding: 15px; text-align: left; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Email</th>
-                    <th style="background: #1b3a1b; color: #fff; padding: 15px; text-align: left; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Phone</th>
-                    <th style="background: #1b3a1b; color: #fff; padding: 15px; text-align: left; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Total Purchases</th>
-                    <th style="background: #1b3a1b; color: #fff; padding: 15px; text-align: left; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Purchase Count</th>
-                    <th style="background: #1b3a1b; color: #fff; padding: 15px; text-align: left; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Last Purchase</th>
-                    <th style="background: #1b3a1b; color: #fff; padding: 15px; text-align: left; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Status</th>
-                    <th style="background: #1b3a1b; color: #fff; padding: 15px; text-align: left; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($members as $member)
-                <tr style="transition: background 0.3s ease;">
-                    <td style="padding: 15px; border-bottom: 1px solid #eee; vertical-align: middle; white-space: nowrap; min-width: 180px;">{{ $member->first_name }} {{ $member->last_name }}</td>
-                    <td style="padding: 15px; border-bottom: 1px solid #eee; vertical-align: middle;">{{ $member->email ?? 'N/A' }}</td>
-                    <td style="padding: 15px; border-bottom: 1px solid #eee; vertical-align: middle;">{{ $member->phone ?? 'N/A' }}</td>
-                    <td style="padding: 15px; border-bottom: 1px solid #eee; vertical-align: middle;">₱{{ number_format($member->total_purchases, 2) }}</td>
-                    <td style="padding: 15px; border-bottom: 1px solid #eee; vertical-align: middle;">{{ $member->purchase_count }}</td>
-                    <td style="padding: 15px; border-bottom: 1px solid #eee; vertical-align: middle; white-space: nowrap; min-width: 130px;">{{ $member->last_purchase_date ? $member->last_purchase_date->format('M d, Y') : 'Never' }}</td>
-                    <td style="padding: 15px; border-bottom: 1px solid #eee; vertical-align: middle;">
-                        @if($member->is_active)
-                            <span style="background: #e8f5e8; color: #2d5a2d; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;">Active</span>
-                        @else
-                            <span style="background: #ffe8e8; color: #d32f2f; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;">Inactive</span>
-                        @endif
-                    </td>
-                    <td style="padding: 15px; border-bottom: 1px solid #eee; vertical-align: middle; width: 500px; min-width: 500px;">
-                        <div class="action-buttons" style="display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; white-space: nowrap;">
-                            <button class="btn-edit" onclick="location.href='{{ route('members.edit', $member->id) }}'" title="Edit Member">
-                                <i class="fa fa-edit"></i> Edit
-                            </button>
-                            <button class="btn-analytics" onclick="location.href='{{ route('members.analytics', $member->id) }}'" title="View Member Analytics">
-                                <i class="fa fa-chart-bar"></i> Analytics
-                            </button>
-                            <button class="btn-view" onclick="location.href='{{ route('members.card', $member->id) }}'" title="View Member Card">
-                                <i class="fa fa-id-card"></i> Card
-                            </button>
-                            <form action="{{ route('members.destroy', $member->id) }}" method="POST" class="delete-form" style="margin: 0;">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn-delete" onclick="return confirm('Are you sure you want to delete this member?')" title="Delete Member">
-                                    <i class="fa fa-trash"></i> Delete
-                                </button>
-                            </form>
-                        </div>
-                    </td>
-                </tr>
-                @empty
-                <tr>
-                    <td colspan="8" style="text-align: center; padding: 60px 20px;">
-                        <div style="text-align: center;">
-                            <i class="fas fa-users" style="font-size: 48px; color: #ccc; margin-bottom: 20px; display: block;"></i>
-                            <h4 style="font-size: 18px; color: #666; margin-bottom: 20px;">No members found</h4>
-                            <p style="font-size: 18px; color: #666; margin-bottom: 20px;">Start by adding your first member.</p>
-                            <button onclick="location.href='{{ route('members.create') }}'" style="background: #27ae60; color: #fff; padding: 10px 20px; border-radius: 6px; font-weight: bold; border: none; cursor: pointer;">Add Your First Member</button>
-                        </div>
-                    </td>
-                </tr>
-                @endforelse
-            </tbody>
-        </table>
+    {{-- Summary stats --}}
+    @php
+        $totalMembers = $members->count();
+        $activeCount = $members->where('is_active', true)->count();
+        $totalPurchases = $members->sum('total_purchases');
+    @endphp
+    <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div class="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-base text-brand-600">
+                <i class="fa fa-users"></i>
+            </div>
+            <div class="min-w-0">
+                <div class="truncate text-xl font-bold text-slate-900">{{ $totalMembers }}</div>
+                <div class="text-xs text-slate-500">Total Members</div>
+            </div>
+        </div>
+        <div class="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-base text-emerald-600">
+                <i class="fa fa-check-circle"></i>
+            </div>
+            <div class="min-w-0">
+                <div class="truncate text-xl font-bold text-slate-900">{{ $activeCount }}</div>
+                <div class="text-xs text-slate-500">Active Members</div>
+            </div>
+        </div>
+        <div class="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-50 text-base text-sky-600">
+                <i class="fa fa-money"></i>
+            </div>
+            <div class="min-w-0">
+                <div class="truncate text-xl font-bold text-slate-900">₱{{ number_format($totalPurchases, 2) }}</div>
+                <div class="text-xs text-slate-500">Total Purchases</div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Members table --}}
+    <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div class="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+            <h3 class="text-sm font-semibold text-slate-900">Member Records</h3>
+            @if($search)
+                <a href="{{ route('members.index') }}" class="text-xs font-medium text-slate-500 transition-colors hover:text-brand-600">
+                    <i class="fa fa-times"></i> Clear search
+                </a>
+            @endif
+        </div>
+        <div class="max-h-[calc(100vh-24rem)] overflow-auto">
+            <table class="w-full text-left text-sm">
+                <thead class="sticky top-0 z-10 bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
+                    <tr>
+                        <th class="px-5 py-3.5 font-semibold">Member</th>
+                        <th class="px-5 py-3.5 font-semibold">Contact</th>
+                        <th class="px-5 py-3.5 text-right font-semibold">Purchases</th>
+                        <th class="px-5 py-3.5 font-semibold">Last Purchase</th>
+                        <th class="px-5 py-3.5 font-semibold">Status</th>
+                        <th class="px-5 py-3.5 text-right font-semibold">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    @forelse($members as $member)
+                    <tr class="transition-colors hover:bg-slate-50">
+                        <td class="px-5 py-3.5">
+                            <div class="font-medium text-slate-900">{{ $member->first_name }} {{ $member->last_name }}</div>
+                            <div class="text-xs text-slate-400">#{{ $member->member_number }}</div>
+                        </td>
+                        <td class="px-5 py-3.5">
+                            <div class="text-slate-600">{{ $member->email ?? 'N/A' }}</div>
+                            <div class="text-xs text-slate-400">{{ $member->phone ?? 'No phone' }}</div>
+                        </td>
+                        <td class="whitespace-nowrap px-5 py-3.5 text-right">
+                            <div class="font-semibold text-slate-700">₱{{ number_format($member->total_purchases, 2) }}</div>
+                            <div class="text-xs text-slate-400">{{ $member->purchase_count }} transaction{{ $member->purchase_count != 1 ? 's' : '' }}</div>
+                        </td>
+                        <td class="whitespace-nowrap px-5 py-3.5 text-slate-500">{{ $member->last_purchase_date ? $member->last_purchase_date->format('M d, Y') : 'Never' }}</td>
+                        <td class="px-5 py-3.5">
+                            @if($member->is_active)
+                                <x-badge color="green"><i class="fa fa-circle text-[6px]"></i> Active</x-badge>
+                            @else
+                                <x-badge color="red"><i class="fa fa-circle text-[6px]"></i> Inactive</x-badge>
+                            @endif
+                        </td>
+                        <td class="whitespace-nowrap px-5 py-3.5">
+                            <div class="flex items-center justify-end gap-1.5">
+                                <x-button href="{{ route('members.edit', $member->id) }}" color="secondary" size="sm" title="Edit Member">
+                                    <i class="fa fa-edit"></i>
+                                </x-button>
+                                <x-button href="{{ route('members.analytics', $member->id) }}" color="secondary" size="sm" title="View Analytics">
+                                    <i class="fa fa-bar-chart"></i>
+                                </x-button>
+                                <x-button href="{{ route('members.card', $member->id) }}" color="secondary" size="sm" title="View ID Card">
+                                    <i class="fa fa-id-card"></i>
+                                </x-button>
+                                <form action="{{ route('members.destroy', $member->id) }}" method="POST" class="delete-form">
+                                    @csrf
+                                    @method('DELETE')
+                                    <x-button type="submit" color="dangerGhost" size="sm" title="Delete Member" onclick="return confirm('Are you sure you want to delete this member?')">
+                                        <i class="fa fa-trash"></i>
+                                    </x-button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="6" class="px-5 py-16 text-center">
+                            <div class="flex flex-col items-center">
+                                <div class="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-2xl text-slate-400">
+                                    <i class="fa fa-users"></i>
+                                </div>
+                                <p class="text-base font-semibold text-slate-700">{{ $search ? 'No members match your search' : 'No members found' }}</p>
+                                <p class="mt-1 text-sm text-slate-500">{{ $search ? 'Try a different search term.' : 'Start by adding your first member.' }}</p>
+                                <x-button href="{{ route('members.create') }}" color="primary" class="mt-5">
+                                    <i class="fa fa-user-plus"></i> Add Your First Member
+                                </x-button>
+                            </div>
+                        </td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
-
-<script>
-// Add hover effect to table rows
-document.addEventListener('DOMContentLoaded', function() {
-    const rows = document.querySelectorAll('tbody tr');
-    rows.forEach(row => {
-        row.addEventListener('mouseenter', function() {
-            this.style.background = '#f8f9fa';
-        });
-        row.addEventListener('mouseleave', function() {
-            this.style.background = '';
-        });
-    });
-});
-</script>
 @endsection

@@ -3,46 +3,40 @@
 @section('title', 'Edit Item')
 
 @section('content')
-<div class="inventory-container">
-    <div class="inventory-header">
-        <h2>Edit Item</h2>
-        <div class="inventory-actions">
-            <button class="btn-add" onclick="location.href='{{ route('inventory.index') }}'">Back to Inventory</button>
+@php
+    $inputClass = 'w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30';
+@endphp
+
+<div class="mx-auto max-w-xl">
+    <div class="mb-6 flex items-center justify-between gap-3">
+        <div>
+            <h2 class="text-xl font-bold text-slate-900">Edit Item</h2>
+            <p class="mt-0.5 text-sm text-slate-500">Update the details of this product</p>
         </div>
+        <x-button href="{{ route('inventory.index') }}" color="secondary" size="sm">
+            <i class="fa fa-arrow-left"></i> Back
+        </x-button>
     </div>
 
-    <div class="inventory-form-container">
-        <form action="{{ route('inventory.update', $item->id) }}" method="POST" class="inventory-form">
+    <x-card>
+        <form action="{{ route('inventory.update', $item->id) }}" method="POST" class="space-y-5">
             @csrf
             @method('PUT')
-            
-            <div class="form-group">
-                <label for="item_name">Item Name</label>
-                <input type="text" id="item_name" name="item_name" class="form-control" value="{{ $item->item_name }}" required>
-                @error('item_name')
-                    <span class="error-message">{{ $message }}</span>
-                @enderror
-            </div>
 
-            <div class="form-group">
-                <label for="quantity">Quantity</label>
-                <input type="number" id="quantity" name="quantity" class="form-control" value="{{ $item->quantity }}" min="0" required>
-                @error('quantity')
-                    <span class="error-message">{{ $message }}</span>
-                @enderror
-            </div>
+            <x-field label="Item Name" name="item_name" required>
+                <input type="text" id="item_name" name="item_name" value="{{ $item->item_name }}" required class="{{ $inputClass }}">
+            </x-field>
 
-            <div class="form-group">
-                <label for="price">Price</label>
-                <input type="number" id="price" name="price" class="form-control" value="{{ $item->price }}" step="0.01" min="0" required>
-                @error('price')
-                    <span class="error-message">{{ $message }}</span>
-                @enderror
-            </div>
+            <x-field label="Quantity" name="quantity" required>
+                <input type="number" id="quantity" name="quantity" value="{{ $item->quantity }}" min="0" required class="{{ $inputClass }}">
+            </x-field>
 
-            <div class="form-group">
-                <label for="category">Category</label>
-                <select id="category" name="category" class="form-control" required>
+            <x-field label="Price" name="price" required>
+                <input type="number" id="price" name="price" value="{{ $item->price }}" step="0.01" min="0" required class="{{ $inputClass }}">
+            </x-field>
+
+            <x-field label="Category" name="category" required>
+                <select id="category" name="category" required class="{{ $inputClass }}">
                     <option value="">Select Category</option>
                     <option value="disposable" {{ $item->category == 'disposable' ? 'selected' : '' }}>Disposable</option>
                     <option value="condiments" {{ $item->category == 'condiments' ? 'selected' : '' }}>Condiments</option>
@@ -57,16 +51,17 @@
                     <option value="candy" {{ $item->category == 'candy' ? 'selected' : '' }}>Candy</option>
                     <option value="essentials" {{ $item->category == 'essentials' ? 'selected' : '' }}>Essentials</option>
                 </select>
-                @error('category')
-                    <span class="error-message">{{ $message }}</span>
-                @enderror
-            </div>
+            </x-field>
 
-            <div class="form-actions">
-                <button type="submit" class="btn-submit">Update Item</button>
-                <button type="button" class="btn-cancel" onclick="location.href='{{ route('inventory.index') }}'">Cancel</button>
+            <div class="flex gap-3 pt-2">
+                <x-button type="submit" color="primary" class="flex-1">
+                    <i class="fa fa-save"></i> Update Item
+                </x-button>
+                <x-button type="button" color="secondary" onclick="location.href='{{ route('inventory.index') }}'">
+                    Cancel
+                </x-button>
             </div>
         </form>
-    </div>
+    </x-card>
 </div>
 @endsection
