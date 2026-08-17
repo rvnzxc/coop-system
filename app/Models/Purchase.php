@@ -11,6 +11,7 @@ class Purchase extends Model
         'member_id',
         'member_number',
         'customer_type',
+        'payment_method',
         'amount',
         'quantity',
         'product_name',

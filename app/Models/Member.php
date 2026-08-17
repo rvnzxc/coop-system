@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 class Member extends Model
 {
@@ -40,5 +41,20 @@ class Member extends Model
     public function purchases()
     {
         return $this->hasMany(Purchase::class);
+    }
+
+    public function credits()
+    {
+        return $this->hasMany(Credit::class);
+    }
+
+    public function getOutstandingCreditBalanceAttribute()
+    {
+        return (float) $this->credits()->outstanding()->sum(DB::raw('amount - amount_paid'));
+    }
+
+    public function getHasUnpaidCreditAttribute()
+    {
+        return $this->credits()->outstanding()->exists();
     }
 }

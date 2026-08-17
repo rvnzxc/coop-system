@@ -94,7 +94,7 @@
                     <tr class="transition-colors hover:bg-slate-50">
                         <td class="px-5 py-3.5">
                             <div class="font-medium text-slate-900">{{ $member->first_name }} {{ $member->last_name }}</div>
-                            <div class="text-xs text-slate-400">#{{ $member->member_number }}</div>
+                            <div class="text-xs text-slate-400">{{ $member->member_number }}</div>
                         </td>
                         <td class="px-5 py-3.5">
                             <div class="text-slate-600">{{ $member->email ?? 'N/A' }}</div>

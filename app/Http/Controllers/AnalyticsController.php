@@ -271,4 +271,83 @@ class AnalyticsController extends Controller
         }
         return $yearlyData;
     }
+
+    public function getCustomerTypeBreakdown(Request $request)
+    {
+        $period = $request->query('period', 'monthly');
+        $startDate = null;
+        $endDate = null;
+
+        switch ($period) {
+            case 'daily':
+                $weekParam = $request->query('week');
+                if ($weekParam) {
+                    list($year, $week) = explode('-', $weekParam);
+                    $weekStart = Carbon::now()->setISODate((int)$year, (int)$week)->startOfWeek();
+                } else {
+                    $weekStart = Carbon::now()->startOfWeek();
+                }
+                $startDate = $weekStart->format('Y-m-d');
+                $endDate = $weekStart->copy()->endOfWeek()->format('Y-m-d');
+                break;
+
+            case 'weekly':
+                $monthParam = $request->query('month');
+                if ($monthParam) {
+                    $selectedMonth = Carbon::createFromFormat('Y-m', $monthParam)->startOfMonth();
+                } else {
+                    $selectedMonth = Carbon::now()->startOfMonth();
+                }
+                $startDate = $selectedMonth->format('Y-m-d');
+                $endDate = $selectedMonth->copy()->endOfMonth()->format('Y-m-d');
+                break;
+
+            case 'monthly':
+                $yearParam = $request->query('year');
+                if ($yearParam) {
+                    $selectedYear = Carbon::createFromDate($yearParam)->startOfYear();
+                } else {
+                    $selectedYear = Carbon::now()->startOfYear();
+                }
+                $startDate = $selectedYear->format('Y-m-d');
+                $endDate = $selectedYear->copy()->endOfYear()->format('Y-m-d');
+                break;
+
+            case 'yearly':
+                $startDate = null;
+                $endDate = null;
+                break;
+        }
+
+        $query = DB::table('purchases')
+            ->select('customer_type', DB::raw('SUM(amount) as total'), DB::raw('COUNT(*) as count'));
+
+        if ($startDate && $endDate) {
+            $query->whereBetween('purchase_date', [$startDate, $endDate]);
+        }
+
+        $breakdown = $query->groupBy('customer_type')->get();
+
+        $memberTotal = 0;
+        $nonMemberTotal = 0;
+        $memberCount = 0;
+        $nonMemberCount = 0;
+
+        foreach ($breakdown as $row) {
+            if ($row->customer_type === 'member') {
+                $memberTotal = (float) $row->total;
+                $memberCount = (int) $row->count;
+            } else {
+                $nonMemberTotal = (float) $row->total;
+                $nonMemberCount = (int) $row->count;
+            }
+        }
+
+        return response()->json([
+            'member_total'     => round($memberTotal, 2),
+            'non_member_total' => round($nonMemberTotal, 2),
+            'member_count'     => $memberCount,
+            'non_member_count' => $nonMemberCount,
+        ]);
+    }
 }

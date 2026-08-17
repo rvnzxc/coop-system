@@ -159,8 +159,16 @@ class MemberController extends Controller
     {
         $q = $request->query('q');
 
+        $cleanQ = ltrim($q, '#');
+        $cleanQ = preg_replace('/^MEM/i', '', $cleanQ);
+        $paddedQ = str_pad($cleanQ, 5, '0', STR_PAD_LEFT);
+
         $member = Member::where('member_number', $q)
+            ->orWhere('member_number', 'MEM' . $paddedQ)
+            ->orWhere('member_number', '#' . $paddedQ)
+            ->orWhere('member_number', $paddedQ)
             ->orWhere('id', $q)
+            ->orWhere('member_number', 'LIKE', "%{$cleanQ}")
             ->orWhere(
                 DB::raw("CONCAT(first_name, ' ', last_name)"),
                 'LIKE',
@@ -171,7 +179,8 @@ class MemberController extends Controller
         if ($member) {
             return response()->json([
                 'found' => true,
-                'member' => $member
+                'member' => $member,
+                'outstanding_credit_balance' => $member->outstanding_credit_balance,
             ]);
         }
 

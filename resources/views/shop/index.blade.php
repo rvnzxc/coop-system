@@ -68,6 +68,17 @@
             <button onclick="clearMember()" class="cursor-pointer border-0 bg-transparent text-lg leading-none text-red-500 hover:text-red-700">&#x2715;</button>
           </div>
 
+          <!-- Credit balance display (hidden by default) -->
+          <div id="creditBalanceSection" style="display: none;" class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <i class="fa fa-credit-card text-sm text-amber-600"></i>
+                <span class="text-xs font-medium text-amber-700">Outstanding Credit: <span id="creditBalanceAmount" class="font-bold">P0.00</span></span>
+              </div>
+              <button onclick="openPayCreditModal()" class="cursor-pointer rounded bg-amber-600 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-amber-700">Pay</button>
+            </div>
+          </div>
+
           <!-- Scanner input -->
           <div id="scannerInputSection">
             <label for="memberScanInput" class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -105,6 +116,20 @@
         <div class="checkout-items min-h-0 flex-1 overflow-y-auto rounded-lg border border-slate-200 p-2 max-h-48 sm:max-h-72 lg:max-h-96 xl:max-h-none">
             <div class="empty-cart py-8 text-center text-sm text-slate-400">No items in cart</div>
         </div>
+
+        <!-- Payment method selection (members only) -->
+        <div id="paymentMethodSection" style="display: none;" class="mt-3 shrink-0">
+          <div class="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Payment Method</div>
+          <div class="flex gap-2">
+            <button onclick="setPaymentMethod('cash')" id="btnCash" class="flex-1 cursor-pointer rounded-lg border-2 border-brand-600 bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-700 transition-colors">
+              <i class="fa fa-money mr-1"></i> Cash
+            </button>
+            <button onclick="setPaymentMethod('credit')" id="btnCredit" class="flex-1 cursor-pointer rounded-lg border-2 border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition-colors hover:border-brand-300 hover:text-brand-600">
+              <i class="fa fa-credit-card mr-1"></i> Credit
+            </button>
+          </div>
+        </div>
+
         <div class="total mt-4 -mx-5 shrink-0 border-t border-slate-100 px-5 py-3 text-right text-lg font-bold text-slate-900">TOTAL P0.00</div>
         <div class="checkout-actions mt-1 flex shrink-0 gap-3">
             <button class="btn-cancel flex-1 cursor-pointer rounded-lg border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50" onclick="cancelCheckout()">CANCEL</button>
@@ -114,6 +139,7 @@
         <!-- Hidden inputs for member tracking -->
         <input type="hidden" id="selectedMemberIdInput" name="member_id" value="">
         <input type="hidden" id="isNonMemberInput" name="is_non_member" value="0">
+        <input type="hidden" id="paymentMethodInput" name="payment_method" value="cash">
     </aside>
 </div>
 
@@ -125,6 +151,8 @@ let total = 0;
 // Member tracking
 let currentMember = null;
 let isNonMember = false;
+let selectedPaymentMethod = 'cash';
+let currentOutstandingBalance = 0;
 
 document.addEventListener('DOMContentLoaded', function() {
     // Search functionality
@@ -232,13 +260,31 @@ function cancelCheckout() {
     clearMember();
 }
 
+// Payment method
+function setPaymentMethod(method) {
+    selectedPaymentMethod = method;
+    document.getElementById('paymentMethodInput').value = method;
+
+    const btnCash = document.getElementById('btnCash');
+    const btnCredit = document.getElementById('btnCredit');
+
+    if (method === 'cash') {
+        btnCash.className = 'flex-1 cursor-pointer rounded-lg border-2 border-brand-600 bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-700 transition-colors';
+        btnCredit.className = 'flex-1 cursor-pointer rounded-lg border-2 border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition-colors hover:border-brand-300 hover:text-brand-600';
+        document.querySelector('.btn-pay').textContent = `PAY (P${total.toFixed(2)})`;
+    } else {
+        btnCredit.className = 'flex-1 cursor-pointer rounded-lg border-2 border-brand-600 bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-700 transition-colors';
+        btnCash.className = 'flex-1 cursor-pointer rounded-lg border-2 border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition-colors hover:border-brand-300 hover:text-brand-600';
+        document.querySelector('.btn-pay').textContent = `CHARGE TO CREDIT (P${total.toFixed(2)})`;
+    }
+}
+
 async function processPayment() {
     if (cart.length === 0) {
         alert('Your cart is empty!');
         return;
     }
 
-    // Check if member or non-member is selected
     if (!currentMember && !isNonMember) {
         alert('Please scan a member or select Non-Member before paying.');
         return;
@@ -258,34 +304,20 @@ async function processPayment() {
             body: JSON.stringify({
                 items: cart,
                 member_id: document.getElementById('selectedMemberIdInput').value,
-                is_non_member: document.getElementById('isNonMemberInput').value
+                is_non_member: document.getElementById('isNonMemberInput').value,
+                payment_method: document.getElementById('paymentMethodInput').value
             })
         });
 
         const result = await response.json();
 
         if (result.success) {
-            // Save sale to localStorage for analytics
-            const sale = {
-                id: Date.now().toString(),
-                date: new Date().toISOString(),
-                total: total,
-                items: [...cart]
-            };
-            
-            const existing = JSON.parse(localStorage.getItem("ccf_sales") || "[]");
-            existing.push(sale);
-            localStorage.setItem("ccf_sales", JSON.stringify(existing));
-            
-            console.log('Sale saved to localStorage:', sale);
-            console.log('Total sales in localStorage:', existing.length);
-            
-            alert('Payment successful! Inventory updated.');
+            alert(result.message || 'Payment successful! Inventory updated.');
             cart = [];
             total = 0;
+            selectedPaymentMethod = 'cash';
             updateCart();
             clearMember();
-            // Refresh the page to show updated quantities
             setTimeout(() => {
                 window.location.reload();
             }, 1500);
@@ -303,19 +335,15 @@ async function processPayment() {
 // Member lookup functions
 async function lookupMember() {
   const query = document.getElementById('memberScanInput').value.trim();
-  console.log('Looking up member with query:', query);
-  
   if (!query) return;
 
   try {
     const response = await fetch(`/members/lookup?q=${encodeURIComponent(query)}`);
     const data = await response.json();
-    console.log('Lookup response:', data);
 
     if (data.found) {
       currentMember = data.member;
       isNonMember = false;
-      console.log('Member found:', data.member);
 
       document.getElementById('selectedMemberName').textContent = data.member.first_name + ' ' + data.member.last_name;
       document.getElementById('selectedMemberID').textContent = 'ID: ' + data.member.member_number;
@@ -326,8 +354,21 @@ async function lookupMember() {
       document.getElementById('memberScanError').style.display = 'none';
       document.getElementById('selectedMemberIdInput').value = data.member.id;
       document.getElementById('isNonMemberInput').value = '0';
+
+      // Show payment method section
+      document.getElementById('paymentMethodSection').style.display = 'block';
+      setPaymentMethod('cash');
+
+      // Show credit balance if any
+      const balance = parseFloat(data.outstanding_credit_balance) || 0;
+      currentOutstandingBalance = balance;
+      if (balance > 0) {
+        document.getElementById('creditBalanceAmount').textContent = 'P' + balance.toFixed(2);
+        document.getElementById('creditBalanceSection').style.display = 'block';
+      } else {
+        document.getElementById('creditBalanceSection').style.display = 'none';
+      }
     } else {
-      console.log('Member not found');
       document.getElementById('memberScanError').style.display = 'block';
     }
   } catch (e) {
@@ -346,11 +387,16 @@ function setNonMember() {
   document.getElementById('nonMemberBadge').style.display = 'flex';
   document.getElementById('selectedMemberIdInput').value = '';
   document.getElementById('isNonMemberInput').value = '1';
+  document.getElementById('paymentMethodSection').style.display = 'none';
+  document.getElementById('creditBalanceSection').style.display = 'none';
+  document.getElementById('paymentMethodInput').value = 'cash';
+  selectedPaymentMethod = 'cash';
 }
 
 function clearMember() {
   currentMember = null;
   isNonMember = false;
+  currentOutstandingBalance = 0;
 
   document.getElementById('selectedMemberDisplay').style.display = 'none';
   document.getElementById('nonMemberBadge').style.display = 'none';
@@ -360,6 +406,87 @@ function clearMember() {
   document.getElementById('selectedMemberIdInput').value = '';
   document.getElementById('isNonMemberInput').value = '0';
   document.getElementById('memberScanError').style.display = 'none';
+  document.getElementById('paymentMethodSection').style.display = 'none';
+  document.getElementById('creditBalanceSection').style.display = 'none';
+  document.getElementById('paymentMethodInput').value = 'cash';
+  selectedPaymentMethod = 'cash';
+}
+
+// Pay credit modal
+function openPayCreditModal() {
+  if (!currentMember || currentOutstandingBalance <= 0) return;
+
+  const remaining = currentOutstandingBalance;
+  const modal = document.createElement('div');
+  modal.id = 'payCreditModal';
+  modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50';
+  modal.innerHTML = `
+    <div class="mx-4 w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
+      <h3 class="mb-1 text-base font-bold text-slate-900">Pay Credit</h3>
+      <p class="mb-4 text-sm text-slate-500">${currentMember.first_name} ${currentMember.last_name} — Outstanding: P${remaining.toFixed(2)}</p>
+      <div class="mb-4">
+        <label class="mb-1 block text-xs font-semibold text-slate-600">Payment Amount</label>
+        <input type="number" id="payCreditAmount" step="0.01" min="0.01" max="${remaining}" value="${remaining.toFixed(2)}" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30">
+      </div>
+      <div class="flex gap-3">
+        <button onclick="document.getElementById('payCreditModal').remove()" class="flex-1 cursor-pointer rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50">Cancel</button>
+        <button onclick="submitCreditPayment()" class="flex-1 cursor-pointer rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700">Record Payment</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+async function submitCreditPayment() {
+  const amount = parseFloat(document.getElementById('payCreditAmount').value);
+  if (!amount || amount <= 0) {
+    alert('Please enter a valid amount.');
+    return;
+  }
+
+  if (!currentMember) return;
+
+  try {
+    const response = await fetch(`/members/lookup?q=${currentMember.member_number}`);
+    const data = await response.json();
+
+    if (data.found && data.outstanding_credit_balance > 0) {
+      // We need the credit_id — fetch it from the credits page
+      const creditsResponse = await fetch(`/credits?status=unpaid`);
+      const html = await creditsResponse.text();
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      const creditRows = doc.querySelectorAll('tr[data-member-id="' + currentMember.id + '"]');
+
+      if (creditRows.length > 0) {
+        const creditId = creditRows[0].dataset.creditId;
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/credits/${creditId}/pay?redirect=pos`;
+
+        const csrfToken = document.createElement('input');
+        csrfToken.type = 'hidden';
+        csrfToken.name = '_token';
+        csrfToken.value = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        form.appendChild(csrfToken);
+
+        const amountInput = document.createElement('input');
+        amountInput.type = 'hidden';
+        amountInput.name = 'amount_paid';
+        amountInput.value = amount;
+        form.appendChild(amountInput);
+
+        document.body.appendChild(form);
+        form.submit();
+      } else {
+        // Fallback: pay against the first outstanding credit via API
+        alert('Could not find the credit record. Please use the Credits page to record this payment.');
+      }
+    }
+  } catch (e) {
+    console.error('Pay credit error:', e);
+    alert('Error recording payment. Please try again.');
+  }
 }
 </script>
 @endsection

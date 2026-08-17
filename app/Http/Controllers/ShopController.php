@@ -2,20 +2,19 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Item; // This tells Laravel to use your database model
+use App\Models\Credit;
+use App\Models\Item;
 use App\Models\Member;
 use App\Models\Purchase;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ShopController extends Controller
 {
     public function index()
     {
-        // 1. Fetch all items from the 'items' table using the Item model
         $items = Item::orderBy('item_name', 'asc')->get();
 
-        // 2. Return the view located at resources/views/shop/index.blade.php
-        // 3. 'compact' passes the $items variable to the HTML so you can loop through it
         return view('shop.index', compact('items'));
     }
 
@@ -24,110 +23,137 @@ class ShopController extends Controller
         $cartItems = $request->input('items', []);
         $memberId = $request->input('member_id');
         $isNonMember = $request->input('is_non_member', 0);
-        
-        // Validate that either a member is selected or non-member is chosen
+        $paymentMethod = $request->input('payment_method', 'cash');
+
         if (!$memberId && !$isNonMember) {
             return response()->json([
                 'success' => false,
                 'message' => 'Please select a member or choose non-member option.'
             ], 400);
         }
-        
+
+        // Credit is only for members
+        if ($paymentMethod === 'credit') {
+            if ($isNonMember || !$memberId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Credit payment is only available for members.'
+                ], 400);
+            }
+            $member = Member::find($memberId);
+            if (!$member || !$member->is_active) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Credit is only available for active members.'
+                ], 400);
+            }
+        }
+
+        DB::beginTransaction();
+
         try {
             $totalAmount = 0;
-            
+
+            // Validate stock and calculate total
             foreach ($cartItems as $cartItem) {
                 $itemName = $cartItem['name'];
                 $quantity = $cartItem['quantity'];
-                
-                // Find the item in database
+
                 $item = Item::where('item_name', $itemName)->first();
-                
-                if ($item) {
-                    // Check if enough stock is available
-                    if ($item->quantity >= $quantity) {
-                        // Calculate total amount
-                        $totalAmount += ($item->price * $quantity);
-                        
-                        // Deduct from inventory
-                        $item->quantity -= $quantity;
-                        $item->save();
-                    } else {
-                        return response()->json([
-                            'success' => false,
-                            'message' => "Not enough stock for {$itemName}. Available: {$item->quantity}, Required: {$quantity}"
-                        ], 400);
-                    }
-                } else {
+
+                if (!$item) {
+                    DB::rollBack();
                     return response()->json([
                         'success' => false,
                         'message' => "Item {$itemName} not found in inventory"
                     ], 400);
                 }
-            }
-            
-            // Process member or non-member sale
-            if ($isNonMember) {
-                // Create purchase records for non-member sales
-                foreach ($cartItems as $cartItem) {
-                    $itemName = $cartItem['name'];
-                    $quantity = $cartItem['quantity'];
-                    
-                    // Find the item in database
-                    $item = Item::where('item_name', $itemName)->first();
-                    
-                    if ($item) {
-                        // Create purchase record for non-member (member_id = null)
-                        Purchase::create([
-                            'member_id' => null,
-                            'member_number' => null,
-                            'customer_type' => 'non_member',
-                            'amount' => $item->price * $quantity,
-                            'quantity' => $quantity,
-                            'product_name' => $itemName,
-                            'purchase_date' => now()->format('Y-m-d')
-                        ]);
-                    }
+
+                if ($item->quantity < $quantity) {
+                    DB::rollBack();
+                    return response()->json([
+                        'success' => false,
+                        'message' => "Not enough stock for {$itemName}. Available: {$item->quantity}, Required: {$quantity}"
+                    ], 400);
                 }
-            } elseif ($memberId) {
-                // Create individual purchase records for each item
-                $member = Member::find($memberId);
+
+                $totalAmount += ($item->price * $quantity);
+            }
+
+            // Deduct inventory and create purchase records
+            $saleRef = now()->format('Y-m-d H:i:s');
+
+            foreach ($cartItems as $cartItem) {
+                $itemName = $cartItem['name'];
+                $quantity = $cartItem['quantity'];
+
+                $item = Item::where('item_name', $itemName)->first();
+                $item->quantity -= $quantity;
+                $item->save();
+
+                if ($isNonMember) {
+                    Purchase::create([
+                        'member_id'      => null,
+                        'member_number'  => null,
+                        'customer_type'  => 'non_member',
+                        'payment_method' => 'cash',
+                        'amount'         => $item->price * $quantity,
+                        'quantity'       => $quantity,
+                        'product_name'   => $itemName,
+                        'purchase_date'  => now()->format('Y-m-d'),
+                    ]);
+                } elseif ($memberId) {
+                    $member = $member ?? Member::find($memberId);
+                    Purchase::create([
+                        'member_id'      => $memberId,
+                        'member_number'  => $member->member_number,
+                        'customer_type'  => 'member',
+                        'payment_method' => $paymentMethod,
+                        'amount'         => $item->price * $quantity,
+                        'quantity'       => $quantity,
+                        'product_name'   => $itemName,
+                        'purchase_date'  => now()->format('Y-m-d'),
+                    ]);
+                }
+            }
+
+            // Update member stats
+            if (!$isNonMember && $memberId) {
+                $member = $member ?? Member::find($memberId);
                 if ($member) {
-                    foreach ($cartItems as $cartItem) {
-                        $itemName = $cartItem['name'];
-                        $quantity = $cartItem['quantity'];
-                        
-                        // Find the item in database
-                        $item = Item::where('item_name', $itemName)->first();
-                        
-                        if ($item) {
-                            // Create purchase record
-                            Purchase::create([
-                                'member_id' => $memberId,
-                                'member_number' => $member->member_number,
-                                'customer_type' => 'member',
-                                'amount' => $item->price * $quantity,
-                                'quantity' => $quantity,
-                                'product_name' => $itemName,
-                                'purchase_date' => now()->format('Y-m-d')
-                            ]);
-                        }
-                    }
-                    
-                    // Update member purchase statistics
                     $member->total_purchases += $totalAmount;
                     $member->purchase_count += count($cartItems);
                     $member->last_purchase_date = now();
                     $member->save();
                 }
             }
-            
+
+            // Create credit record if credit sale
+            if ($paymentMethod === 'credit' && $memberId) {
+                Credit::create([
+                    'member_id'      => $memberId,
+                    'amount'         => $totalAmount,
+                    'amount_paid'    => 0,
+                    'status'         => 'unpaid',
+                    'sale_reference' => $saleRef,
+                    'notes'          => count($cartItems) . ' item(s) purchased on credit',
+                ]);
+            }
+
+            DB::commit();
+
+            $message = 'Checkout completed successfully!';
+            if ($paymentMethod === 'credit') {
+                $message = 'Credit sale recorded. Member owes ₱' . number_format($totalAmount, 2) . '.';
+            }
+
             return response()->json([
                 'success' => true,
-                'message' => 'Checkout completed successfully!'
+                'message' => $message,
             ]);
-            
+
         } catch (\Exception $e) {
+            DB::rollBack();
             return response()->json([
                 'success' => false,
                 'message' => 'Error processing checkout: ' . $e->getMessage()

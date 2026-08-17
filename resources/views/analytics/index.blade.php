@@ -87,6 +87,39 @@
             </div>
         </div>
     </div>
+
+    {{-- Member vs Non-Member Breakdown --}}
+    <div class="mt-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h3 class="mb-4 text-base font-semibold text-slate-900">Member vs Non-Member Sales</h3>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div class="flex items-center gap-4 rounded-lg border border-brand-200 bg-brand-50 p-4">
+                <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-lg text-brand-700">
+                    <i class="fa fa-users"></i>
+                </div>
+                <div class="min-w-0 flex-1">
+                    <div id="memberSalesTotal" class="truncate text-xl font-bold text-brand-900">₱0.00</div>
+                    <div class="text-xs text-brand-600">Member Sales</div>
+                </div>
+                <div class="text-right">
+                    <div id="memberSalesCount" class="text-sm font-semibold text-brand-700">0</div>
+                    <div class="text-xs text-brand-500">transactions</div>
+                </div>
+            </div>
+            <div class="flex items-center gap-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
+                <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-lg text-amber-700">
+                    <i class="fa fa-user-o"></i>
+                </div>
+                <div class="min-w-0 flex-1">
+                    <div id="nonMemberSalesTotal" class="truncate text-xl font-bold text-amber-900">₱0.00</div>
+                    <div class="text-xs text-amber-600">Non-Member Sales</div>
+                </div>
+                <div class="text-right">
+                    <div id="nonMemberSalesCount" class="text-sm font-semibold text-amber-700">0</div>
+                    <div class="text-xs text-amber-500">transactions</div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -239,6 +272,26 @@ function updateKpis(kpis) {
     document.getElementById('peakSalesAmount').textContent = formatPeso(kpis.peak);
 }
 
+// Fetch and update member vs non-member breakdown
+async function fetchCustomerTypeBreakdown(period, params = {}) {
+    try {
+        let url = `/api/analytics/customer-type?period=${period}`;
+        if (period === 'daily' && params.week) url += `&week=${params.week}`;
+        else if (period === 'weekly' && params.month) url += `&month=${params.month}`;
+        else if (period === 'monthly' && params.year) url += `&year=${params.year}`;
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        document.getElementById('memberSalesTotal').textContent = formatPeso(data.member_total);
+        document.getElementById('memberSalesCount').textContent = data.member_count;
+        document.getElementById('nonMemberSalesTotal').textContent = formatPeso(data.non_member_total);
+        document.getElementById('nonMemberSalesCount').textContent = data.non_member_count;
+    } catch (error) {
+        console.error('Error fetching customer type breakdown:', error);
+    }
+}
+
 // Initialize week selector
 function initializeWeekSelector() {
     const selector = document.getElementById('weekSelector');
@@ -371,6 +424,10 @@ async function loadDataWithParams(period, params) {
         average: data.average_sales || 0,
         peak: data.peak_sales || 0
     });
+
+    // Update member vs non-member breakdown
+    const breakdownParams = { ...params };
+    await fetchCustomerTypeBreakdown(period, breakdownParams);
 }
 
 // Main function to set time range and update everything

@@ -5,6 +5,7 @@ use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CreditController;
 
 // Default route - redirect to login
 Route::get('/', function () {
@@ -21,6 +22,14 @@ Route::middleware(['auth', 'role.cashier'])->group(function () {
     Route::get('/pos', [ShopController::class, 'index'])->name('shop.index');
     Route::post('/checkout', [ShopController::class, 'checkout'])->name('shop.checkout');
     Route::get('/members/lookup', [MemberController::class, 'lookup'])->name('members.lookup');
+    Route::get('/members/{memberId}/credit-balance', [CreditController::class, 'balance'])->name('members.credit-balance');
+});
+
+// Credits Management - Admin and Cashier
+Route::middleware(['auth'])->group(function () {
+    Route::get('/credits', [CreditController::class, 'index'])->name('credits.index');
+    Route::get('/credits/{credit}', [CreditController::class, 'show'])->name('credits.show');
+    Route::post('/credits/{credit}/pay', [CreditController::class, 'pay'])->name('credits.pay');
 });
 
 // Inventory Management - Admin only
