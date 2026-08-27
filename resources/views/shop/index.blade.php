@@ -9,7 +9,7 @@
     <section class="products-section flex min-h-0 min-w-0 flex-1 flex-col rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
         <div class="search-bar mb-4 text-right">
             <div class="relative w-full sm:ml-auto sm:w-72">
-                <i class="fa fa-search pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-slate-400"></i>
+                <x-icon name="search" class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                 <input
                     type="text"
                     id="search-input"
@@ -45,7 +45,7 @@
                 @endforeach
             @else
                 <div class="no-products col-span-full py-16 text-center text-sm text-slate-400">
-                    <i class="fa fa-cube mb-3 block text-4xl"></i>
+                    <x-icon name="cube" class="mb-3 h-9 w-9" />
                     No products available
                 </div>
             @endif
@@ -59,7 +59,7 @@
           <!-- Selected member display (hidden by default) -->
           <div id="selectedMemberDisplay" style="display: none; align-items: center; justify-content: space-between;" class="mb-3 rounded-lg border border-brand-200 bg-brand-50 p-3">
             <div class="flex items-center gap-2.5">
-              <i class="fa fa-user-circle text-xl text-brand-700"></i>
+              <x-icon name="user-circle" class="h-5 w-5 text-brand-700" />
               <div>
                 <div id="selectedMemberName" class="text-sm font-semibold text-brand-900"></div>
                 <div id="selectedMemberID" class="text-xs text-slate-500"></div>
@@ -72,7 +72,7 @@
           <div id="creditBalanceSection" style="display: none;" class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2">
-                <i class="fa fa-credit-card text-sm text-amber-600"></i>
+                <x-icon name="credit-card" class="h-3.5 w-3.5 text-amber-600" />
                 <span class="text-xs font-medium text-amber-700">Outstanding Credit: <span id="creditBalanceAmount" class="font-bold">P0.00</span></span>
               </div>
               <button onclick="openPayCreditModal()" class="cursor-pointer rounded bg-amber-600 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-amber-700">Pay</button>
@@ -82,7 +82,7 @@
           <!-- Scanner input -->
           <div id="scannerInputSection">
             <label for="memberScanInput" class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-              <i class="fa fa-qrcode"></i> Scan Member QR / Barcode
+              <x-icon name="qrcode" class="h-3 w-3" /> Scan Member QR / Barcode
             </label>
             <div class="flex gap-2">
               <input
@@ -94,7 +94,7 @@
                 autofocus
               />
               <button onclick="lookupMember()" class="rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700">
-                <i class="fa fa-search"></i>
+                <x-icon name="search" class="h-3.5 w-3.5" />
               </button>
             </div>
             <div id="memberScanError" style="display: none;" class="mt-1.5 text-xs text-red-600">Member not found.</div>
@@ -106,7 +106,7 @@
               Continue as Non-Member
             </button>
             <div id="nonMemberBadge" style="display: none; align-items: center; justify-content: space-between;" class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-              <span><i class="fa fa-user-o"></i> Non-Member</span>
+              <span><x-icon name="user-o" class="h-3 w-3" /> Non-Member</span>
               <button onclick="clearMember()" class="cursor-pointer border-0 bg-transparent text-base leading-none text-red-500 hover:text-red-700">&#x2715;</button>
             </div>
           </div>
@@ -122,10 +122,10 @@
           <div class="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Payment Method</div>
           <div class="flex gap-2">
             <button onclick="setPaymentMethod('cash')" id="btnCash" class="flex-1 cursor-pointer rounded-lg border-2 border-brand-600 bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-700 transition-colors">
-              <i class="fa fa-money mr-1"></i> Cash
+              <x-icon name="money" class="mr-1 h-3.5 w-3.5" /> Cash
             </button>
             <button onclick="setPaymentMethod('credit')" id="btnCredit" class="flex-1 cursor-pointer rounded-lg border-2 border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition-colors hover:border-brand-300 hover:text-brand-600">
-              <i class="fa fa-credit-card mr-1"></i> Credit
+              <x-icon name="credit-card" class="mr-1 h-3.5 w-3.5" /> Credit
             </button>
           </div>
         </div>

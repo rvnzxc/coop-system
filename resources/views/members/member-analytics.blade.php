@@ -17,7 +17,7 @@
         .transaction-detail {
             display: none !important;
         }
-        i.fa-chevron-right {
+        i.chevron-toggle {
             display: none !important;
         }
         table {
@@ -33,7 +33,7 @@
     {{-- Header --}}
     <div class="mb-6 flex flex-col items-start gap-5 rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:flex-row sm:items-center">
         <div class="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-brand-600 text-3xl text-white">
-            <i class="fa fa-user"></i>
+            <x-icon name="user" class="h-8 w-8" />
         </div>
 
         <div class="min-w-0 flex-1">
@@ -42,16 +42,16 @@
             </h2>
             <div class="mt-1 text-sm text-slate-500">
                 @if($member->email)
-                    <div class="mb-1"><i class="fa fa-envelope mr-2"></i>{{ $member->email }}</div>
+                    <div class="mb-1"><x-icon name="envelope" class="mr-2 h-3.5 w-3.5" />{{ $member->email }}</div>
                 @endif
                 @if($member->phone)
-                    <div class="mb-1"><i class="fa fa-phone mr-2"></i>{{ $member->phone }}</div>
+                    <div class="mb-1"><x-icon name="phone" class="mr-2 h-3.5 w-3.5" />{{ $member->phone }}</div>
                 @endif
                 <div class="mt-2">
                     @if($member->is_active)
-                        <x-badge color="green"><i class="fa fa-circle text-[6px]"></i> Active</x-badge>
+                        <x-badge color="green"><x-icon name="circle" class="h-1.5 w-1.5" /> Active</x-badge>
                     @else
-                        <x-badge color="red"><i class="fa fa-circle text-[6px]"></i> Inactive</x-badge>
+                        <x-badge color="red"><x-icon name="circle" class="h-1.5 w-1.5" /> Inactive</x-badge>
                     @endif
                 </div>
             </div>
@@ -99,7 +99,7 @@
                     <option value="yearly">Last 365 Days</option>
                 </select>
                 <x-button color="secondary" size="sm" onclick="window.print()">
-                    <i class="fa fa-print"></i> Print Report
+                    <x-icon name="print" class="h-3 w-3" /> Print Report
                 </x-button>
             </div>
 
@@ -123,7 +123,7 @@
     {{-- Back Button --}}
     <div class="mt-8 text-center">
         <x-button href="{{ route('members.index') }}" color="secondary">
-            <i class="fa fa-arrow-left"></i> Back to Members
+            <x-icon name="arrow-left" class="h-3.5 w-3.5" /> Back to Members
         </x-button>
     </div>
 </div>
@@ -195,7 +195,8 @@ function buildTransactionRow(transaction, index) {
     dtCell.className = 'px-4 py-3';
 
     const chevron = document.createElement('i');
-    chevron.className = 'fa fa-chevron-right text-[10px] text-slate-400 transition-transform duration-200';
+    chevron.className = 'chevron-toggle text-slate-400 transition-transform duration-200';
+    chevron.innerHTML = '<svg class="inline-block h-2.5 w-2.5" viewBox="0 0 1792 1792" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><path d="M1107 659l-742 -742q-19 -19 -45 -19t-45 19l-166 166q-19 19 -19 45t19 45l531 531l-531 531q-19 19 -19 45t19 45l166 166q19 19 45 19t45 -19l742 -742q19 -19 19 -45t-19 -45z"/></svg>';
     dtCell.appendChild(chevron);
     dtCell.appendChild(document.createTextNode(' ' + formatDateTime(transaction.datetime)));
 

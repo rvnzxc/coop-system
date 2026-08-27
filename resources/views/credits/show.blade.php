@@ -6,14 +6,14 @@
 <div class="mx-auto max-w-4xl">
     @if(session('success'))
         <div class="mb-6 flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
-            <i class="fa fa-check-circle"></i>
+            <x-icon name="check-circle" class="h-3.5 w-3.5" />
             {{ session('success') }}
         </div>
     @endif
 
     <div class="mb-6 flex items-center gap-3">
         <a href="{{ route('credits.index') }}" class="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-sm text-slate-600 transition-colors hover:bg-slate-50">
-            <i class="fa fa-arrow-left"></i>
+            <x-icon name="arrow-left" class="h-4 w-4" />
         </a>
         <div>
             <h2 class="text-xl font-bold text-slate-900">Credit #{{ $credit->id }}</h2>
@@ -41,11 +41,11 @@
             <div class="mt-1 text-xl font-bold {{ $credit->balance > 0 ? 'text-red-600' : 'text-emerald-600' }}">₱{{ number_format($credit->balance, 2) }}</div>
             <div class="mt-1">
                 @if($credit->status === 'paid')
-                    <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700"><i class="fa fa-check-circle"></i> Paid</span>
+                    <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700"><x-icon name="check-circle" class="h-3 w-3" /> Paid</span>
                 @elseif($credit->status === 'partial')
-                    <span class="inline-flex items-center gap-1 rounded-full bg-yellow-50 px-2.5 py-0.5 text-xs font-medium text-yellow-700"><i class="fa fa-clock-o"></i> Partial</span>
+                    <span class="inline-flex items-center gap-1 rounded-full bg-yellow-50 px-2.5 py-0.5 text-xs font-medium text-yellow-700"><x-icon name="clock-o" class="h-3 w-3" /> Partial</span>
                 @else
-                    <span class="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700"><i class="fa fa-exclamation-circle"></i> Unpaid</span>
+                    <span class="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700"><x-icon name="exclamation-circle" class="h-3 w-3" /> Unpaid</span>
                 @endif
             </div>
         </div>

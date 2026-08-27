@@ -5,9 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CCFMPC - @yield('title')</title>
 
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700" rel="stylesheet" />
-
     <link rel="stylesheet" href="{{ asset('css/style.css') }}">
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -26,7 +23,7 @@
             <div class="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 lg:h-16 lg:px-5">
                 <div class="flex items-center gap-3">
                     <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-white">
-                        <i class="fa fa-leaf"></i>
+                        <x-icon name="leaf" />
                     </div>
                     <div class="min-w-0 leading-tight">
                         <p class="truncate text-sm font-semibold text-slate-900">CCFMPC</p>
@@ -34,7 +31,7 @@
                     </div>
                 </div>
                 <button type="button" onclick="closeSidebar()" class="-mr-2 flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 lg:hidden" aria-label="Close menu">
-                    <i class="fa fa-times"></i>
+                    <x-icon name="times" />
                 </button>
             </div>
 
@@ -43,34 +40,34 @@
                     @if($role === 'admin')
                         <div class="hidden px-3 pb-2 pt-4 text-[11px] font-semibold uppercase tracking-wider text-slate-400 lg:block">Point of Sale</div>
                         <a href="{{ route('shop.index') }}" class="flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-colors {{ request()->routeIs('shop.index') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' }}">
-                            <i class="fa fa-shopping-cart w-5 text-center text-base"></i> POS
+                            <x-icon name="shopping-cart" /> POS
                         </a>
 
                         <div class="hidden px-3 pb-2 pt-4 text-[11px] font-semibold uppercase tracking-wider text-slate-400 lg:block">Management</div>
                         <a href="{{ route('inventory.index') }}" class="flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-colors {{ request()->routeIs('inventory.*') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' }}">
-                            <i class="fa fa-archive w-5 text-center text-base"></i> Inventory
+                            <x-icon name="archive" /> Inventory
                         </a>
                         <a href="{{ route('members.index') }}" class="flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-colors {{ request()->routeIs('members.*') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' }}">
-                            <i class="fa fa-users w-5 text-center text-base"></i> Members
+                            <x-icon name="users" /> Members
                         </a>
                         <a href="{{ route('analytics.index') }}" class="flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-colors {{ request()->routeIs('analytics.*') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' }}">
-                            <i class="fa fa-bar-chart w-5 text-center text-base"></i> Analytics
+                            <x-icon name="bar-chart" /> Analytics
                         </a>
                         <a href="{{ route('credits.index') }}" class="flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-colors {{ request()->routeIs('credits.*') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' }}">
-                            <i class="fa fa-credit-card w-5 text-center text-base"></i> Credits
+                            <x-icon name="credit-card" /> Credits
                         </a>
                     @else
                         <div class="hidden px-3 pb-2 pt-4 text-[11px] font-semibold uppercase tracking-wider text-slate-400 lg:block">Point of Sale</div>
                         <a href="{{ route('shop.index') }}" class="flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-colors {{ request()->routeIs('shop.index') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' }}">
-                            <i class="fa fa-shopping-cart w-5 text-center text-base"></i> POS
+                            <x-icon name="shopping-cart" /> POS
                         </a>
                         <a href="{{ route('credits.index') }}" class="flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-colors {{ request()->routeIs('credits.*') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' }}">
-                            <i class="fa fa-credit-card w-5 text-center text-base"></i> Credits
+                            <x-icon name="credit-card" /> Credits
                         </a>
                     @endif
 
                     <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" class="flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 lg:mt-auto">
-                        <i class="fa fa-sign-out w-5 text-center text-base"></i> Logout
+                        <x-icon name="sign-out" /> Logout
                     </a>
                 @endauth
             </nav>
@@ -82,7 +79,7 @@
                 <div class="flex h-16 items-center justify-between gap-4 px-4 md:px-6">
                     <div class="flex min-w-0 items-center gap-3">
                         <button type="button" onclick="openSidebar()" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 lg:hidden" aria-label="Open menu">
-                            <i class="fa fa-bars"></i>
+                            <x-icon name="bars" />
                         </button>
                         <div class="min-w-0">
                             <p class="hidden truncate text-sm text-slate-500 sm:block">Cavite College of Fisheries Multi-Purpose Cooperative</p>
@@ -91,7 +88,7 @@
                     </div>
                     <div class="notification-top relative flex items-center">
                         <a href="#" onclick="toggleNotifications()" class="notification-link-top relative flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700">
-                            <i class="fa fa-bell text-lg"></i>
+                            <x-icon name="bell" class="h-4.5 w-4.5" />
                             <span class="notification-badge absolute -right-0.5 -top-0.5 hidden h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white" id="notificationBadge" style="display: none;">0</span>
                             <span id="redDotIndicator" style="display: none; position: absolute; top: 2px; right: 2px; width: 10px; height: 10px; background: #ef4444; border-radius: 50%; border: 2px solid #fff; animation: blink 1.5s infinite; z-index: 9999;"></span>
                         </a>
@@ -232,43 +229,5 @@
         }
     </script>
 
-    <script>
-        // Icon fallback: FontAwesome is bundled locally. If the webfont ever
-        // fails to load (missing/corrupt asset), swap icons for a neutral
-        // square instead of a missing-glyph box. Degrades silently.
-        (function () {
-            var root = document.documentElement;
-            root.classList.add('fa-unavailable');
-
-            function faReady() {
-                if (!document.fonts || !document.fonts.forEach) {
-                    root.classList.remove('fa-unavailable');
-                    return;
-                }
-                var face = null;
-                var loaded = false;
-                try {
-                    document.fonts.forEach(function (f) {
-                        if (f.family && f.family.indexOf('FontAwesome') !== -1) {
-                            face = f;
-                            if (f.status === 'loaded') { loaded = true; }
-                        }
-                    });
-                } catch (e) { face = null; }
-                if (face === null) { loaded = true; } // no face registered: assume available
-                if (loaded) {
-                    root.classList.remove('fa-unavailable');
-                }
-            }
-
-            if (document.fonts && document.fonts.ready) {
-                document.fonts.ready.then(faReady).catch(faReady);
-            }
-            window.addEventListener('load', faReady);
-            setTimeout(faReady, 1500);
-            document.addEventListener('DOMContentLoaded', faReady);
-        })();
-    </script>
-
-</body>
+    </body>
 </html>

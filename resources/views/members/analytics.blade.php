@@ -8,7 +8,7 @@
     {{-- TOP PROFILE CARD --}}
     <div class="flex flex-col gap-5 rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:flex-row sm:items-center">
         <div class="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-brand-600 text-3xl text-white">
-            <i class="fa fa-user"></i>
+            <x-icon name="user" class="h-8 w-8" />
         </div>
 
         <div class="min-w-0 flex-1">
@@ -17,35 +17,35 @@
             </h2>
             @if($member->email)
                 <div class="mt-1 text-sm text-slate-500">
-                    <i class="fa fa-envelope mr-2"></i>{{ $member->email }}
+                    <x-icon name="envelope" class="mr-2 h-3.5 w-3.5" />{{ $member->email }}
                 </div>
             @endif
             @if($member->phone)
                 <div class="mt-1 text-sm text-slate-500">
-                    <i class="fa fa-phone mr-2"></i>{{ $member->phone }}
+                    <x-icon name="phone" class="mr-2 h-3.5 w-3.5" />{{ $member->phone }}
                 </div>
             @endif
             <div class="mt-3">
                 @if($member->is_active)
-                    <x-badge color="green"><i class="fa fa-circle text-[6px]"></i> Active</x-badge>
+                    <x-badge color="green"><x-icon name="circle" class="h-1.5 w-1.5" /> Active</x-badge>
                 @else
-                    <x-badge color="red"><i class="fa fa-circle text-[6px]"></i> Inactive</x-badge>
+                    <x-badge color="red"><x-icon name="circle" class="h-1.5 w-1.5" /> Inactive</x-badge>
                 @endif
             </div>
         </div>
 
         <div class="flex flex-wrap items-center gap-2 sm:justify-end">
             <x-button href="{{ route('members.edit', $member->id) }}" color="secondary" size="sm">
-                <i class="fa fa-edit"></i> Edit
+                <x-icon name="edit" class="h-3 w-3" /> Edit
             </x-button>
             <x-button href="{{ route('members.card', $member->id) }}" color="primary" size="sm">
-                <i class="fa fa-id-card"></i> Print Card
+                <x-icon name="id-card" class="h-3 w-3" /> Print Card
             </x-button>
             <form action="{{ route('members.destroy', $member->id) }}" method="POST">
                 @csrf
                 @method('DELETE')
                 <x-button type="submit" color="danger" size="sm" onclick="return confirm('Are you sure you want to delete this member?')">
-                    <i class="fa fa-trash"></i> Delete
+                    <x-icon name="trash" class="h-3 w-3" /> Delete
                 </x-button>
             </form>
         </div>
@@ -148,7 +148,7 @@
     {{-- MEMBER ANALYTICS SECTION --}}
     <x-card>
         <h3 class="mb-4 flex items-center gap-2 text-lg font-bold text-slate-900">
-            <i class="fa fa-line-chart text-brand-600"></i> Member Analytics - Per Member Breakdown
+            <x-icon name="line-chart" class="text-brand-600" /> Member Analytics - Per Member Breakdown
         </h3>
 
         <div class="mb-4 flex flex-wrap items-center gap-4">
@@ -160,7 +160,7 @@
                 <option value="yearly">Yearly</option>
             </select>
             <x-button color="secondary" size="sm" onclick="window.print()">
-                <i class="fa fa-print"></i> Print Report
+                <x-icon name="print" class="h-3 w-3" /> Print Report
             </x-button>
         </div>
 
@@ -188,7 +188,7 @@
     <x-card>
         @if($purchaseCount == 0)
             <div class="flex items-start gap-4">
-                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600"><i class="fa fa-lightbulb-o"></i></div>
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600"><x-icon name="lightbulb-o" class="h-4 w-4" /></div>
                 <div>
                     <div class="font-semibold text-slate-900">Recommendation</div>
                     <div class="mt-1 text-sm text-slate-500">This member hasn't made any purchases yet. Consider sending promotional offers to encourage their first purchase.</div>
@@ -196,7 +196,7 @@
             </div>
         @elseif($lastPurchaseDate && $lastPurchaseDate->diffInDays(now()) > 30)
             <div class="flex items-start gap-4">
-                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-600"><i class="fa fa-exclamation-triangle"></i></div>
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-600"><x-icon name="exclamation-triangle" class="h-4 w-4" /></div>
                 <div>
                     <div class="font-semibold text-slate-900">Attention Needed</div>
                     <div class="mt-1 text-sm text-slate-500">This member hasn't purchased in over 30 days. Consider reaching out with special offers.</div>
@@ -204,7 +204,7 @@
             </div>
         @else
             <div class="flex items-start gap-4">
-                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600"><i class="fa fa-check-circle"></i></div>
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600"><x-icon name="check-circle" class="h-4 w-4" /></div>
                 <div>
                     <div class="font-semibold text-slate-900">Great Member!</div>
                     <div class="mt-1 text-sm text-slate-500">This member is actively purchasing and engaged with your cooperative.</div>
@@ -215,7 +215,7 @@
 
     <div class="text-center">
         <x-button href="{{ route('members.index') }}" color="secondary">
-            <i class="fa fa-arrow-left"></i> Back to Members
+            <x-icon name="arrow-left" class="h-3.5 w-3.5" /> Back to Members
         </x-button>
     </div>
 </div>
@@ -223,6 +223,9 @@
 <script>
 // Use member analytics data from controller
 const memberAnalyticsData = @json($memberAnalytics ?? []);
+
+// Inline status dot (replaces the Font Awesome fa-circle glyph)
+const DOT = '<svg class="inline-block h-1.5 w-1.5" viewBox="0 0 1792 1792" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><path d="M1536 640q0 -209 -103 -385.5t-279.5 -279.5t-385.5 -103t-385.5 103t-279.5 279.5t-103 385.5t103 385.5t279.5 279.5t385.5 103t385.5 -103t279.5 -279.5t103 -385.5z"/></svg>';
 
 // Convert to array for easier filtering
 const allMembersData = Object.values(memberAnalyticsData);
@@ -304,13 +307,13 @@ function filterMemberAnalytics() {
             const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
             
             if (diffDays <= 7) {
-                frequencyCell.innerHTML = '<span class="text-emerald-600"><i class="fa fa-circle text-[6px]"></i> Weekly</span>';
+                frequencyCell.innerHTML = '<span class="text-emerald-600">' + DOT + ' Weekly</span>';
             } else if (diffDays <= 30) {
-                frequencyCell.innerHTML = '<span class="text-amber-500"><i class="fa fa-circle text-[6px]"></i> Monthly</span>';
+                frequencyCell.innerHTML = '<span class="text-amber-500">' + DOT + ' Monthly</span>';
             } else if (diffDays <= 90) {
-                frequencyCell.innerHTML = '<span class="text-orange-500"><i class="fa fa-circle text-[6px]"></i> Quarterly</span>';
+                frequencyCell.innerHTML = '<span class="text-orange-500">' + DOT + ' Quarterly</span>';
             } else {
-                frequencyCell.innerHTML = '<span class="text-red-500"><i class="fa fa-circle text-[6px]"></i> Yearly</span>';
+                frequencyCell.innerHTML = '<span class="text-red-500">' + DOT + ' Yearly</span>';
             }
         } else {
             frequencyCell.innerHTML = '<span class="text-slate-500">Never</span>';
@@ -319,8 +322,8 @@ function filterMemberAnalytics() {
         const statusCell = document.createElement('td');
         statusCell.className = 'px-4 py-3 w-[15%]';
         statusCell.innerHTML = member.is_active ? 
-            '<span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20"><i class="fa fa-circle text-[6px]"></i> Active</span>' : 
-            '<span class="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20"><i class="fa fa-circle text-[6px]"></i> Inactive</span>';
+            '<span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">' + DOT + ' Active</span>' : 
+            '<span class="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20">' + DOT + ' Inactive</span>';
         
         // Append cells to row
         row.appendChild(memberCell);

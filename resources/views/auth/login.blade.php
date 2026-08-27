@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - CCF Multi-Purpose Cooperative</title>
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-screen bg-cover bg-center bg-no-repeat" style="background-image: url('/images/login-bg.png'); background-color: #052e16;">
@@ -13,7 +11,7 @@
         <div class="w-full max-w-md">
         <div class="mb-8 text-center">
             <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-600 text-3xl text-white shadow-lg shadow-brand-600/30">
-                <i class="fa fa-leaf"></i>
+                <x-icon name="leaf" class="h-8 w-8" />
             </div>
             <h1 class="text-2xl font-bold text-white" style="text-shadow: 0 2px 8px rgba(0,0,0,0.5);">CCFMPC</h1>
             <p class="mt-1 text-sm text-white" style="text-shadow: 0 1px 4px rgba(0,0,0,0.5);">Point of Sale System</p>
@@ -22,7 +20,7 @@
         <div class="rounded-2xl border border-slate-200 bg-white p-8 shadow-xl">
             @if ($errors->has('email'))
                 <div class="mb-6 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                    <i class="fa fa-exclamation-circle mt-0.5"></i>
+                    <x-icon name="exclamation-circle" class="mt-0.5 h-3.5 w-3.5" />
                     <div>{{ $errors->first('email') }}</div>
                 </div>
             @endif

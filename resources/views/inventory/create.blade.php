@@ -14,7 +14,7 @@
             <p class="mt-0.5 text-sm text-slate-500">Create a new product in your inventory</p>
         </div>
         <x-button href="{{ route('inventory.index') }}" color="secondary" size="sm">
-            <i class="fa fa-arrow-left"></i> Back
+            <x-icon name="arrow-left" class="h-3 w-3" /> Back
         </x-button>
     </div>
 
@@ -54,7 +54,7 @@
 
             <div class="flex gap-3 pt-2">
                 <x-button type="submit" color="primary" class="flex-1">
-                    <i class="fa fa-plus"></i> Add Item
+                    <x-icon name="plus" class="h-3.5 w-3.5" /> Add Item
                 </x-button>
                 <x-button type="button" color="secondary" onclick="location.href='{{ route('inventory.index') }}'">
                     Cancel

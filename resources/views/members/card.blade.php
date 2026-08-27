@@ -28,7 +28,7 @@
 
 <div class="member-card-container flex min-h-[calc(100vh-8rem)] flex-col items-center justify-center gap-6 p-6">
     <button class="print-button flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-700" onclick="window.print()">
-        <i class="fa fa-print"></i> Print Card
+        <x-icon name="print" class="h-3.5 w-3.5" /> Print Card
     </button>
 
     <div class="member-card flex w-full max-w-[350px] flex-col justify-between rounded-2xl bg-gradient-to-br from-brand-800 to-brand-600 p-5 text-white shadow-xl">

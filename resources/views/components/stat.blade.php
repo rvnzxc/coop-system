@@ -22,7 +22,7 @@
             <div
                 class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-base {{ $tones[$tone] ?? $tones['green'] }}"
             >
-                <i class="{{ $icon }}"></i>
+                <x-icon :name="$icon" class="h-4 w-4" />
             </div>
         @endif
         <div class="min-w-0">

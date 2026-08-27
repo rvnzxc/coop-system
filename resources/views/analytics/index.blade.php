@@ -61,7 +61,7 @@
     <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
         <div class="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
             <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-lg text-brand-600">
-                <i class="fa fa-money"></i>
+                <x-icon name="money" class="h-4.5 w-4.5" />
             </div>
             <div class="min-w-0">
                 <div id="totalSalesAmount" class="truncate text-2xl font-bold text-slate-900">₱0.00</div>
@@ -70,7 +70,7 @@
         </div>
         <div class="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
             <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-sky-50 text-lg text-sky-600">
-                <i class="fa fa-line-chart"></i>
+                <x-icon name="line-chart" class="h-4.5 w-4.5" />
             </div>
             <div class="min-w-0">
                 <div id="avgSalesAmount" class="truncate text-2xl font-bold text-slate-900">₱0.00</div>
@@ -79,7 +79,7 @@
         </div>
         <div class="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
             <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-lg text-amber-600">
-                <i class="fa fa-trophy"></i>
+                <x-icon name="trophy" class="h-4.5 w-4.5" />
             </div>
             <div class="min-w-0">
                 <div id="peakSalesAmount" class="truncate text-2xl font-bold text-slate-900">₱0.00</div>
@@ -94,7 +94,7 @@
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div class="flex items-center gap-4 rounded-lg border border-brand-200 bg-brand-50 p-4">
                 <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-lg text-brand-700">
-                    <i class="fa fa-users"></i>
+                    <x-icon name="users" class="h-4.5 w-4.5" />
                 </div>
                 <div class="min-w-0 flex-1">
                     <div id="memberSalesTotal" class="truncate text-xl font-bold text-brand-900">₱0.00</div>
@@ -107,7 +107,7 @@
             </div>
             <div class="flex items-center gap-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
                 <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-lg text-amber-700">
-                    <i class="fa fa-user-o"></i>
+                    <x-icon name="user-o" class="h-4.5 w-4.5" />
                 </div>
                 <div class="min-w-0 flex-1">
                     <div id="nonMemberSalesTotal" class="truncate text-xl font-bold text-amber-900">₱0.00</div>

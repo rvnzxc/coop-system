@@ -6,7 +6,7 @@
 <div class="mx-auto max-w-7xl">
     @if(session('success'))
         <div class="mb-6 flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
-            <i class="fa fa-check-circle"></i>
+            <x-icon name="check-circle" class="h-3.5 w-3.5" />
             {{ session('success') }}
         </div>
     @endif
@@ -22,7 +22,7 @@
     <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-4">
         <div class="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-base text-amber-600">
-                <i class="fa fa-credit-card"></i>
+                <x-icon name="credit-card" class="h-4 w-4" />
             </div>
             <div class="min-w-0">
                 <div class="truncate text-xl font-bold text-slate-900">₱{{ number_format($totalOutstanding, 2) }}</div>
@@ -31,7 +31,7 @@
         </div>
         <div class="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-50 text-base text-red-600">
-                <i class="fa fa-exclamation-circle"></i>
+                <x-icon name="exclamation-circle" class="h-4 w-4" />
             </div>
             <div class="min-w-0">
                 <div class="truncate text-xl font-bold text-slate-900">{{ $unpaidCount }}</div>
@@ -40,7 +40,7 @@
         </div>
         <div class="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-yellow-50 text-base text-yellow-600">
-                <i class="fa fa-clock-o"></i>
+                <x-icon name="clock-o" class="h-4 w-4" />
             </div>
             <div class="min-w-0">
                 <div class="truncate text-xl font-bold text-slate-900">{{ $partialCount }}</div>
@@ -49,7 +49,7 @@
         </div>
         <div class="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-base text-blue-600">
-                <i class="fa fa-users"></i>
+                <x-icon name="users" class="h-4 w-4" />
             </div>
             <div class="min-w-0">
                 <div class="truncate text-xl font-bold text-slate-900">{{ $membersWithDebt }}</div>
@@ -86,7 +86,7 @@
                     <tr class="cursor-pointer transition-colors hover:bg-slate-50 {{ $group['has_unpaid'] ? 'bg-amber-50/30' : '' }}" onclick="toggleMember({{ $memberId }})">
                         <td class="px-5 py-3.5">
                             <div class="flex items-center gap-2">
-                                <i id="chevron-{{ $memberId }}" class="fa fa-chevron-right text-xs text-slate-400 transition-transform"></i>
+                                <x-icon id="chevron-{{ $memberId }}" name="chevron-right" class="h-3 w-3 text-slate-400 transition-transform" />
                                 <div>
                                     <div class="font-medium text-slate-900">{{ $group['member']->first_name }} {{ $group['member']->last_name }}</div>
                                     <div class="text-xs text-slate-400">{{ $group['member']->member_number }}</div>
@@ -102,7 +102,7 @@
                         <td class="whitespace-nowrap px-5 py-3.5 text-right">
                             @if($group['has_unpaid'])
                             <button onclick="event.stopPropagation(); openPayMemberModal({{ $memberId }}, '{{ $group['member']->first_name }} {{ $group['member']->last_name }}', {{ $group['balance'] }})" class="cursor-pointer rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-brand-700">
-                                <i class="fa fa-money"></i> Pay
+                                <x-icon name="money" class="h-3 w-3" /> Pay
                             </button>
                             @endif
                         </td>
@@ -167,7 +167,7 @@
                         <td colspan="6" class="px-5 py-16 text-center">
                             <div class="flex flex-col items-center">
                                 <div class="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-2xl text-slate-400">
-                                    <i class="fa fa-credit-card"></i>
+                                    <x-icon name="credit-card" class="h-6 w-6" />
                                 </div>
                                 <p class="text-base font-semibold text-slate-700">No credit records found</p>
                                 <p class="mt-1 text-sm text-slate-500">Credit sales will appear here.</p>

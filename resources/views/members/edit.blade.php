@@ -14,7 +14,7 @@
             <p class="mt-0.5 text-sm text-slate-500">Update member information</p>
         </div>
         <x-button href="{{ route('members.index') }}" color="secondary" size="sm">
-            <i class="fa fa-arrow-left"></i> Back
+            <x-icon name="arrow-left" class="h-3 w-3" /> Back
         </x-button>
     </div>
 
@@ -68,10 +68,10 @@
 
             <div class="flex justify-end gap-3 pt-2">
                 <x-button href="{{ route('members.analytics', $member->id) }}" color="secondary">
-                    <i class="fa fa-line-chart"></i> View Analytics
+                    <x-icon name="line-chart" class="h-3.5 w-3.5" /> View Analytics
                 </x-button>
                 <x-button type="submit" color="primary">
-                    <i class="fa fa-save"></i> Update Member
+                    <x-icon name="save" class="h-3.5 w-3.5" /> Update Member
                 </x-button>
             </div>
         </form>
