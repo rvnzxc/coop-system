@@ -1,3 +1,4 @@
+@import 'font-awesome/css/font-awesome.min.css';
 @import 'tailwindcss';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
@@ -103,4 +104,29 @@ body {
     100% {
         opacity: 1;
     }
+}
+
+/*
+ * Offline icon fallback -------------------------------------------------
+ *
+ * FontAwesome glyphs are font-based. If the webfont ever fails to load
+ * (missing/corrupt bundle, unavailable network), the inline script below
+ * adds .fa-unavailable to <html>. We then hide the broken pseudo-element
+ * glyph and render a small neutral square outline instead, so icons never
+ * show as a missing-glyph box or leave a confusing blank. This degrades
+ * silently and never blocks the rest of the page.
+ */
+html.fa-unavailable i.fa::before {
+    content: none !important;
+}
+
+html.fa-unavailable i.fa {
+    box-sizing: border-box;
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    border: 2px solid currentColor;
+    border-radius: 2px;
+    background: transparent;
+    vertical-align: middle;
 }

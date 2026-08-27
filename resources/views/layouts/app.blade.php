@@ -9,7 +9,6 @@
     <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700" rel="stylesheet" />
 
     <link rel="stylesheet" href="{{ asset('css/style.css') }}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -231,6 +230,44 @@
             document.getElementById('sidebar').classList.remove('open');
             document.getElementById('sidebarBackdrop').classList.add('hidden');
         }
+    </script>
+
+    <script>
+        // Icon fallback: FontAwesome is bundled locally. If the webfont ever
+        // fails to load (missing/corrupt asset), swap icons for a neutral
+        // square instead of a missing-glyph box. Degrades silently.
+        (function () {
+            var root = document.documentElement;
+            root.classList.add('fa-unavailable');
+
+            function faReady() {
+                if (!document.fonts || !document.fonts.forEach) {
+                    root.classList.remove('fa-unavailable');
+                    return;
+                }
+                var face = null;
+                var loaded = false;
+                try {
+                    document.fonts.forEach(function (f) {
+                        if (f.family && f.family.indexOf('FontAwesome') !== -1) {
+                            face = f;
+                            if (f.status === 'loaded') { loaded = true; }
+                        }
+                    });
+                } catch (e) { face = null; }
+                if (face === null) { loaded = true; } // no face registered: assume available
+                if (loaded) {
+                    root.classList.remove('fa-unavailable');
+                }
+            }
+
+            if (document.fonts && document.fonts.ready) {
+                document.fonts.ready.then(faReady).catch(faReady);
+            }
+            window.addEventListener('load', faReady);
+            setTimeout(faReady, 1500);
+            document.addEventListener('DOMContentLoaded', faReady);
+        })();
     </script>
 
 </body>
