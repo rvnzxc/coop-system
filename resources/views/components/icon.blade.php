@@ -47,22 +47,24 @@
         $paths[$name] = '';
     }
 
-    // The glyphs are stored in font space (ascent ~1536 / descent ~-256), so a
-    // plain flip about the viewBox midline leaves them sitting low and clips
-    // the bottom. Each icon gets its own flip axis so its shape stays centered.
-    $flipY = [
-        'archive' => 1536, 'arrow-left' => 1472, 'bar-chart' => 1536, 'bars' => 1536,
-        'bell' => 1536, 'check-circle' => 1536, 'chevron-right' => 1600, 'circle' => 1536,
-        'clock-o' => 1536, 'credit-card' => 1536, 'cube' => 1472, 'edit' => 1525,
-        'envelope' => 1472, 'exclamation-circle' => 1536, 'exclamation-triangle' => 1600,
-        'id-card' => 1536, 'leaf' => 1600, 'lightbulb-o' => 1536, 'line-chart' => 1536,
-        'money' => 1536, 'phone' => 1600, 'plus' => 1600, 'print' => 1536, 'qrcode' => 1600,
-        'save' => 1536, 'search' => 1472, 'shopping-cart' => 1472, 'sign-out' => 1536,
-        'times' => 1472, 'trash' => 1536, 'trophy' => 1536, 'user' => 1536,
-        'user-circle' => 1536, 'user-o' => 1536, 'user-plus' => 1536, 'users' => 1536,
+    // The glyphs are stored in font space (y-up), so they need a vertical flip
+    // to render upright in the viewBox. The paths were then per-icon centered,
+    // scaled and optically re-centered (each glyph's visual weight sits on the
+    // viewBox midline) so every icon looks vertically centered in its box.
+    // Format: scale|translateY|centerX|centerY of the font-space bounding box.
+    $opts = [
+        'archive' => '1.000|891.9|896|640', 'arrow-left' => '1.000|896.5|800|576', 'bar-chart' => '0.875|768.2|1024|640', 'bars' => '1.000|896.5|768|640',
+        'bell' => '0.928|831.7|896|640', 'check-circle' => '1.000|910.3|768|640', 'chevron-right' => '1.000|896.5|608|704', 'circle' => '1.000|896.5|768|640',
+        'clock-o' => '1.000|902.6|768|640', 'credit-card' => '0.933|956.7|960|640', 'cube' => '1.000|876.0|832|576', 'edit' => '1.000|870.1|758|630',
+        'envelope' => '1.000|893.7|896|576', 'exclamation-circle' => '1.000|891.3|768|640', 'exclamation-triangle' => '0.875|728.0|896|704', 'id-card' => '0.875|868.5|1024|640',
+        'leaf' => '1.000|877.3|896|704', 'lightbulb-o' => '1.000|883.3|512|640', 'line-chart' => '0.875|781.0|1024|640', 'money' => '0.933|897.9|960|640',
+        'phone' => '1.000|789.6|704|704', 'plus' => '1.000|896.5|704|704', 'print' => '1.000|799.0|832|640', 'qrcode' => '1.000|907.6|704|704',
+        'save' => '1.000|908.6|768|640', 'search' => '1.000|928.3|832|576', 'shopping-cart' => '1.000|996.3|832|576', 'sign-out' => '1.000|896.5|784|640',
+        'times' => '1.000|896.5|704|576', 'trash' => '1.000|851.7|704|640', 'trophy' => '1.000|992.3|832|640', 'user' => '1.000|768.9|640|640',
+        'user-circle' => '0.896|988.9|896|640', 'user-o' => '0.905|810.4|768|640', 'user-plus' => '0.875|763.7|1024|640', 'users' => '0.933|858.2|960|640',
     ];
 
-    $translateY = $flipY[$name] ?? 1536;
+    [$scale, $translateY, $centerX, $centerY] = explode('|', $opts[$name] ?? '1.000|896.5|896|640');
 
     // Preserve the original icon sizing: if the caller already set a width,
     // give it an equal height (inline SVGs need both). Otherwise default to the
@@ -85,7 +87,7 @@
     focusable="false"
 >
     @if ($paths[$name] !== '')
-        <g transform="translate(0 {{ $translateY }}) scale(1 -1)">
+        <g transform="translate(896 {{ $translateY }}) scale({{ $scale }}) scale(1 -1) translate(-{{ $centerX }} -{{ $centerY }})">
             <path d="{{ $paths[$name] }}" />
         </g>
     @endif
