@@ -21,6 +21,7 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::middleware(['auth', 'role.cashier'])->group(function () {
     Route::get('/pos', [ShopController::class, 'index'])->name('shop.index');
     Route::post('/checkout', [ShopController::class, 'checkout'])->name('shop.checkout');
+    Route::get('/items/lookup', [ShopController::class, 'lookupItem'])->name('items.lookup');
     Route::get('/members/lookup', [MemberController::class, 'lookup'])->name('members.lookup');
     Route::get('/members/{memberId}/credit-balance', [CreditController::class, 'balance'])->name('members.credit-balance');
 });
