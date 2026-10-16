@@ -31,7 +31,7 @@ class InventoryController extends Controller
             'quantity' => 'required|integer|min:0',
             'price' => 'required|numeric|min:0',
             'category' => 'required|string|max:50',
-            'manufacturer_barcode' => 'nullable|string|max:64|unique:items,manufacturer_barcode',
+            'manufacturer_barcode' => $this->manufacturerBarcodeRules(),
         ]);
 
         Item::create([
@@ -60,10 +60,7 @@ class InventoryController extends Controller
             'quantity' => 'required|integer|min:0',
             'price' => 'required|numeric|min:0',
             'category' => 'required|string|max:50',
-            'manufacturer_barcode' => [
-                'nullable', 'string', 'max:64',
-                Rule::unique('items', 'manufacturer_barcode')->ignore($item->id),
-            ],
+            'manufacturer_barcode' => $this->manufacturerBarcodeRules($item->id),
         ]);
 
         $item->update([
@@ -75,6 +72,31 @@ class InventoryController extends Controller
         ]);
 
         return redirect()->route('inventory.index')->with('success', 'Item updated successfully!');
+    }
+
+    private function manufacturerBarcodeRules(?int $ignoreId = null): array
+    {
+        $unique = Rule::unique('items', 'manufacturer_barcode');
+
+        if ($ignoreId !== null) {
+            $unique->ignore($ignoreId);
+        }
+
+        return [
+            'nullable',
+            'string',
+            'max:64',
+            $unique,
+            function ($attribute, $value, $fail) {
+                if (blank($value)) {
+                    return;
+                }
+
+                if (Item::where('barcode', $value)->exists()) {
+                    $fail('This code is already used as an internal barcode on another item.');
+                }
+            },
+        ];
     }
 
     public function destroy($id)

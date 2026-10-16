@@ -156,6 +156,23 @@ class InventoryBarcodeTest extends TestCase
         $this->assertDatabaseMissing('items', ['item_name' => 'Milk']);
     }
 
+    public function test_store_rejects_a_code_used_as_an_internal_barcode(): void
+    {
+        $existing = $this->createItem();
+        $admin = $this->createAdmin();
+
+        $response = $this->actingAs($admin)->post('/inventory/store', [
+            'item_name' => 'Milk',
+            'quantity' => 3,
+            'price' => 60.00,
+            'category' => 'frozen',
+            'manufacturer_barcode' => $existing->barcode,
+        ]);
+
+        $response->assertSessionHasErrors('manufacturer_barcode');
+        $this->assertDatabaseMissing('items', ['item_name' => 'Milk']);
+    }
+
     // ── Update ───────────────────────────────────────────────
 
     public function test_update_can_set_the_manufacturer_barcode(): void
@@ -228,6 +245,24 @@ class InventoryBarcodeTest extends TestCase
         $response->assertSessionHasErrors('manufacturer_barcode');
         $this->assertNotSame('0555555555555', $item->fresh()->manufacturer_barcode);
         $this->assertSame('0555555555555', $taken->fresh()->manufacturer_barcode);
+    }
+
+    public function test_update_rejects_a_code_used_as_another_items_internal_barcode(): void
+    {
+        $item = $this->createItem();
+        $other = $this->createItem(['item_name' => 'Butter']);
+        $admin = $this->createAdmin();
+
+        $response = $this->actingAs($admin)->put('/inventory/update/'.$item->id, [
+            'item_name' => $item->item_name,
+            'quantity' => $item->quantity,
+            'price' => $item->price,
+            'category' => $item->category,
+            'manufacturer_barcode' => $other->barcode,
+        ]);
+
+        $response->assertSessionHasErrors('manufacturer_barcode');
+        $this->assertNotSame($other->barcode, $item->fresh()->manufacturer_barcode);
     }
 
     public function test_update_never_changes_the_internal_barcode(): void
