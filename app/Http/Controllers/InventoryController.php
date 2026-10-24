@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use App\Models\Item; // Using Item model instead of Product
 
 class InventoryController extends Controller
@@ -25,18 +26,20 @@ class InventoryController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'item_name' => 'required|string|max:255',
             'quantity' => 'required|integer|min:0',
             'price' => 'required|numeric|min:0',
-            'category' => 'required|string|max:50'
+            'category' => 'required|string|max:50',
+            'manufacturer_barcode' => $this->manufacturerBarcodeRules(),
         ]);
 
         Item::create([
-            'item_name' => $request->item_name,
-            'quantity' => $request->quantity,
-            'price' => $request->price,
-            'category' => $request->category
+            'item_name' => $validated['item_name'],
+            'quantity' => $validated['quantity'],
+            'price' => $validated['price'],
+            'category' => $validated['category'],
+            'manufacturer_barcode' => $validated['manufacturer_barcode'] ?? null,
         ]);
 
         return redirect()->route('inventory.index')->with('success', 'Item added successfully!');
@@ -50,22 +53,50 @@ class InventoryController extends Controller
 
     public function update(Request $request, $id)
     {
-        $request->validate([
+        $item = Item::findOrFail($id);
+
+        $validated = $request->validate([
             'item_name' => 'required|string|max:255',
             'quantity' => 'required|integer|min:0',
             'price' => 'required|numeric|min:0',
-            'category' => 'required|string|max:50'
+            'category' => 'required|string|max:50',
+            'manufacturer_barcode' => $this->manufacturerBarcodeRules($item->id),
         ]);
 
-        $item = Item::findOrFail($id);
         $item->update([
-            'item_name' => $request->item_name,
-            'quantity' => $request->quantity,
-            'price' => $request->price,
-            'category' => $request->category
+            'item_name' => $validated['item_name'],
+            'quantity' => $validated['quantity'],
+            'price' => $validated['price'],
+            'category' => $validated['category'],
+            'manufacturer_barcode' => $validated['manufacturer_barcode'] ?? null,
         ]);
 
         return redirect()->route('inventory.index')->with('success', 'Item updated successfully!');
+    }
+
+    private function manufacturerBarcodeRules(?int $ignoreId = null): array
+    {
+        $unique = Rule::unique('items', 'manufacturer_barcode');
+
+        if ($ignoreId !== null) {
+            $unique->ignore($ignoreId);
+        }
+
+        return [
+            'nullable',
+            'string',
+            'max:64',
+            $unique,
+            function ($attribute, $value, $fail) {
+                if (blank($value)) {
+                    return;
+                }
+
+                if (Item::where('barcode', $value)->exists()) {
+                    $fail('This code is already used as an internal barcode on another item.');
+                }
+            },
+        ];
     }
 
     public function destroy($id)

@@ -52,6 +52,12 @@
                 </select>
             </x-field>
 
+            <hr class="border-slate-100">
+
+            <x-field label="Manufacturer Barcode (UPC/EAN)" name="manufacturer_barcode">
+                <input type="text" id="manufacturer_barcode" name="manufacturer_barcode" value="{{ old('manufacturer_barcode') }}" placeholder="Optional — e.g. 4800016138546" class="{{ $inputClass }}">
+            </x-field>
+
             <div class="flex gap-3 pt-2">
                 <x-button type="submit" color="primary" class="flex-1">
                     <x-icon name="plus" class="h-3.5 w-3.5" /> Add Item

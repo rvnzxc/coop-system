@@ -18,6 +18,69 @@ class ShopController extends Controller
         return view('shop.index', compact('items'));
     }
 
+    /**
+     * Resolve a scanned barcode to an item, for the POS scan input.
+     */
+    public function lookupItem(Request $request)
+    {
+        $code = $request->query('code');
+
+        if (blank($code)) {
+            return response()->json([
+                'found'   => false,
+                'message' => 'No barcode provided.',
+            ]);
+        }
+
+        $item = Item::findByAnyBarcode($code);
+
+        if (!$item) {
+            return response()->json([
+                'found'   => false,
+                'message' => "No item matches barcode {$code}.",
+            ]);
+        }
+
+        return response()->json([
+            'found'      => true,
+            'matched_on' => $item->matchedBarcodeColumn($code),
+            'item'       => [
+                'id'           => $item->id,
+                'display_name' => ucwords($item->item_name),
+                'price'        => (float) $item->price,
+                'quantity'     => $item->quantity,
+            ],
+        ]);
+    }
+
+    /**
+     * Match a cart line to its inventory row.
+     *
+     * Cart lines are keyed by item id, which is unambiguous when two products
+     * share a name. The name lookup is kept only so older clients that still
+     * post item_name keep working.
+     */
+    private function resolveCartItem(array $cartItem): ?Item
+    {
+        if (!empty($cartItem['id'])) {
+            return Item::find($cartItem['id']);
+        }
+
+        if (!empty($cartItem['name'])) {
+            return Item::where('item_name', $cartItem['name'])->first();
+        }
+
+        return null;
+    }
+
+    /**
+     * Human readable label for a cart line, for error messages.
+     */
+    private function cartItemLabel(array $cartItem): string
+    {
+        return (string) ($cartItem['name'] ?? ($cartItem['id'] ?? 'item'));
+    }
+
     public function checkout(Request $request)
     {
         $cartItems = $request->input('items', []);
@@ -56,16 +119,14 @@ class ShopController extends Controller
 
             // Validate stock and calculate total
             foreach ($cartItems as $cartItem) {
-                $itemName = $cartItem['name'];
                 $quantity = $cartItem['quantity'];
-
-                $item = Item::where('item_name', $itemName)->first();
+                $item = $this->resolveCartItem($cartItem);
 
                 if (!$item) {
                     DB::rollBack();
                     return response()->json([
                         'success' => false,
-                        'message' => "Item {$itemName} not found in inventory"
+                        'message' => "Item {$this->cartItemLabel($cartItem)} not found in inventory"
                     ], 400);
                 }
 
@@ -73,7 +134,7 @@ class ShopController extends Controller
                     DB::rollBack();
                     return response()->json([
                         'success' => false,
-                        'message' => "Not enough stock for {$itemName}. Available: {$item->quantity}, Required: {$quantity}"
+                        'message' => "Not enough stock for {$item->item_name}. Available: {$item->quantity}, Required: {$quantity}"
                     ], 400);
                 }
 
@@ -84,10 +145,8 @@ class ShopController extends Controller
             $saleRef = now()->format('Y-m-d H:i:s');
 
             foreach ($cartItems as $cartItem) {
-                $itemName = $cartItem['name'];
                 $quantity = $cartItem['quantity'];
-
-                $item = Item::where('item_name', $itemName)->first();
+                $item = $this->resolveCartItem($cartItem);
                 $item->quantity -= $quantity;
                 $item->save();
 
@@ -99,7 +158,7 @@ class ShopController extends Controller
                         'payment_method' => 'cash',
                         'amount'         => $item->price * $quantity,
                         'quantity'       => $quantity,
-                        'product_name'   => $itemName,
+                        'product_name'   => $item->item_name,
                         'purchase_date'  => now()->format('Y-m-d'),
                     ]);
                 } elseif ($memberId) {
@@ -111,7 +170,7 @@ class ShopController extends Controller
                         'payment_method' => $paymentMethod,
                         'amount'         => $item->price * $quantity,
                         'quantity'       => $quantity,
-                        'product_name'   => $itemName,
+                        'product_name'   => $item->item_name,
                         'purchase_date'  => now()->format('Y-m-d'),
                     ]);
                 }
@@ -132,9 +191,9 @@ class ShopController extends Controller
             if ($paymentMethod === 'credit' && $memberId) {
                 $itemsSnapshot = [];
                 foreach ($cartItems as $cartItem) {
-                    $item = Item::where('item_name', $cartItem['name'])->first();
+                    $item = $this->resolveCartItem($cartItem);
                     $itemsSnapshot[] = [
-                        'product_name' => $cartItem['name'],
+                        'product_name' => $item ? $item->item_name : $this->cartItemLabel($cartItem),
                         'quantity'     => $cartItem['quantity'],
                         'price'        => $item ? $item->price : 0,
                         'subtotal'     => $item ? $item->price * $cartItem['quantity'] : 0,

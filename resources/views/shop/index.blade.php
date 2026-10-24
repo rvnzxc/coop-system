@@ -19,6 +19,20 @@
             </div>
         </div>
 
+        <div class="scan-bar mb-4 text-right">
+            <div class="relative w-full sm:ml-auto sm:w-72">
+                <i class="fa fa-barcode pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-slate-400"></i>
+                <input
+                    type="text"
+                    id="itemScanInput"
+                    placeholder="Scan product barcode..."
+                    class="w-full rounded-lg border border-slate-300 bg-slate-50 py-2.5 pl-10 pr-4 text-sm text-slate-700 placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+                    onkeydown="if(event.key==='Enter') routeScan(this.value)"
+                >
+            </div>
+            <div id="itemScanError" style="display: none;" class="mt-1.5 text-xs text-red-600 sm:ml-auto sm:w-72 sm:text-right"></div>
+        </div>
+
         <div class="categories mb-4 flex shrink-0 gap-2 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch] [scrollbar-width:thin]">
             <div class="category flex-none cursor-pointer whitespace-nowrap rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 active" data-category="all">All</div>
             <div class="category flex-none cursor-pointer whitespace-nowrap rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50" data-category="disposable">Disposable</div>
@@ -38,7 +52,7 @@
         <div class="product-grid grid min-h-0 min-w-0 flex-1 auto-rows-[7rem] grid-cols-2 gap-3 overflow-y-auto p-1 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-3 2xl:grid-cols-4">
             @if($items->count() > 0)
                 @foreach($items as $item)
-                    <div class="product-card flex min-w-0 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-3 text-center transition-all hover:-translate-y-0.5 hover:border-brand-300 hover:bg-brand-50 hover:shadow-md" data-category="{{ $item->category ?? 'other' }}">
+                    <div class="product-card flex min-w-0 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-3 text-center transition-all hover:-translate-y-0.5 hover:border-brand-300 hover:bg-brand-50 hover:shadow-md" data-category="{{ $item->category ?? 'other' }}" data-id="{{ $item->id }}" data-name="{{ $item->item_name }}">
                         <div class="product-name mb-1 line-clamp-2 text-sm font-semibold text-slate-700">{{ ucwords($item->item_name) }}</div>
                         <div class="product-price text-base font-bold text-brand-700">{{ number_format($item->price, 2) }}</div>
                     </div>
@@ -90,7 +104,7 @@
                 id="memberScanInput"
                 placeholder="Scan or type member ID..."
                 class="flex-1 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/30"
-                onkeydown="if(event.key==='Enter') lookupMember()"
+                onkeydown="if(event.key==='Enter') routeScan(this.value)"
                 autofocus
               />
               <button onclick="lookupMember()" class="rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700">
@@ -204,21 +218,126 @@ document.addEventListener('DOMContentLoaded', function() {
     // Product click to add to cart
     document.querySelectorAll('.product-card').forEach(product => {
         product.addEventListener('click', function() {
-            const name = this.querySelector('.product-name').textContent;
+            const id = parseInt(this.dataset.id, 10);
+            const name = this.dataset.name;
             const price = parseFloat(this.querySelector('.product-price').textContent.replace(',', ''));
-            addToCart(name, price);
+            addToCart(id, name, price);
+            focusItemScan();
         });
     });
 });
 
-function addToCart(name, price) {
-    const existingItem = cart.find(item => item.name === name);
+// Cart lines are keyed by item id, so two products that share a name never
+// collide. `name` is kept purely for display.
+function addToCart(id, name, price) {
+    const existingItem = cart.find(item => item.id === id);
     if(existingItem) {
         existingItem.quantity++;
     } else {
-        cart.push({ name, price, quantity: 1 });
+        cart.push({ id, name, price, quantity: 1 });
     }
     updateCart();
+}
+
+// Look up a scanned product barcode and add it to the cart.
+// Returns true when something was added, so the member scanner can fall back
+// to treating an unmatched member code as a product code.
+async function scanItem(codeOverride) {
+    const input = document.getElementById('itemScanInput');
+    const code = (codeOverride !== undefined ? codeOverride : input.value).trim();
+    if (!code) return false;
+
+    try {
+        const response = await fetch(`/items/lookup?code=${encodeURIComponent(code)}`);
+        const data = await response.json();
+
+        if (data.found) {
+            addToCart(data.item.id, data.item.display_name, data.item.price);
+            input.value = '';
+            return true;
+        }
+
+        return false;
+    } catch (e) {
+        console.error('Item scan error:', e);
+        return false;
+    }
+}
+
+function focusItemScan() {
+    const input = document.getElementById('itemScanInput');
+    if (input) input.focus();
+}
+
+let scanBuffer = '';
+
+document.addEventListener('focusin', function () {
+    scanBuffer = '';
+});
+
+document.addEventListener('keydown', function (event) {
+    const target = event.target;
+    if (target !== document.body && target !== document.documentElement) return;
+
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        const value = scanBuffer.trim();
+        scanBuffer = '';
+        if (value) routeScan(value);
+        return;
+    }
+
+    if (event.key.length === 1) {
+        scanBuffer += event.key;
+        event.preventDefault();
+
+        const itemInput = document.getElementById('itemScanInput');
+        if (itemInput) itemInput.value = scanBuffer;
+    }
+});
+
+async function routeScan(code) {
+    const value = (code || '').trim();
+    if (!value) return false;
+
+    const itemInput = document.getElementById('itemScanInput');
+    const memberInput = document.getElementById('memberScanInput');
+    const itemError = document.getElementById('itemScanError');
+    const memberError = document.getElementById('memberScanError');
+
+    if (itemInput) itemInput.value = value;
+    if (itemError) itemError.style.display = 'none';
+    if (memberError) memberError.style.display = 'none';
+
+    const resetScans = () => {
+        if (itemInput) itemInput.value = '';
+        if (memberInput) memberInput.value = '';
+    };
+
+    if (await scanItem(value)) {
+        resetScans();
+        focusItemScan();
+        return true;
+    }
+
+    if (memberInput) memberInput.value = value;
+
+    if (await lookupMember()) {
+        resetScans();
+        focusItemScan();
+        return true;
+    }
+
+    if (memberInput) memberInput.value = '';
+    if (itemError) {
+        itemError.textContent = 'No item or member matches ' + value + '.';
+        itemError.style.display = 'block';
+    }
+    if (itemInput) {
+        itemInput.focus();
+        itemInput.select();
+    }
+    return false;
 }
 
 function updateCart() {
@@ -302,7 +421,7 @@ async function processPayment() {
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
             },
             body: JSON.stringify({
-                items: cart,
+                items: cart.map(item => ({ id: item.id, name: item.name, quantity: item.quantity })),
                 member_id: document.getElementById('selectedMemberIdInput').value,
                 is_non_member: document.getElementById('isNonMemberInput').value,
                 payment_method: document.getElementById('paymentMethodInput').value
@@ -335,7 +454,7 @@ async function processPayment() {
 // Member lookup functions
 async function lookupMember() {
   const query = document.getElementById('memberScanInput').value.trim();
-  if (!query) return;
+  if (!query) return false;
 
   try {
     const response = await fetch(`/members/lookup?q=${encodeURIComponent(query)}`);
@@ -368,12 +487,15 @@ async function lookupMember() {
       } else {
         document.getElementById('creditBalanceSection').style.display = 'none';
       }
-    } else {
-      document.getElementById('memberScanError').style.display = 'block';
+
+      focusItemScan();
+      return true;
     }
+
+    return false;
   } catch (e) {
     console.error('Lookup error:', e);
-    document.getElementById('memberScanError').style.display = 'block';
+    return false;
   }
 }
 
@@ -391,6 +513,7 @@ function setNonMember() {
   document.getElementById('creditBalanceSection').style.display = 'none';
   document.getElementById('paymentMethodInput').value = 'cash';
   selectedPaymentMethod = 'cash';
+  focusItemScan();
 }
 
 function clearMember() {
@@ -405,11 +528,11 @@ function clearMember() {
   document.getElementById('memberScanInput').value = '';
   document.getElementById('selectedMemberIdInput').value = '';
   document.getElementById('isNonMemberInput').value = '0';
-  document.getElementById('memberScanError').style.display = 'none';
   document.getElementById('paymentMethodSection').style.display = 'none';
   document.getElementById('creditBalanceSection').style.display = 'none';
   document.getElementById('paymentMethodInput').value = 'cash';
   selectedPaymentMethod = 'cash';
+  focusItemScan();
 }
 
 // Pay credit modal
