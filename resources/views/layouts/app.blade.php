@@ -56,6 +56,12 @@
                         <a href="{{ route('credits.index') }}" class="flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-colors {{ request()->routeIs('credits.*') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' }}">
                             <x-icon name="credit-card" /> Credits
                         </a>
+                        <a href="{{ route('transactions.index') }}" class="flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-colors {{ request()->routeIs('transactions.*') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' }}">
+                            <x-icon name="money" /> Transactions
+                        </a>
+                        <a href="{{ route('accounts.index') }}" class="flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-colors {{ request()->routeIs('accounts.*') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' }}">
+                            <x-icon name="users" /> Accounts
+                        </a>
                     @else
                         <div class="hidden px-3 pb-2 pt-4 text-[11px] font-semibold uppercase tracking-wider text-slate-400 lg:block">Point of Sale</div>
                         <a href="{{ route('shop.index') }}" class="flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-colors {{ request()->routeIs('shop.index') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' }}">
@@ -63,6 +69,9 @@
                         </a>
                         <a href="{{ route('credits.index') }}" class="flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-colors {{ request()->routeIs('credits.*') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' }}">
                             <x-icon name="credit-card" /> Credits
+                        </a>
+                        <a href="{{ route('my-transactions.index') }}" class="flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-colors {{ request()->routeIs('my-transactions.*') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' }}">
+                            <x-icon name="money" /> My Transactions
                         </a>
                     @endif
 

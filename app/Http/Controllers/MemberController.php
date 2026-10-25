@@ -226,7 +226,7 @@ class MemberController extends Controller
         $member = Member::findOrFail($id);
 
         // Fetch the member's purchase line items in a single query.
-        // There is no receipt/order column, but every item from the same
+        // There is no order column, but every item from the same
         // checkout is inserted within a single request, so the rows share
         // the exact same created_at timestamp - that is the grouping key.
         $purchases = $member->purchases()

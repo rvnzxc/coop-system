@@ -18,24 +18,24 @@
         </div>
 
         <div class="rounded-2xl border border-slate-200 bg-white p-8 shadow-xl">
-            @if ($errors->has('email'))
+            @if ($errors->has('username'))
                 <div class="mb-6 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
                     <x-icon name="exclamation-circle" class="mt-0.5 h-3.5 w-3.5" />
-                    <div>{{ $errors->first('email') }}</div>
+                    <div>{{ $errors->first('username') }}</div>
                 </div>
             @endif
 
             <form method="POST" action="/login" class="space-y-5">
                 @csrf
                 <div>
-                    <label for="email" class="mb-1.5 block text-sm font-medium text-slate-700">Email Address</label>
-                    <input type="email" id="email" name="email" value="{{ old('email') }}" required autofocus
+                    <label for="username" class="mb-1.5 block text-sm font-medium text-slate-700">Username or Email</label>
+                    <input type="text" id="username" name="username" value="{{ old('username') }}" required autofocus autocomplete="username"
                         class="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30">
                 </div>
 
                 <div>
                     <label for="password" class="mb-1.5 block text-sm font-medium text-slate-700">Password</label>
-                    <input type="password" id="password" name="password" required
+                    <input type="password" id="password" name="password" required autocomplete="current-password"
                         class="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30">
                 </div>
 

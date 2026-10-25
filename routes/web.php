@@ -6,6 +6,9 @@ use App\Http\Controllers\MemberController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CreditController;
+use App\Http\Controllers\AccountController;
+use App\Http\Controllers\MyTransactionController;
+use App\Http\Controllers\TransactionController;
 
 // Default route - redirect to login
 Route::get('/', function () {
@@ -31,6 +34,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/credits', [CreditController::class, 'index'])->name('credits.index');
     Route::get('/credits/{credit}', [CreditController::class, 'show'])->name('credits.show');
     Route::post('/credits/{credit}/pay', [CreditController::class, 'pay'])->name('credits.pay');
+});
+
+// Cashier's own transactions - always scoped to the session user
+Route::middleware(['auth'])->group(function () {
+    Route::get('/my-transactions', [MyTransactionController::class, 'index'])->name('my-transactions.index');
 });
 
 // Inventory Management - Admin only
@@ -65,4 +73,21 @@ Route::middleware(['auth', 'role.admin'])->prefix('members')->group(function () 
 // Analytics - Admin only
 Route::middleware(['auth', 'role.admin'])->group(function () {
     Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
+});
+
+// Accounts management - Admin only
+Route::middleware(['auth', 'role.admin'])->prefix('accounts')->group(function () {
+    Route::get('/', [AccountController::class, 'index'])->name('accounts.index');
+    Route::post('/cashiers', [AccountController::class, 'storeCashier'])->name('accounts.cashiers.store');
+    Route::put('/cashiers/{user}', [AccountController::class, 'updateCashier'])->name('accounts.cashiers.update');
+    Route::post('/cashiers/{user}/reset-password', [AccountController::class, 'resetCashierPassword'])->name('accounts.cashiers.reset-password');
+    Route::patch('/cashiers/{user}/status', [AccountController::class, 'toggleCashierStatus'])->name('accounts.cashiers.status');
+    Route::put('/me', [AccountController::class, 'updateSelf'])->name('accounts.me.update');
+});
+
+// Transactions and activity log - Admin only
+Route::middleware(['auth', 'role.admin'])->prefix('transactions')->group(function () {
+    Route::get('/', [TransactionController::class, 'index'])->name('transactions.index');
+    Route::get('/export', [TransactionController::class, 'export'])->name('transactions.export');
+    Route::get('/activity', [TransactionController::class, 'activity'])->name('transactions.activity');
 });
