@@ -29,17 +29,32 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $request->validate([
-            'username' => 'required|string|max:255',
+            'username' => 'nullable|string|max:255',
+            'email' => 'nullable|string|max:255',
+            'login' => 'nullable|string|max:255',
             'password' => 'required|string',
         ]);
 
-        $login = trim((string) $request->input('username'));
+        $login = trim((string) (
+            $request->input('username')
+            ?? $request->input('email')
+            ?? $request->input('login')
+        ));
         $password = (string) $request->input('password');
 
+        if ($login === '') {
+            return back()->withErrors([
+                'username' => 'The username field is required.',
+                'email' => 'The username field is required.',
+            ])->onlyInput('username', 'email');
+        }
+
+        $normalized = mb_strtolower($login);
+
         $user = User::query()
-            ->where(function ($query) use ($login) {
-                $query->whereRaw('LOWER(username) = ?', [mb_strtolower($login)])
-                    ->orWhere('email', $login);
+            ->where(function ($query) use ($normalized) {
+                $query->whereRaw('LOWER(username) = ?', [$normalized])
+                    ->orWhereRaw('LOWER(email) = ?', [$normalized]);
             })
             ->first();
 
@@ -49,7 +64,7 @@ class AuthController extends Controller
             if (! $user->is_active) {
                 return back()->withErrors([
                     'username' => 'This account has been disabled. Please contact an administrator.',
-                ])->onlyInput('username');
+                ])->onlyInput('username', 'email');
             }
 
             $needsRehash = false;
@@ -86,7 +101,7 @@ class AuthController extends Controller
 
         return back()->withErrors([
             'username' => 'The provided credentials do not match our records.',
-        ])->onlyInput('username');
+        ])->onlyInput('username', 'email');
     }
 
     /**

@@ -42,6 +42,20 @@ body {
 }
 
 /*
+ * Hide the horizontal scrollbar on tables that need to pan on very narrow
+ * screens. Scrolling still works via touch/trackpad, but no scroll wheel is
+ * shown inside the card.
+ */
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+/*
  * Mobile/tablet off-canvas sidebar drawer. The `-translate-x-full` base
  * utility is layered, so this unlayered rule reliably wins when `.open`
  * is toggled by the inline hamburger script in layouts/app.blade.php.

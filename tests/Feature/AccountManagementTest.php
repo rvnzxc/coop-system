@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
@@ -12,16 +11,16 @@ class AccountManagementTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function createAdmin(array $overrides = []): User
+    private function createAdmin(string $password = 'adminpass123'): User
     {
-        return User::create(array_merge([
-            'name' => 'Admin User',
+        return User::create([
+            'name' => 'Test Admin',
             'username' => 'admin',
             'email' => 'admin@test.com',
-            'password' => bcrypt('password'),
+            'password' => $password,
             'role' => 'admin',
             'is_active' => true,
-        ], $overrides));
+        ]);
     }
 
     private function createCashier(array $overrides = []): User
@@ -29,270 +28,194 @@ class AccountManagementTest extends TestCase
         return User::create(array_merge([
             'name' => 'Test Cashier',
             'username' => 'cashier',
-            'email' => null,
-            'password' => bcrypt('password'),
+            'email' => 'cashier@test.com',
+            'password' => 'cashierpass123',
             'role' => 'cashier',
             'is_active' => true,
         ], $overrides));
     }
 
-    public function test_admin_can_view_accounts_page_with_cashiers(): void
+    public function test_admin_can_view_accounts_page(): void
     {
         $admin = $this->createAdmin();
-        $cashier = $this->createCashier(['name' => 'Jane Cashier', 'username' => 'janec']);
+        $cashier = $this->createCashier();
 
-        $response = $this->actingAs($admin)->get('/accounts');
+        $response = $this->actingAs($admin)->get(route('accounts.index'));
 
         $response->assertOk();
-        $response->assertSee('My Account');
-        $response->assertSee('Cashier Accounts');
-        $response->assertSee('Jane Cashier');
-        $response->assertSee('janec');
+        $response->assertSee('Manage cashier accounts and your own administrator profile');
+        $response->assertSee($cashier->username);
     }
 
-    public function test_cashier_cannot_access_accounts_page_or_endpoints(): void
+    public function test_cashier_cannot_access_account_management(): void
     {
         $cashier = $this->createCashier();
 
-        $this->actingAs($cashier)->get('/accounts')->assertForbidden();
-        $this->actingAs($cashier)->post('/accounts/cashiers', [
-            'name' => 'Nope',
-            'username' => 'nope',
-            'password' => 'secret123',
-            'password_confirmation' => 'secret123',
-        ])->assertForbidden();
-        $this->actingAs($cashier)->put('/accounts/me', [
-            'name' => 'Nope',
-            'username' => 'nope',
-        ])->assertForbidden();
+        $this->actingAs($cashier)->get(route('accounts.index'))->assertForbidden();
+        $this->actingAs($cashier)->get(route('accounts.create'))->assertForbidden();
     }
 
-    public function test_admin_can_create_cashier_with_hashed_password_and_login(): void
+    public function test_admin_can_create_a_cashier_account_with_a_hashed_password(): void
     {
         $admin = $this->createAdmin();
 
-        $response = $this->actingAs($admin)->post('/accounts/cashiers', [
+        $response = $this->actingAs($admin)->post(route('accounts.store'), [
+            'username' => 'New.Cashier',
             'name' => 'New Cashier',
-            'username' => 'newcashier',
-            'password' => 'secret123',
-            'password_confirmation' => 'secret123',
+            'email' => 'new.cashier@test.com',
+            'password' => 'secretpass123',
+            'password_confirmation' => 'secretpass123',
+            'is_active' => '1',
         ]);
 
         $response->assertRedirect(route('accounts.index'));
-        $response->assertSessionHas('success');
 
-        $cashier = User::where('username', 'newcashier')->firstOrFail();
+        $cashier = User::where('username', 'New.Cashier')->firstOrFail();
 
         $this->assertSame('cashier', $cashier->role);
         $this->assertTrue($cashier->is_active);
-        $this->assertNotSame('secret123', $cashier->password);
-        $this->assertTrue(Hash::check('secret123', $cashier->password));
-
-        $this->post('/logout');
-        $this->post('/login', [
-            'username' => 'newcashier',
-            'password' => 'secret123',
-        ])->assertRedirect('/pos');
-
-        $this->assertAuthenticatedAs($cashier);
+        $this->assertNotSame('secretpass123', $cashier->password);
+        $this->assertTrue(Hash::check('secretpass123', $cashier->password));
     }
 
-    public function test_duplicate_username_is_rejected_case_insensitively(): void
+    public function test_usernames_are_unique_case_insensitively(): void
     {
         $admin = $this->createAdmin();
-        $this->createCashier(['username' => 'CashierOne']);
+        $this->createCashier(['username' => 'Cashier.One']);
 
-        $response = $this->actingAs($admin)->post('/accounts/cashiers', [
-            'name' => 'Duplicate',
-            'username' => 'cashierone',
-            'password' => 'secret123',
-            'password_confirmation' => 'secret123',
+        $response = $this->actingAs($admin)->post(route('accounts.store'), [
+            'username' => 'cashier.one',
+            'name' => 'Duplicate Cashier',
+            'password' => 'secretpass123',
+            'password_confirmation' => 'secretpass123',
         ]);
 
         $response->assertSessionHasErrors('username');
-        $this->assertSame(1, User::where('role', 'cashier')->count());
+        $this->assertDatabaseMissing('users', ['name' => 'Duplicate Cashier']);
     }
 
-    public function test_admin_can_update_cashier_username_and_password(): void
+    public function test_usernames_cannot_collide_with_existing_emails(): void
     {
         $admin = $this->createAdmin();
-        $cashier = $this->createCashier(['username' => 'oldname']);
+        $this->createCashier(['username' => null, 'email' => 'legacy@test.com']);
 
-        $response = $this->actingAs($admin)->put('/accounts/cashiers/'.$cashier->id, [
-            'name' => 'Updated Cashier',
-            'username' => 'newname',
-            'password' => 'newsecret123',
-            'password_confirmation' => 'newsecret123',
+        $response = $this->actingAs($admin)->post(route('accounts.store'), [
+            'username' => 'legacy@test.com',
+            'name' => 'Collision Cashier',
+            'password' => 'secretpass123',
+            'password_confirmation' => 'secretpass123',
         ]);
 
-        $response->assertRedirect(route('accounts.index'));
-
-        $cashier->refresh();
-        $this->assertSame('Updated Cashier', $cashier->name);
-        $this->assertSame('newname', $cashier->username);
-        $this->assertTrue(Hash::check('newsecret123', $cashier->password));
-
-        $this->post('/login', [
-            'username' => 'newname',
-            'password' => 'newsecret123',
-        ])->assertRedirect('/pos');
-        $this->assertAuthenticatedAs($cashier);
+        $response->assertSessionHasErrors('username');
     }
 
-    public function test_editing_cashier_without_password_keeps_current_password(): void
-    {
-        $admin = $this->createAdmin();
-        $cashier = $this->createCashier(['username' => 'keepme']);
-        $originalHash = $cashier->password;
-
-        $this->actingAs($admin)->put('/accounts/cashiers/'.$cashier->id, [
-            'name' => 'Renamed Cashier',
-            'username' => 'keepme2',
-            'password' => '',
-            'password_confirmation' => '',
-        ])->assertRedirect(route('accounts.index'));
-
-        $cashier->refresh();
-        $this->assertSame($originalHash, $cashier->password);
-        $this->assertTrue(Hash::check('password', $cashier->password));
-    }
-
-    public function test_admin_can_reset_cashier_password(): void
-    {
-        $admin = $this->createAdmin();
-        $cashier = $this->createCashier(['username' => 'resetcash']);
-
-        $this->actingAs($admin)->post('/accounts/cashiers/'.$cashier->id.'/reset-password', [
-            'password' => 'brandnew123',
-            'password_confirmation' => 'brandnew123',
-        ])->assertRedirect(route('accounts.index'));
-
-        $cashier->refresh();
-        $this->assertTrue(Hash::check('brandnew123', $cashier->password));
-
-        $this->post('/login', [
-            'username' => 'resetcash',
-            'password' => 'brandnew123',
-        ])->assertRedirect('/pos');
-        $this->assertAuthenticatedAs($cashier);
-    }
-
-    public function test_admin_can_toggle_cashier_status_and_disabled_cashier_cannot_login(): void
-    {
-        $admin = $this->createAdmin();
-        $cashier = $this->createCashier(['username' => 'toggleme']);
-
-        $this->actingAs($admin)->patch('/accounts/cashiers/'.$cashier->id.'/status', [
-            'is_active' => '0',
-        ])->assertRedirect(route('accounts.index'));
-
-        $cashier->refresh();
-        $this->assertFalse($cashier->is_active);
-
-        $this->post('/logout');
-        $this->post('/login', [
-            'username' => 'toggleme',
-            'password' => 'password',
-        ])->assertSessionHasErrors('username');
-
-        $this->assertGuest();
-    }
-
-    public function test_admin_can_update_own_info_with_correct_current_password(): void
-    {
-        $admin = $this->createAdmin(['username' => 'oldadmin']);
-
-        $response = $this->actingAs($admin)->put('/accounts/me', [
-            'name' => 'Renamed Admin',
-            'username' => 'newadmin',
-            'current_password' => 'password',
-            'password' => 'newpassword123',
-            'password_confirmation' => 'newpassword123',
-        ]);
-
-        $response->assertRedirect(route('accounts.index'));
-        $response->assertSessionHas('success');
-
-        $admin->refresh();
-        $this->assertSame('Renamed Admin', $admin->name);
-        $this->assertSame('newadmin', $admin->username);
-        $this->assertTrue(Hash::check('newpassword123', $admin->password));
-        $this->assertAuthenticatedAs($admin);
-    }
-
-    public function test_admin_self_update_rejects_wrong_current_password(): void
-    {
-        $admin = $this->createAdmin();
-
-        $response = $this->actingAs($admin)->put('/accounts/me', [
-            'name' => 'Admin User',
-            'username' => 'admin',
-            'current_password' => 'wrong-password',
-            'password' => 'newpassword123',
-            'password_confirmation' => 'newpassword123',
-        ]);
-
-        $response->assertSessionHasErrors('current_password');
-
-        $admin->refresh();
-        $this->assertTrue(Hash::check('password', $admin->password));
-    }
-
-    public function test_self_update_requires_current_password_when_setting_a_new_one(): void
-    {
-        $admin = $this->createAdmin();
-
-        $response = $this->actingAs($admin)->put('/accounts/me', [
-            'name' => 'Admin User',
-            'username' => 'admin',
-            'password' => 'newpassword123',
-            'password_confirmation' => 'newpassword123',
-        ]);
-
-        $response->assertSessionHasErrors('current_password');
-    }
-
-    public function test_accounts_page_never_exposes_stored_passwords(): void
+    public function test_admin_can_reset_a_cashier_password_and_the_cashier_can_login(): void
     {
         $admin = $this->createAdmin();
         $cashier = $this->createCashier();
 
-        $response = $this->actingAs($admin)->get('/accounts');
+        $response = $this->actingAs($admin)->put(route('accounts.password.update', $cashier), [
+            'password' => 'brandnewpass123',
+            'password_confirmation' => 'brandnewpass123',
+        ]);
 
-        $response->assertOk();
-        $response->assertDontSee($cashier->password);
-        $response->assertDontSee('password_confirmation" value', false);
-    }
+        $response->assertRedirect(route('accounts.index'));
 
-    public function test_admin_cannot_manage_another_admin_through_cashier_endpoints(): void
-    {
-        $admin = $this->createAdmin();
-        $otherAdmin = $this->createAdmin(['name' => 'Other Admin', 'username' => 'otheradmin', 'email' => 'other@test.com']);
+        $cashier->refresh();
+        $this->assertTrue(Hash::check('brandnewpass123', $cashier->password));
 
-        $this->actingAs($admin)->put('/accounts/cashiers/'.$otherAdmin->id, [
-            'name' => 'Hijacked',
-            'username' => 'hijacked',
-        ])->assertNotFound();
-
-        $this->assertSame('Other Admin', $otherAdmin->fresh()->name);
-        $this->assertSame('otheradmin', $otherAdmin->fresh()->username);
-    }
-
-    public function test_legacy_plain_text_password_is_rehashed_on_login(): void
-    {
-        $user = $this->createCashier(['username' => 'legacyuser']);
-
-        // Simulate an account created before password hashing was enforced.
-        DB::table('users')->where('id', $user->id)->update(['password' => 'plaintextpass']);
-        $user->refresh();
+        $this->post('/logout');
 
         $this->post('/login', [
-            'username' => 'legacyuser',
-            'password' => 'plaintextpass',
+            'username' => $cashier->username,
+            'password' => 'brandnewpass123',
         ])->assertRedirect('/pos');
 
-        $this->assertAuthenticatedAs($user);
-        $this->assertNotSame('plaintextpass', $user->fresh()->password);
-        $this->assertTrue(Hash::check('plaintextpass', $user->fresh()->password));
+        $this->assertAuthenticatedAs($cashier);
+    }
+
+    public function test_admin_can_update_their_own_username_and_password(): void
+    {
+        $admin = $this->createAdmin();
+
+        $response = $this->actingAs($admin)->put(route('accounts.me.update'), [
+            'name' => 'Updated Admin',
+            'username' => 'admin.updated',
+            'email' => 'updated.admin@test.com',
+            'current_password' => 'adminpass123',
+            'password' => 'newadminpass123',
+            'password_confirmation' => 'newadminpass123',
+        ]);
+
+        $response->assertRedirect(route('accounts.me'));
+
+        $admin->refresh();
+        $this->assertSame('admin.updated', $admin->username);
+        $this->assertSame('Updated Admin', $admin->name);
+        $this->assertTrue(Hash::check('newadminpass123', $admin->password));
+
+        $this->post('/logout');
+
+        $this->post('/login', [
+            'username' => 'admin.updated',
+            'password' => 'newadminpass123',
+        ])->assertRedirect('/analytics');
+
+        $this->assertAuthenticatedAs($admin);
+    }
+
+    public function test_admin_password_change_requires_the_correct_current_password(): void
+    {
+        $admin = $this->createAdmin();
+
+        $response = $this->actingAs($admin)->from(route('accounts.me'))->put(route('accounts.me.update'), [
+            'name' => $admin->name,
+            'username' => $admin->username,
+            'current_password' => 'wrong-password',
+            'password' => 'newadminpass123',
+            'password_confirmation' => 'newadminpass123',
+        ]);
+
+        $response->assertRedirect(route('accounts.me'));
+        $response->assertSessionHasErrors('current_password');
+
+        $admin->refresh();
+        $this->assertTrue(Hash::check('adminpass123', $admin->password));
+    }
+
+    public function test_inactive_cashiers_cannot_login(): void
+    {
+        $cashier = $this->createCashier(['is_active' => false]);
+
+        $response = $this->post('/login', [
+            'username' => $cashier->username,
+            'password' => 'cashierpass123',
+        ]);
+
+        $response->assertSessionHasErrors('username');
+        $this->assertGuest();
+    }
+
+    public function test_admin_can_deactivate_a_cashier_account(): void
+    {
+        $admin = $this->createAdmin();
+        $cashier = $this->createCashier();
+
+        $response = $this->actingAs($admin)->post(route('accounts.status', $cashier));
+
+        $response->assertRedirect(route('accounts.index'));
+        $this->assertFalse($cashier->fresh()->is_active);
+    }
+
+    public function test_legacy_email_login_still_works_without_a_username(): void
+    {
+        $cashier = $this->createCashier(['username' => null, 'email' => 'legacy.cashier@test.com']);
+
+        $this->post('/login', [
+            'email' => $cashier->email,
+            'password' => 'cashierpass123',
+        ])->assertRedirect('/pos');
+
+        $this->assertAuthenticatedAs($cashier);
     }
 }

@@ -81,6 +81,12 @@
                         </x-button>
                     </div>
                     <p id="barcodeScanStatus" class="mt-1.5 text-xs text-slate-400">Click Scan, then scan the product packaging.</p>
+                    @if($item->manufacturer_barcode)
+                        <div class="mt-3 inline-block rounded-md border border-slate-200 bg-white p-2.5">
+                            {!! \App\Services\BarcodeService::generateBarcode($item->manufacturer_barcode) !!}
+                        </div>
+                        <p class="mt-1.5 text-xs text-slate-400">Scan this code straight off the packaging — the value is also printed under the bars.</p>
+                    @endif
                 </x-field>
             </div>
 

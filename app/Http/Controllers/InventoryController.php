@@ -21,7 +21,10 @@ class InventoryController extends Controller
 
     public function create()
     {
-        return view('inventory.create');
+        $previewBarcode = Item::generateBarcode();
+        session(['inventory.preview_barcode' => $previewBarcode]);
+
+        return view('inventory.create', compact('previewBarcode'));
     }
 
     public function store(Request $request)
@@ -34,11 +37,18 @@ class InventoryController extends Controller
             'manufacturer_barcode' => $this->manufacturerBarcodeRules(),
         ]);
 
+        $barcode = session()->pull('inventory.preview_barcode');
+
+        if (blank($barcode) || Item::where('barcode', $barcode)->exists()) {
+            $barcode = Item::generateBarcode();
+        }
+
         Item::create([
             'item_name' => $validated['item_name'],
             'quantity' => $validated['quantity'],
             'price' => $validated['price'],
             'category' => $validated['category'],
+            'barcode' => $barcode,
             'manufacturer_barcode' => $validated['manufacturer_barcode'] ?? null,
         ]);
 

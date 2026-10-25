@@ -8,105 +8,133 @@ use App\Services\AuditLogger;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 
 class AccountController extends Controller
 {
-    public function index(Request $request)
+    public function index()
     {
-        $this->ensureAdmin();
-
-        $search = trim((string) $request->query('search', ''));
-
-        $cashiers = User::query()
-            ->where('role', 'cashier')
-            ->when($search !== '', function ($query) use ($search) {
-                $like = '%'.$search.'%';
-
-                $query->where(function ($query) use ($like) {
-                    $query->where('name', 'like', $like)
-                        ->orWhere('username', 'like', $like);
-                });
-            })
+        $accounts = User::orderByRaw("CASE WHEN role = 'admin' THEN 0 ELSE 1 END")
             ->orderBy('name')
             ->get();
 
-        return view('accounts.index', [
-            'cashiers' => $cashiers,
-            'search' => $search,
-            'currentUser' => $request->user(),
-        ]);
+        $totalAccounts = $accounts->count();
+        $cashierCount = $accounts->where('role', 'cashier')->count();
+        $activeCount = $accounts->where('is_active', true)->count();
+
+        return view('accounts.index', compact(
+            'accounts',
+            'totalAccounts',
+            'cashierCount',
+            'activeCount'
+        ));
     }
 
-    public function storeCashier(Request $request)
+    public function create()
     {
-        $this->ensureAdmin();
+        return view('accounts.create');
+    }
 
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'username' => $this->usernameRules(),
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
-        ]);
+    public function store(Request $request)
+    {
+        $validated = $request->validate($this->accountRules());
 
         $user = User::create([
             'name' => $validated['name'],
-            'username' => $validated['username'],
-            'email' => null,
+            'username' => trim($validated['username']),
+            'email' => filled($validated['email'] ?? null) ? trim($validated['email']) : null,
             'password' => $validated['password'],
             'role' => 'cashier',
-            'is_active' => true,
+            'is_active' => $request->has('is_active') ? $request->boolean('is_active') : true,
         ]);
 
         AuditLogger::log(AuditLog::ACTION_ACCOUNT_CREATED, 'user', $user->id, [
-            'name' => $user->name,
             'username' => $user->username,
             'role' => $user->role,
+            'is_active' => (bool) $user->is_active,
         ]);
 
         return redirect()
             ->route('accounts.index')
-            ->with('success', 'Cashier account created successfully.');
+            ->with('success', 'Cashier account "'.$user->username.'" created successfully.');
     }
 
-    public function updateCashier(Request $request, User $user)
+    public function edit(User $user)
     {
-        $this->ensureAdmin();
-        $this->ensureCashier($user);
+        if ($user->is(Auth::user())) {
+            return redirect()->route('accounts.me');
+        }
 
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'username' => $this->usernameRules($user),
-            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
-        ]);
+        abort_if($user->role !== 'cashier', 403, 'Administrator accounts can only be managed by their owner.');
+
+        return view('accounts.edit', ['account' => $user]);
+    }
+
+    public function update(Request $request, User $user)
+    {
+        $isSelf = $user->is(Auth::user());
+
+        abort_if(! $isSelf && $user->role !== 'cashier', 403, 'Administrator accounts can only be managed by their owner.');
+
+        $rules = $this->accountRules($user, false);
+        $rules['current_password'] = ['nullable', 'required_with:password', 'current_password'];
+        $rules['password'] = ['nullable', 'string', 'min:8', 'confirmed'];
+
+        if (! $isSelf) {
+            unset($rules['current_password']);
+        }
+
+        $validated = $request->validate($rules);
 
         $user->name = $validated['name'];
-        $user->username = $validated['username'];
+        $user->username = trim($validated['username']);
+        $user->email = filled($validated['email'] ?? null) ? trim($validated['email']) : null;
 
-        // A blank password keeps the existing one. Hash casts on the model
-        // handle the actual hashing; the plain value is never stored.
-        $passwordChanged = ! blank($validated['password'] ?? null);
+        if (! $isSelf) {
+            $user->is_active = $request->has('is_active') ? $request->boolean('is_active') : false;
+        }
 
-        if ($passwordChanged) {
+        if (filled($validated['password'] ?? null)) {
             $user->password = $validated['password'];
         }
 
         $user->save();
 
         AuditLogger::log(AuditLog::ACTION_ACCOUNT_UPDATED, 'user', $user->id, [
-            'name' => $user->name,
             'username' => $user->username,
-            'password_changed' => $passwordChanged,
+            'role' => $user->role,
+            'is_active' => (bool) $user->is_active,
+            'password_changed' => filled($validated['password'] ?? null),
         ]);
+
+        if ($isSelf) {
+            return redirect()
+                ->route('accounts.me')
+                ->with('success', 'Your account has been updated.');
+        }
 
         return redirect()
             ->route('accounts.index')
-            ->with('success', 'Cashier account updated successfully.');
+            ->with('success', 'Account "'.$user->username.'" updated successfully.');
     }
 
-    public function resetCashierPassword(Request $request, User $user)
+    public function password(User $user)
     {
-        $this->ensureAdmin();
-        $this->ensureCashier($user);
+        if ($user->is(Auth::user())) {
+            return redirect()->route('accounts.me');
+        }
+
+        abort_if($user->role !== 'cashier', 403, 'Administrator accounts can only be managed by their owner.');
+
+        return view('accounts.password', ['account' => $user]);
+    }
+
+    public function resetPassword(Request $request, User $user)
+    {
+        if ($user->is(Auth::user())) {
+            return redirect()->route('accounts.me');
+        }
+
+        abort_if($user->role !== 'cashier', 403, 'Administrator accounts can only be managed by their owner.');
 
         $validated = $request->validate([
             'password' => ['required', 'string', 'min:8', 'confirmed'],
@@ -116,162 +144,123 @@ class AccountController extends Controller
         $user->save();
 
         AuditLogger::log(AuditLog::ACTION_ACCOUNT_PASSWORD_RESET, 'user', $user->id, [
-            'name' => $user->name,
             'username' => $user->username,
         ]);
 
         return redirect()
             ->route('accounts.index')
-            ->with('success', 'Password reset for '.$user->name.'.');
+            ->with('success', 'Password for "'.$user->username.'" has been reset.');
     }
 
-    public function toggleCashierStatus(Request $request, User $user)
+    public function toggleStatus(User $user)
     {
-        $this->ensureAdmin();
-        $this->ensureCashier($user);
+        if ($user->is(Auth::user())) {
+            return back()->with('error', 'You cannot change the status of your own account.');
+        }
 
-        $validated = $request->validate([
-            'is_active' => ['required', 'boolean'],
-        ]);
+        if ($user->role !== 'cashier') {
+            return back()->with('error', 'Administrator accounts cannot be deactivated from this page.');
+        }
 
-        $user->is_active = (bool) $validated['is_active'];
+        $user->is_active = ! $user->is_active;
         $user->save();
 
         AuditLogger::log(AuditLog::ACTION_ACCOUNT_STATUS_CHANGED, 'user', $user->id, [
-            'name' => $user->name,
             'username' => $user->username,
-            'is_active' => $user->is_active,
+            'is_active' => (bool) $user->is_active,
         ]);
+
+        $status = $user->is_active ? 'activated' : 'deactivated';
 
         return redirect()
             ->route('accounts.index')
-            ->with('success', $user->name.'\'s account has been '.($user->is_active ? 'enabled' : 'disabled').'.');
+            ->with('success', 'Account "'.$user->username.'" has been '.$status.'.');
     }
 
-    public function updateSelf(Request $request)
+    public function me()
     {
-        $this->ensureAdmin();
+        return view('accounts.me', ['account' => Auth::user()]);
+    }
 
-        $user = $request->user();
-        $previousUsername = $user->username;
+    public function updateMe(Request $request)
+    {
+        $user = Auth::user();
 
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'username' => $this->usernameRules($user),
-            'current_password' => [
-                'nullable',
-                'required_with:password',
-                function (string $attribute, $value, Closure $fail) use ($request) {
-                    if (blank($value)) {
-                        return;
-                    }
+        $rules = $this->accountRules($user, false);
+        $rules['current_password'] = ['nullable', 'required_with:password', 'current_password'];
+        $rules['password'] = ['nullable', 'string', 'min:8', 'confirmed'];
 
-                    if (! $this->passwordMatches($request->user(), (string) $value)) {
-                        $fail('The current password is incorrect.');
-                    }
-                },
-            ],
-            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
-        ]);
-
-        $usernameChanged = mb_strtolower((string) $previousUsername) !== mb_strtolower($validated['username']);
-        $passwordChanged = ! blank($validated['password'] ?? null);
+        $validated = $request->validate($rules);
 
         $user->name = $validated['name'];
-        $user->username = $validated['username'];
+        $user->username = trim($validated['username']);
+        $user->email = filled($validated['email'] ?? null) ? trim($validated['email']) : null;
 
-        if ($passwordChanged) {
+        if (filled($validated['password'] ?? null)) {
             $user->password = $validated['password'];
         }
 
         $user->save();
 
         AuditLogger::log(AuditLog::ACTION_ACCOUNT_UPDATED, 'user', $user->id, [
-            'name' => $user->name,
             'username' => $user->username,
-            'username_changed' => $usernameChanged,
-            'password_changed' => $passwordChanged,
-            'self' => true,
+            'role' => $user->role,
+            'password_changed' => filled($validated['password'] ?? null),
         ]);
 
-        // Keep the current session authenticated after changing credentials.
-        Auth::setUser($user->fresh());
-
-        if ($usernameChanged || $passwordChanged) {
-            $request->session()->regenerate();
-        }
-
-        if ($passwordChanged) {
-            $message = 'Your account was updated. You are still signed in with your new password.';
-        } elseif ($usernameChanged) {
-            $message = 'Your account was updated. You are still signed in with your new username.';
-        } else {
-            $message = 'Your account was updated.';
-        }
-
         return redirect()
-            ->route('accounts.index')
-            ->with('success', $message);
+            ->route('accounts.me')
+            ->with('success', 'Your account has been updated.');
     }
 
-    /**
-     * Usernames are unique case-insensitively, so the check is done with
-     * LOWER() rather than relying on the database collation alone.
-     *
-     * @return array<int, mixed>
-     */
-    private function usernameRules(?User $ignore = null): array
+    private function accountRules(?User $user = null, bool $passwordRequired = true): array
     {
-        return [
-            'required',
-            'string',
-            'min:3',
-            'max:64',
-            'regex:/^[A-Za-z0-9._-]+$/',
-            function (string $attribute, $value, Closure $fail) use ($ignore) {
-                $query = User::query()->whereRaw('LOWER(username) = ?', [mb_strtolower((string) $value)]);
-
-                if ($ignore) {
-                    $query->whereKeyNot($ignore->getKey());
-                }
-
-                if ($query->exists()) {
-                    $fail('This username is already taken.');
-                }
-            },
+        $rules = [
+            'name' => ['required', 'string', 'max:255'],
+            'username' => [
+                'required',
+                'string',
+                'min:3',
+                'max:255',
+                $this->uniqueIdentifierRule($user, 'username'),
+            ],
+            'email' => [
+                'nullable',
+                'email',
+                'max:255',
+                $this->uniqueIdentifierRule($user, 'email'),
+            ],
         ];
+
+        $rules['password'] = $passwordRequired
+            ? ['required', 'string', 'min:8', 'confirmed']
+            : ['nullable', 'string', 'min:8', 'confirmed'];
+
+        return $rules;
     }
 
-    private function passwordMatches(User $user, string $password): bool
+    private function uniqueIdentifierRule(?User $user, string $column): Closure
     {
-        $stored = (string) $user->getAuthPassword();
-
-        if ($stored === '') {
-            return false;
-        }
-
-        try {
-            if (Hash::check($password, $stored)) {
-                return true;
+        return function (string $attribute, mixed $value, Closure $fail) use ($user, $column): void {
+            if (blank($value)) {
+                return;
             }
-        } catch (\Throwable $e) {
-            // Fall through to the legacy plain-text comparison.
-        }
 
-        $isHashed = (bool) preg_match('/^\$(2[aby]|argon2(id|i)?)\$/', $stored);
+            $identifier = mb_strtolower(trim((string) $value));
 
-        return ! $isHashed && hash_equals($stored, $password);
-    }
+            $query = User::where(function ($query) use ($identifier) {
+                $query->whereRaw('LOWER(username) = ?', [$identifier])
+                    ->orWhereRaw('LOWER(email) = ?', [$identifier]);
+            });
 
-    private function ensureAdmin(): void
-    {
-        abort_unless(Auth::check() && Auth::user()->role === 'admin', 403, 'Access denied. Admin access required.');
-    }
+            if ($user) {
+                $query->where('id', '!=', $user->id);
+            }
 
-    private function ensureCashier(User $user): void
-    {
-        // Admin accounts are not managed through the cashier endpoints, which
-        // also prevents an admin from being demoted through them.
-        abort_unless($user->role === 'cashier', 404);
+            if ($query->exists()) {
+                $label = $column === 'email' ? 'email address' : 'username';
+                $fail('That '.$label.' is already in use.');
+            }
+        };
     }
 }

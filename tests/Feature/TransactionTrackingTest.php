@@ -349,7 +349,7 @@ class TransactionTrackingTest extends TestCase
         $admin = $this->createUser('admin');
         $cashier = $this->createUser();
 
-        $this->actingAs($admin)->post('/accounts/cashiers', [
+        $this->actingAs($admin)->post(route('accounts.store'), [
             'name' => 'New Cashier',
             'username' => 'newcashier',
             'password' => 'supersecret123',
@@ -365,9 +365,10 @@ class TransactionTrackingTest extends TestCase
             'target_id' => $created->id,
         ]);
 
-        $this->actingAs($admin)->put('/accounts/cashiers/'.$cashier->id, [
+        $this->actingAs($admin)->put(route('accounts.update', $cashier), [
             'name' => 'Renamed Cashier',
             'username' => $cashier->username,
+            'is_active' => '1',
             'password' => '',
             'password_confirmation' => '',
         ])->assertRedirect(route('accounts.index'));
@@ -377,7 +378,7 @@ class TransactionTrackingTest extends TestCase
             'target_id' => $cashier->id,
         ]);
 
-        $this->actingAs($admin)->post('/accounts/cashiers/'.$cashier->id.'/reset-password', [
+        $this->actingAs($admin)->put(route('accounts.password.update', $cashier), [
             'password' => 'anothersecret123',
             'password_confirmation' => 'anothersecret123',
         ])->assertRedirect(route('accounts.index'));

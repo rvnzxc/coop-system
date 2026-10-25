@@ -1,13 +1,13 @@
 <?php
 
-use App\Http\Controllers\ShopController;
-use App\Http\Controllers\InventoryController;
-use App\Http\Controllers\MemberController;
+use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CreditController;
-use App\Http\Controllers\AccountController;
+use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\MemberController;
 use App\Http\Controllers\MyTransactionController;
+use App\Http\Controllers\ShopController;
 use App\Http\Controllers\TransactionController;
 
 // Default route - redirect to login
@@ -70,19 +70,23 @@ Route::middleware(['auth', 'role.admin'])->prefix('members')->group(function () 
     Route::get('/card/{id}', [MemberController::class, 'card'])->name('members.card');
 });
 
+// Accounts - Admin only
+Route::middleware(['auth', 'role.admin'])->prefix('accounts')->group(function () {
+    Route::get('/', [AccountController::class, 'index'])->name('accounts.index');
+    Route::get('/create', [AccountController::class, 'create'])->name('accounts.create');
+    Route::post('/', [AccountController::class, 'store'])->name('accounts.store');
+    Route::get('/me', [AccountController::class, 'me'])->name('accounts.me');
+    Route::put('/me', [AccountController::class, 'updateMe'])->name('accounts.me.update');
+    Route::get('/{user}/edit', [AccountController::class, 'edit'])->name('accounts.edit');
+    Route::put('/{user}', [AccountController::class, 'update'])->name('accounts.update');
+    Route::get('/{user}/password', [AccountController::class, 'password'])->name('accounts.password');
+    Route::put('/{user}/password', [AccountController::class, 'resetPassword'])->name('accounts.password.update');
+    Route::post('/{user}/status', [AccountController::class, 'toggleStatus'])->name('accounts.status');
+});
+
 // Analytics - Admin only
 Route::middleware(['auth', 'role.admin'])->group(function () {
     Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
-});
-
-// Accounts management - Admin only
-Route::middleware(['auth', 'role.admin'])->prefix('accounts')->group(function () {
-    Route::get('/', [AccountController::class, 'index'])->name('accounts.index');
-    Route::post('/cashiers', [AccountController::class, 'storeCashier'])->name('accounts.cashiers.store');
-    Route::put('/cashiers/{user}', [AccountController::class, 'updateCashier'])->name('accounts.cashiers.update');
-    Route::post('/cashiers/{user}/reset-password', [AccountController::class, 'resetCashierPassword'])->name('accounts.cashiers.reset-password');
-    Route::patch('/cashiers/{user}/status', [AccountController::class, 'toggleCashierStatus'])->name('accounts.cashiers.status');
-    Route::put('/me', [AccountController::class, 'updateSelf'])->name('accounts.me.update');
 });
 
 // Transactions and activity log - Admin only
