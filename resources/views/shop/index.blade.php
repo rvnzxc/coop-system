@@ -13,24 +13,11 @@
                 <input
                     type="text"
                     id="search-input"
-                    placeholder="Search products..."
+                    placeholder="Search item or scan barcode..."
+                    autocomplete="off"
                     class="w-full rounded-lg border border-slate-300 bg-slate-50 py-2.5 pl-10 pr-4 text-sm text-slate-700 placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/30"
                 >
             </div>
-        </div>
-
-        <div class="scan-bar mb-4 text-right">
-            <div class="relative w-full sm:ml-auto sm:w-72">
-                <i class="fa fa-barcode pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-slate-400"></i>
-                <input
-                    type="text"
-                    id="itemScanInput"
-                    placeholder="Scan product barcode..."
-                    class="w-full rounded-lg border border-slate-300 bg-slate-50 py-2.5 pl-10 pr-4 text-sm text-slate-700 placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/30"
-                    onkeydown="if(event.key==='Enter') routeScan(this.value)"
-                >
-            </div>
-            <div id="itemScanError" style="display: none;" class="mt-1.5 text-xs text-red-600 sm:ml-auto sm:w-72 sm:text-right"></div>
         </div>
 
         <div class="categories mb-4 flex shrink-0 gap-2 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch] [scrollbar-width:thin]">
@@ -52,7 +39,7 @@
         <div class="product-grid grid min-h-0 min-w-0 flex-1 auto-rows-[7rem] grid-cols-2 gap-3 overflow-y-auto p-1 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-3 2xl:grid-cols-4">
             @if($items->count() > 0)
                 @foreach($items as $item)
-                    <div class="product-card flex min-w-0 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-3 text-center transition-all hover:-translate-y-0.5 hover:border-brand-300 hover:bg-brand-50 hover:shadow-md" data-category="{{ $item->category ?? 'other' }}" data-id="{{ $item->id }}" data-name="{{ $item->item_name }}">
+                    <div class="product-card flex min-w-0 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-3 text-center transition-all hover:-translate-y-0.5 hover:border-brand-300 hover:bg-brand-50 hover:shadow-md" data-category="{{ $item->category ?? 'other' }}" data-id="{{ $item->id }}" data-name="{{ $item->item_name }}" data-barcode="{{ $item->barcode }}" data-manufacturer-barcode="{{ $item->manufacturer_barcode }}">
                         <div class="product-name mb-1 line-clamp-2 text-sm font-semibold text-slate-700">{{ ucwords($item->item_name) }}</div>
                         <div class="product-price text-base font-bold text-brand-700">{{ number_format($item->price, 2) }}</div>
                     </div>
@@ -105,9 +92,8 @@
                 placeholder="Scan or type member ID..."
                 class="flex-1 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/30"
                 onkeydown="if(event.key==='Enter') routeScan(this.value)"
-                autofocus
               />
-              <button onclick="routeScan(document.getElementById('memberScanInput').value)" class="rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700">
+              <button onclick="routeScan(document.getElementById('memberScanInput').value, false, true)" class="rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700">
                 <i class="fa fa-search"></i>
               </button>
             </div>
@@ -157,6 +143,8 @@
     </aside>
 </div>
 
+<div id="posToast" class="pointer-events-none fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white opacity-0 shadow-lg transition-opacity duration-200"></div>
+
 <script>
 // POS functionality
 let cart = [];
@@ -168,53 +156,68 @@ let isNonMember = false;
 let selectedPaymentMethod = 'cash';
 let currentOutstandingBalance = 0;
 
+// Barcode scanners type much faster than a person. Keystrokes closer together
+// than this are treated as a scan burst and kept away from the product filter.
+const SCAN_KEY_GAP = 50;
+const SEARCH_DEBOUNCE = 150;
+let lastSearchKeyAt = 0;
+let scannerBurst = false;
+let burstResetTimer = null;
+let searchFilterTimer = null;
+
 document.addEventListener('DOMContentLoaded', function() {
-    // Search functionality
     const searchInput = document.getElementById('search-input');
+
     searchInput.addEventListener('input', function() {
-        const searchTerm = this.value.toLowerCase();
-        const activeCategory = document.querySelector('.category.active').dataset.category;
-        
-        document.querySelectorAll('.product-card').forEach(product => {
-            const productName = product.querySelector('.product-name').textContent.toLowerCase();
-            const category = product.dataset.category;
-            
-            const matchesSearch = productName.includes(searchTerm);
-            const matchesCategory = activeCategory === 'all' || category === activeCategory;
-            
-            if (matchesSearch && matchesCategory) {
-                product.style.display = 'block';
-            } else {
-                product.style.display = 'none';
-            }
-        });
+        const now = performance.now();
+        const gap = now - lastSearchKeyAt;
+        lastSearchKeyAt = now;
+
+        if (gap < SCAN_KEY_GAP) {
+            scannerBurst = true;
+            clearTimeout(burstResetTimer);
+            burstResetTimer = setTimeout(() => {
+                scannerBurst = false;
+                if (searchInput.value.trim() !== '') applyProductFilter();
+            }, 500);
+        }
+
+        clearTimeout(searchFilterTimer);
+
+        // Do not filter while a scanner is mid-burst; the value is a code,
+        // not a search phrase, and filtering it makes member IDs flash.
+        if (scannerBurst) return;
+
+        searchFilterTimer = setTimeout(applyProductFilter, SEARCH_DEBOUNCE);
     });
-    
+
+    searchInput.addEventListener('keydown', function(event) {
+        if (event.key !== 'Enter') return;
+
+        event.preventDefault();
+        clearTimeout(searchFilterTimer);
+
+        const value = this.value.trim();
+        if (!value) return;
+
+        // Short manual entries such as "48" stay searches, even if a fast
+        // typist trips the burst detector.
+        const fromScanner = scannerBurst && value.length >= 4;
+        scannerBurst = false;
+        clearTimeout(burstResetTimer);
+
+        routeScan(value, fromScanner);
+    });
+
     // Category filtering
     document.querySelectorAll('.category').forEach(cat => {
         cat.addEventListener('click', function() {
             document.querySelectorAll('.category').forEach(c => c.classList.remove('active'));
             this.classList.add('active');
-            
-            const category = this.dataset.category;
-            const searchTerm = searchInput.value.toLowerCase();
-            
-            document.querySelectorAll('.product-card').forEach(product => {
-                const productName = product.querySelector('.product-name').textContent.toLowerCase();
-                const productCategory = product.dataset.category;
-                
-                const matchesSearch = productName.includes(searchTerm);
-                const matchesCategory = category === 'all' || productCategory === category;
-                
-                if (matchesSearch && matchesCategory) {
-                    product.style.display = 'block';
-                } else {
-                    product.style.display = 'none';
-                }
-            });
+            applyProductFilter();
         });
     });
-    
+
     // Product click to add to cart
     document.querySelectorAll('.product-card').forEach(product => {
         product.addEventListener('click', function() {
@@ -222,10 +225,63 @@ document.addEventListener('DOMContentLoaded', function() {
             const name = this.dataset.name;
             const price = parseFloat(this.querySelector('.product-price').textContent.replace(',', ''));
             addToCart(id, name, price);
-            focusItemScan();
+            focusSearch();
         });
     });
+
+    focusSearch();
 });
+
+function applyProductFilter() {
+    const searchInput = document.getElementById('search-input');
+    if (!searchInput) return;
+
+    const searchTerm = searchInput.value.trim().toLowerCase();
+    const activeCategory = document.querySelector('.category.active')?.dataset.category || 'all';
+
+    document.querySelectorAll('.product-card').forEach(product => {
+        const productName = (product.dataset.name || '').toLowerCase();
+        const barcode = (product.dataset.barcode || '').toLowerCase();
+        const manufacturerBarcode = (product.dataset.manufacturerBarcode || '').toLowerCase();
+        const category = product.dataset.category;
+
+        const matchesSearch = searchTerm === ''
+            || productName.includes(searchTerm)
+            || barcode.includes(searchTerm)
+            || manufacturerBarcode.includes(searchTerm);
+        const matchesCategory = activeCategory === 'all' || category === activeCategory;
+
+        product.style.display = (matchesSearch && matchesCategory) ? 'block' : 'none';
+    });
+}
+
+function resetProductFilter() {
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) searchInput.value = '';
+
+    clearTimeout(searchFilterTimer);
+    applyProductFilter();
+}
+
+function focusSearch() {
+    const input = document.getElementById('search-input');
+    if (input) input.focus();
+}
+
+function showToast(message) {
+    const toast = document.getElementById('posToast');
+    if (!toast) return;
+
+    toast.textContent = message;
+    toast.classList.remove('opacity-0');
+    toast.classList.add('opacity-100');
+
+    clearTimeout(toast.hideTimer);
+    toast.hideTimer = setTimeout(() => {
+        toast.classList.add('opacity-0');
+        toast.classList.remove('opacity-100');
+    }, 2500);
+}
 
 // Cart lines are keyed by item id, so two products that share a name never
 // collide. `name` is kept purely for display.
@@ -242,18 +298,16 @@ function addToCart(id, name, price) {
 // Look up a scanned product barcode and add it to the cart.
 // Returns true when something was added, so the member scanner can fall back
 // to treating an unmatched member code as a product code.
-async function scanItem(codeOverride) {
-    const input = document.getElementById('itemScanInput');
-    const code = (codeOverride !== undefined ? codeOverride : input.value).trim();
-    if (!code) return false;
+async function scanItem(code) {
+    const value = (code || '').trim();
+    if (!value) return false;
 
     try {
-        const response = await fetch(`/items/lookup?code=${encodeURIComponent(code)}`);
+        const response = await fetch(`/items/lookup?code=${encodeURIComponent(value)}`);
         const data = await response.json();
 
         if (data.found) {
             addToCart(data.item.id, data.item.display_name, data.item.price);
-            input.value = '';
             return true;
         }
 
@@ -262,11 +316,6 @@ async function scanItem(codeOverride) {
         console.error('Item scan error:', e);
         return false;
     }
-}
-
-function focusItemScan() {
-    const input = document.getElementById('itemScanInput');
-    if (input) input.focus();
 }
 
 let scanBuffer = '';
@@ -283,7 +332,7 @@ document.addEventListener('keydown', function (event) {
         event.preventDefault();
         const value = scanBuffer.trim();
         scanBuffer = '';
-        if (value) routeScan(value);
+        if (value) routeScan(value, true);
         return;
     }
 
@@ -291,52 +340,64 @@ document.addEventListener('keydown', function (event) {
         scanBuffer += event.key;
         event.preventDefault();
 
-        const itemInput = document.getElementById('itemScanInput');
-        if (itemInput) itemInput.value = scanBuffer;
+        const searchInput = document.getElementById('search-input');
+        if (searchInput) searchInput.value = scanBuffer;
     }
 });
 
-async function routeScan(code) {
+async function routeScan(code, fromScanner = false, fromMemberInput = false) {
     const value = (code || '').trim();
     if (!value) return false;
 
-    const itemInput = document.getElementById('itemScanInput');
+    const searchInput = document.getElementById('search-input');
     const memberInput = document.getElementById('memberScanInput');
-    const itemError = document.getElementById('itemScanError');
     const memberError = document.getElementById('memberScanError');
+    const cameFromMemberInput = fromMemberInput
+        || (memberInput !== null && document.activeElement === memberInput);
 
-    if (itemInput) itemInput.value = value;
-    if (itemError) itemError.style.display = 'none';
+    if (searchInput) searchInput.value = value;
+    if (memberInput) memberInput.value = value;
     if (memberError) memberError.style.display = 'none';
 
     const resetScans = () => {
-        if (itemInput) itemInput.value = '';
+        if (searchInput) searchInput.value = '';
         if (memberInput) memberInput.value = '';
     };
 
+    // a. Member card / ID wins so a member number never enters the product grid.
+    // Scans from the product search must be exact: the dedicated member box
+    // still allows the old name/partial lookup.
+    if (await lookupMember(value, !cameFromMemberInput)) {
+        resetScans();
+        resetProductFilter();
+        focusSearch();
+        return true;
+    }
+
+    // b. Exact product barcode.
     if (await scanItem(value)) {
         resetScans();
-        focusItemScan();
+        resetProductFilter();
+        focusSearch();
         return true;
     }
 
-    if (memberInput) memberInput.value = value;
-
-    if (await lookupMember()) {
+    // c. Unknown scan: toast and clear. Manual Enter stays a normal search.
+    if (cameFromMemberInput) {
+        if (memberError) memberError.style.display = 'block';
         resetScans();
-        focusItemScan();
-        return true;
+        resetProductFilter();
+    } else if (fromScanner) {
+        showToast('Item/Member not found');
+        resetScans();
+        resetProductFilter();
+    } else {
+        if (memberInput) memberInput.value = '';
+        if (searchInput) searchInput.value = value;
+        applyProductFilter();
     }
 
-    if (memberInput) memberInput.value = '';
-    if (itemError) {
-        itemError.textContent = 'No item or member matches ' + value + '.';
-        itemError.style.display = 'block';
-    }
-    if (itemInput) {
-        itemInput.focus();
-        itemInput.select();
-    }
+    focusSearch();
     return false;
 }
 
@@ -448,16 +509,21 @@ async function processPayment() {
     } finally {
         payButton.disabled = false;
         payButton.textContent = `PAY (P${total.toFixed(2)})`;
+        focusSearch();
     }
 }
 
 // Member lookup functions
-async function lookupMember() {
-  const query = document.getElementById('memberScanInput').value.trim();
+async function lookupMember(queryOverride, exact = false) {
+  const memberInput = document.getElementById('memberScanInput');
+  const query = (queryOverride !== undefined ? queryOverride : (memberInput ? memberInput.value : '')).trim();
   if (!query) return false;
 
   try {
-    const response = await fetch(`/members/lookup?q=${encodeURIComponent(query)}`);
+    const params = new URLSearchParams({ q: query });
+    if (exact) params.set('exact', '1');
+
+    const response = await fetch(`/members/lookup?${params.toString()}`);
     const data = await response.json();
 
     if (data.found) {
@@ -488,7 +554,7 @@ async function lookupMember() {
         document.getElementById('creditBalanceSection').style.display = 'none';
       }
 
-      focusItemScan();
+      focusSearch();
       return true;
     }
 
@@ -513,7 +579,7 @@ function setNonMember() {
   document.getElementById('creditBalanceSection').style.display = 'none';
   document.getElementById('paymentMethodInput').value = 'cash';
   selectedPaymentMethod = 'cash';
-  focusItemScan();
+  focusSearch();
 }
 
 function clearMember() {
@@ -532,7 +598,7 @@ function clearMember() {
   document.getElementById('creditBalanceSection').style.display = 'none';
   document.getElementById('paymentMethodInput').value = 'cash';
   selectedPaymentMethod = 'cash';
-  focusItemScan();
+  focusSearch();
 }
 
 // Pay credit modal
@@ -552,12 +618,18 @@ function openPayCreditModal() {
         <input type="number" id="payCreditAmount" step="0.01" min="0.01" max="${remaining}" value="${remaining.toFixed(2)}" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30">
       </div>
       <div class="flex gap-3">
-        <button onclick="document.getElementById('payCreditModal').remove()" class="flex-1 cursor-pointer rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50">Cancel</button>
+        <button onclick="closePayCreditModal()" class="flex-1 cursor-pointer rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50">Cancel</button>
         <button onclick="submitCreditPayment()" class="flex-1 cursor-pointer rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700">Record Payment</button>
       </div>
     </div>
   `;
   document.body.appendChild(modal);
+}
+
+function closePayCreditModal() {
+  const modal = document.getElementById('payCreditModal');
+  if (modal) modal.remove();
+  focusSearch();
 }
 
 async function submitCreditPayment() {

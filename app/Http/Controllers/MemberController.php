@@ -157,24 +157,39 @@ class MemberController extends Controller
 
     public function lookup(Request $request)
     {
-        $q = $request->query('q');
+        $q = trim((string) $request->query('q'));
+
+        if ($q === '') {
+            return response()->json(['found' => false]);
+        }
 
         $cleanQ = ltrim($q, '#');
         $cleanQ = preg_replace('/^MEM/i', '', $cleanQ);
         $paddedQ = str_pad($cleanQ, 5, '0', STR_PAD_LEFT);
+        $memberNumber = 'MEM' . strtoupper($paddedQ);
 
-        $member = Member::where('member_number', $q)
-            ->orWhere('member_number', 'MEM' . $paddedQ)
-            ->orWhere('member_number', '#' . $paddedQ)
-            ->orWhere('member_number', $paddedQ)
-            ->orWhere('member_number', 'LIKE', "%{$paddedQ}%")
-            ->orWhere(
-                DB::raw("CONCAT(first_name, ' ', last_name)"),
-                'LIKE',
-                "%{$q}%"
-            )
-            ->orderByRaw("CASE WHEN member_number = ? THEN 0 WHEN member_number = ? THEN 1 ELSE 2 END", [$q, 'MEM' . $paddedQ])
-            ->first();
+        if ($request->boolean('exact')) {
+            // A scan only counts as a member when it is the card/ID itself,
+            // never a partial or name-based match.
+            $member = Member::where('member_number', $q)
+                ->orWhere('member_number', $memberNumber)
+                ->orWhere('member_number', '#' . $paddedQ)
+                ->orWhere('member_number', $paddedQ)
+                ->first();
+        } else {
+            $member = Member::where('member_number', $q)
+                ->orWhere('member_number', $memberNumber)
+                ->orWhere('member_number', '#' . $paddedQ)
+                ->orWhere('member_number', $paddedQ)
+                ->orWhere('member_number', 'LIKE', "%{$paddedQ}%")
+                ->orWhere(
+                    DB::raw("CONCAT(first_name, ' ', last_name)"),
+                    'LIKE',
+                    "%{$q}%"
+                )
+                ->orderByRaw("CASE WHEN member_number = ? THEN 0 WHEN member_number = ? THEN 1 ELSE 2 END", [$q, $memberNumber])
+                ->first();
+        }
 
         if ($member) {
             return response()->json([

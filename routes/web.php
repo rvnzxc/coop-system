@@ -1,11 +1,12 @@
 <?php
 
-use App\Http\Controllers\ShopController;
-use App\Http\Controllers\InventoryController;
-use App\Http\Controllers\MemberController;
+use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CreditController;
+use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\MemberController;
+use App\Http\Controllers\ShopController;
 
 // Default route - redirect to login
 Route::get('/', function () {
@@ -60,6 +61,20 @@ Route::middleware(['auth', 'role.admin'])->prefix('members')->group(function () 
     Route::get('/analytics', [MemberController::class, 'analyticsIndex'])->name('members.analytics.index');
     Route::get('/analytics/{id}', [MemberController::class, 'memberAnalytics'])->name('members.analytics');
     Route::get('/card/{id}', [MemberController::class, 'card'])->name('members.card');
+});
+
+// Accounts - Admin only
+Route::middleware(['auth', 'role.admin'])->prefix('accounts')->group(function () {
+    Route::get('/', [AccountController::class, 'index'])->name('accounts.index');
+    Route::get('/create', [AccountController::class, 'create'])->name('accounts.create');
+    Route::post('/', [AccountController::class, 'store'])->name('accounts.store');
+    Route::get('/me', [AccountController::class, 'me'])->name('accounts.me');
+    Route::put('/me', [AccountController::class, 'updateMe'])->name('accounts.me.update');
+    Route::get('/{user}/edit', [AccountController::class, 'edit'])->name('accounts.edit');
+    Route::put('/{user}', [AccountController::class, 'update'])->name('accounts.update');
+    Route::get('/{user}/password', [AccountController::class, 'password'])->name('accounts.password');
+    Route::put('/{user}/password', [AccountController::class, 'resetPassword'])->name('accounts.password.update');
+    Route::post('/{user}/status', [AccountController::class, 'toggleStatus'])->name('accounts.status');
 });
 
 // Analytics - Admin only

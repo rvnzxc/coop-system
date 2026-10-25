@@ -180,24 +180,44 @@ class BarcodeScanningTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('routeScan(this.value)', false);
-        $response->assertSee('async function routeScan(code)', false);
+        $response->assertSee('async function routeScan(code, fromScanner = false, fromMemberInput = false)', false);
         $response->assertSee("target !== document.body && target !== document.documentElement", false);
-        $response->assertSee('focusItemScan()', false);
+        $response->assertSee('focusSearch()', false);
         $response->assertSee('const resetScans = () => {', false);
-        $response->assertSee("if (itemInput) itemInput.value = '';", false);
+        $response->assertSee("if (searchInput) searchInput.value = '';", false);
         $response->assertSee("if (memberInput) memberInput.value = '';", false);
+        $response->assertSee('lookupMember(value, !cameFromMemberInput)', false);
+        $response->assertSee('scanItem(value)', false);
+        $response->assertDontSee('itemScanInput', false);
         $response->assertDontSee('lookupMember(true)', false);
         $response->assertDontSee('scanItem(value, true)', false);
     }
 
-    public function test_pos_recovers_focus_into_the_product_scan_box(): void
+    public function test_pos_keeps_one_search_input_focused_and_scannable(): void
     {
         $cashier = $this->createCashier();
 
         $response = $this->actingAs($cashier)->get('/pos');
 
         $response->assertOk();
-        $response->assertSee('id="itemScanInput"', false);
-        $response->assertSee('document.addEventListener(\'keydown\', function (event) {', false);
+        $response->assertSee('id="search-input"', false);
+        $response->assertSee('placeholder="Search item or scan barcode..."', false);
+        $response->assertSee('searchInput.addEventListener(\'keydown\'', false);
+        $response->assertSee('showToast(\'Item/Member not found\')', false);
+        $response->assertSee('focusSearch();', false);
+        $response->assertDontSee('id="itemScanInput"', false);
+        $response->assertDontSee('placeholder="Scan product barcode..."', false);
+    }
+
+    public function test_member_lookup_exact_only_matches_the_card_number(): void
+    {
+        $member = $this->createMember(['first_name' => 'John', 'last_name' => 'Ersando']);
+        $cashier = $this->createCashier();
+
+        $byName = $this->actingAs($cashier)->getJson('/members/lookup?q=John&exact=1');
+        $byName->assertJson(['found' => false]);
+
+        $byCard = $this->actingAs($cashier)->getJson('/members/lookup?q='.$member->member_number.'&exact=1');
+        $byCard->assertJson(['found' => true]);
     }
 }
