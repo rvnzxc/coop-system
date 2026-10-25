@@ -181,7 +181,7 @@ class BarcodeScanningTest extends TestCase
         $response->assertOk();
         $response->assertSee('routeScan(this.value)', false);
         $response->assertSee('async function routeScan(code, fromScanner = false, fromMemberInput = false)', false);
-        $response->assertSee("target !== document.body && target !== document.documentElement", false);
+        $response->assertSee('target !== document.body && target !== document.documentElement', false);
         $response->assertSee('focusSearch()', false);
         $response->assertSee('const resetScans = () => {', false);
         $response->assertSee("if (searchInput) searchInput.value = '';", false);
