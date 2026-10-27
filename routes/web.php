@@ -49,6 +49,9 @@ Route::middleware(['auth', 'role.admin'])->prefix('inventory')->group(function (
     Route::get('/edit/{id}', [InventoryController::class, 'edit'])->name('inventory.edit');
     Route::put('/update/{id}', [InventoryController::class, 'update'])->name('inventory.update');
     Route::delete('/delete/{id}', [InventoryController::class, 'destroy'])->name('inventory.destroy');
+    Route::get('/barcode/{code}/download', [InventoryController::class, 'downloadBarcode'])
+        ->where('code', '[A-Za-z0-9._#-]{3,64}')
+        ->name('inventory.barcode.download');
 });
 
 // Low-stock notification endpoint - accessible to all authenticated users
@@ -67,6 +70,7 @@ Route::middleware(['auth', 'role.admin'])->prefix('members')->group(function () 
     Route::get('/analytics/{id}', [MemberController::class, 'analytics'])->name('members.analytics');
     Route::get('/analytics', [MemberController::class, 'analyticsIndex'])->name('members.analytics.index');
     Route::get('/analytics/{id}', [MemberController::class, 'memberAnalytics'])->name('members.analytics');
+    Route::get('/card/{id}/download', [MemberController::class, 'downloadCard'])->name('members.card.download');
     Route::get('/card/{id}', [MemberController::class, 'card'])->name('members.card');
 });
 

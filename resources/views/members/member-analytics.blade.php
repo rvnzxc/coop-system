@@ -3,32 +3,6 @@
 @section('title', 'Member Analytics')
 
 @section('content')
-<style>
-    @media print {
-        body {
-            font-family: Arial, sans-serif;
-            font-size: 12px;
-            line-height: 1.4;
-            color: #333;
-        }
-        .print-hide {
-            display: none !important;
-        }
-        .transaction-detail {
-            display: none !important;
-        }
-        i.chevron-toggle {
-            display: none !important;
-        }
-        table {
-            page-break-inside: avoid;
-        }
-        tr {
-            page-break-inside: avoid;
-        }
-    }
-</style>
-
 <div class="mx-auto max-w-5xl">
     {{-- Header --}}
     <div class="mb-6 flex flex-col items-start gap-5 rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:flex-row sm:items-center">
@@ -55,6 +29,11 @@
                     @endif
                 </div>
             </div>
+        </div>
+        <div class="sm:ml-auto">
+            <x-button href="{{ route('members.card.download', $member->id) }}" color="primary" size="sm" data-download-png>
+                <x-download-icon class="h-3 w-3" /> Download Card
+            </x-button>
         </div>
     </div>
 
@@ -90,7 +69,7 @@
 
         {{-- Right Column - Purchase Analytics --}}
         <x-card title="Purchase Analytics">
-            <div class="print-hide mb-4 flex flex-wrap items-center gap-3">
+            <div class="mb-4 flex flex-wrap items-center gap-3">
                 <label class="text-sm font-medium text-slate-500">Analytics Period:</label>
                 <select id="periodFilter" onchange="filterMemberAnalytics()" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30">
                     <option value="all">All Time</option>
@@ -98,9 +77,6 @@
                     <option value="monthly">Last 30 Days</option>
                     <option value="yearly">Last 365 Days</option>
                 </select>
-                <x-button color="secondary" size="sm" onclick="window.print()">
-                    <x-icon name="print" class="h-3 w-3" /> Print Report
-                </x-button>
             </div>
 
             <div class="overflow-x-auto">

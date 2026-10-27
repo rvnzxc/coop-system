@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\BarcodeService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use App\Models\Item; // Using Item model instead of Product
@@ -114,6 +115,22 @@ class InventoryController extends Controller
         $item = Item::findOrFail($id);
         $item->delete();
         return redirect()->route('inventory.index')->with('success', 'Item deleted successfully!');
+    }
+
+    public function downloadBarcode(string $code)
+    {
+        $svg = BarcodeService::generateBarcode($code);
+
+        abort_if($svg === '', 404);
+
+        $filename = 'barcode-'.preg_replace('/[^A-Za-z0-9._-]/', '-', $code).'.svg';
+
+        return response($svg, 200, [
+            'Content-Type' => 'image/svg+xml; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
     }
 
     public function lowStockNotifications()

@@ -67,6 +67,11 @@
                         <div class="mt-3 inline-block rounded-md border border-slate-200 bg-white p-2.5">
                             {!! \App\Services\BarcodeService::generateBarcode($item->barcode) !!}
                         </div>
+                        <div class="mt-2">
+                            <x-button href="{{ route('inventory.barcode.download', $item->barcode) }}" color="secondary" size="sm" data-download-png>
+                                <x-download-icon class="h-3 w-3" /> Download Barcode
+                            </x-button>
+                        </div>
                         <p class="mt-1.5 text-xs text-slate-400">Scan this code instead of typing it — the value is also printed under the bars.</p>
                     @endif
                 </x-field>

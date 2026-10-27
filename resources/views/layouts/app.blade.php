@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CCFMPC - @yield('title')</title>
 
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="{{ asset('css/style.css') }}">
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -19,8 +23,8 @@
         <div id="sidebarBackdrop" class="fixed inset-0 z-40 hidden bg-slate-900/50 lg:hidden" onclick="closeSidebar()"></div>
 
         {{-- Sidebar: off-canvas drawer < lg, static sticky sidebar >= lg --}}
-        <aside id="sidebar" class="sidebar fixed inset-y-0 left-0 z-50 flex w-64 -translate-x-full flex-col border-r border-brand-200 bg-white shadow-xl transition-transform duration-200 lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:shrink-0 lg:translate-x-0 lg:border-b-0 lg:shadow-none">
-            <div class="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 lg:h-16 lg:px-5">
+        <aside id="sidebar" class="sidebar fixed inset-y-0 left-0 z-50 flex w-[250px] -translate-x-full flex-col border-r border-[#DCEFE3] bg-white shadow-xl transition-transform duration-200 lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:shrink-0 lg:translate-x-0 lg:border-b-0 lg:shadow-none">
+            <div class="flex items-center justify-between gap-3 border-b border-[#DCEFE3] px-4 py-3 lg:h-16 lg:px-5">
                 <div class="flex items-center gap-3">
                     <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-white">
                         <x-icon name="leaf" />
@@ -84,20 +88,20 @@
 
         {{-- Main column --}}
         <div class="flex min-w-0 flex-1 flex-col">
-            <header class="sticky top-0 z-30 border-b border-brand-200 bg-white/90 backdrop-blur">
+            <header class="sticky top-0 z-30 border-b border-[#DCEFE3] bg-white/90 backdrop-blur">
                 <div class="flex h-16 items-center justify-between gap-4 px-4 md:px-6">
                     <div class="flex min-w-0 items-center gap-3">
                         <button type="button" onclick="openSidebar()" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 lg:hidden" aria-label="Open menu">
                             <x-icon name="bars" />
                         </button>
                         <div class="min-w-0">
-                            <p class="hidden truncate text-sm text-slate-500 sm:block">Cavite College of Fisheries Multi-Purpose Cooperative</p>
+                            <p class="hidden truncate text-[13px] text-slate-500 sm:block">Cavite College of Fisheries Multi-Purpose Cooperative</p>
                             <h1 class="truncate text-lg font-semibold text-slate-900">@hasSection('title') @yield('title') @else Overview @endif</h1>
                         </div>
                     </div>
                     <div class="notification-top relative flex items-center">
                         <a href="#" onclick="toggleNotifications()" class="notification-link-top relative flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700">
-                            <x-icon name="bell" class="h-4.5 w-4.5" />
+                            <x-icon name="bell" class="h-5 w-5" />
                             <span class="notification-badge absolute -right-0.5 -top-0.5 hidden h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white" id="notificationBadge" style="display: none;">0</span>
                             <span id="redDotIndicator" style="display: none; position: absolute; top: 2px; right: 2px; width: 10px; height: 10px; background: #ef4444; border-radius: 50%; border: 2px solid #fff; animation: blink 1.5s infinite; z-index: 9999;"></span>
                         </a>
@@ -105,7 +109,7 @@
                 </div>
             </header>
 
-            <main class="min-w-0 flex-1 px-4 py-6 md:px-6 lg:px-8 lg:py-8">
+            <main class="min-w-0 flex-1 px-4 py-6 md:px-6 lg:px-6 lg:py-8">
                 @yield('content')
             </main>
         </div>

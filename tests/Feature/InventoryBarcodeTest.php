@@ -44,6 +44,8 @@ class InventoryBarcodeTest extends TestCase
         $response->assertSee($item->barcode);
         $response->assertSee('012345678905');
         $response->assertSee('<svg', false);
+        $response->assertSee('Download Barcode');
+        $response->assertSee('data-download-png', false);
     }
 
     public function test_edit_page_shows_blank_manufacturer_barcode_when_unset(): void
@@ -82,6 +84,8 @@ class InventoryBarcodeTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('name="manufacturer_barcode"', false);
+        $response->assertSee('Download Barcode');
+        $response->assertSee('data-download-png', false);
     }
 
     // ── Store ────────────────────────────────────────────────
@@ -282,11 +286,26 @@ class InventoryBarcodeTest extends TestCase
         $this->assertNotSame('P000001', $item->fresh()->barcode);
     }
 
+    public function test_admin_can_download_an_internal_barcode(): void
+    {
+        $item = $this->createItem();
+        $admin = $this->createAdmin();
+
+        $response = $this->actingAs($admin)->get(route('inventory.barcode.download', $item->barcode));
+
+        $response->assertOk();
+        $response->assertHeader('content-type', 'image/svg+xml; charset=UTF-8');
+        $response->assertHeader('content-disposition', 'attachment; filename="barcode-'.$item->barcode.'.svg"');
+        $response->assertSee('<svg', false);
+        $response->assertSee($item->barcode);
+    }
+
     public function test_inventory_requires_an_admin(): void
     {
         $item = $this->createItem();
 
         $this->get('/inventory/edit/'.$item->id)->assertRedirect();
         $this->post('/inventory/store', [])->assertRedirect();
+        $this->get(route('inventory.barcode.download', $item->barcode))->assertRedirect();
     }
 }

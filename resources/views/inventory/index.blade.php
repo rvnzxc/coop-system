@@ -86,6 +86,7 @@
                         <th class="px-5 py-3.5 font-semibold">Quantity</th>
                         <th class="px-5 py-3.5 font-semibold">Price</th>
                         <th class="px-5 py-3.5 font-semibold">Category</th>
+                        <th class="px-5 py-3.5 font-semibold">Internal Barcode</th>
                         <th class="px-5 py-3.5 text-right font-semibold">Actions</th>
                     </tr>
                 </thead>
@@ -106,6 +107,18 @@
                             <x-badge color="gray">{{ ucfirst($item->category ?? 'Other') }}</x-badge>
                         </td>
                         <td class="whitespace-nowrap px-5 py-3.5">
+                            @if($item->barcode)
+                                <div class="flex items-center gap-2">
+                                    <span class="font-mono text-xs text-slate-500">{{ $item->barcode }}</span>
+                                    <x-button href="{{ route('inventory.barcode.download', $item->barcode) }}" color="secondary" size="sm" title="Download internal barcode" aria-label="Download internal barcode for {{ $item->item_name }}" data-download-png>
+                                        <x-download-icon class="h-3.5 w-3.5" />
+                                    </x-button>
+                                </div>
+                            @else
+                                <span class="text-slate-400">—</span>
+                            @endif
+                        </td>
+                        <td class="whitespace-nowrap px-5 py-3.5">
                             <div class="action-buttons flex items-center justify-end gap-2">
                                 <x-button href="{{ route('inventory.edit', $item->id) }}" color="secondary" size="sm">
                                     <x-icon name="edit" class="h-3 w-3" /> Edit
@@ -122,7 +135,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="6" class="no-items px-5 py-16 text-center">
+                        <td colspan="7" class="no-items px-5 py-16 text-center">
                             <div class="empty-state flex flex-col items-center">
                                 <div class="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-2xl text-slate-400">
 <x-icon name="archive" class="h-4 w-4" />

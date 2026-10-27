@@ -285,4 +285,20 @@ class MemberController extends Controller
         $member = Member::findOrFail($id);
         return view('members.card', compact('member'));
     }
+
+    public function downloadCard($id)
+    {
+        $member = Member::findOrFail($id);
+
+        $filename = 'member-card-'
+            .preg_replace('/[^A-Za-z0-9._-]/', '-', $member->member_number)
+            .'.svg';
+
+        return response()
+            ->view('members.card-svg', compact('member'))
+            ->header('Content-Type', 'image/svg+xml; charset=UTF-8')
+            ->header('Content-Disposition', 'attachment; filename="'.$filename.'"')
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate')
+            ->header('X-Content-Type-Options', 'nosniff');
+    }
 }

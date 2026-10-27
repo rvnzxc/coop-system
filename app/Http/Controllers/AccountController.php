@@ -87,10 +87,13 @@ class AccountController extends Controller
 
         $user->name = $validated['name'];
         $user->username = trim($validated['username']);
-        $user->email = filled($validated['email'] ?? null) ? trim($validated['email']) : null;
 
-        if (! $isSelf) {
-            $user->is_active = $request->has('is_active') ? $request->boolean('is_active') : false;
+        if (array_key_exists('email', $validated)) {
+            $user->email = filled($validated['email'] ?? null) ? trim($validated['email']) : null;
+        }
+
+        if (! $isSelf && $request->has('is_active')) {
+            $user->is_active = $request->boolean('is_active');
         }
 
         if (filled($validated['password'] ?? null)) {
@@ -194,7 +197,10 @@ class AccountController extends Controller
 
         $user->name = $validated['name'];
         $user->username = trim($validated['username']);
-        $user->email = filled($validated['email'] ?? null) ? trim($validated['email']) : null;
+
+        if (array_key_exists('email', $validated)) {
+            $user->email = filled($validated['email'] ?? null) ? trim($validated['email']) : null;
+        }
 
         if (filled($validated['password'] ?? null)) {
             $user->password = $validated['password'];
@@ -208,9 +214,11 @@ class AccountController extends Controller
             'password_changed' => filled($validated['password'] ?? null),
         ]);
 
-        return redirect()
-            ->route('accounts.me')
-            ->with('success', 'Your account has been updated.');
+        $redirect = $request->input('_redirect') === 'index'
+            ? redirect()->route('accounts.index')
+            : redirect()->route('accounts.me');
+
+        return $redirect->with('success', 'Your account has been updated.');
     }
 
     private function accountRules(?User $user = null, bool $passwordRequired = true): array

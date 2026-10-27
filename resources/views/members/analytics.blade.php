@@ -38,8 +38,8 @@
             <x-button href="{{ route('members.edit', $member->id) }}" color="secondary" size="sm">
                 <x-icon name="edit" class="h-3 w-3" /> Edit
             </x-button>
-            <x-button href="{{ route('members.card', $member->id) }}" color="primary" size="sm">
-                <x-icon name="id-card" class="h-3 w-3" /> Print Card
+            <x-button href="{{ route('members.card.download', $member->id) }}" color="primary" size="sm" data-download-png>
+                <x-download-icon class="h-3 w-3" /> Download Card
             </x-button>
             <form action="{{ route('members.destroy', $member->id) }}" method="POST">
                 @csrf
@@ -159,9 +159,6 @@
                 <option value="monthly">Monthly</option>
                 <option value="yearly">Yearly</option>
             </select>
-            <x-button color="secondary" size="sm" onclick="window.print()">
-                <x-icon name="print" class="h-3 w-3" /> Print Report
-            </x-button>
         </div>
 
         <div class="overflow-x-auto">
