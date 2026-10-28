@@ -44,7 +44,7 @@
             <form action="{{ route('members.destroy', $member->id) }}" method="POST">
                 @csrf
                 @method('DELETE')
-                <x-button type="submit" color="danger" size="sm" onclick="return confirm('Are you sure you want to delete this member?')">
+                <x-button type="submit" color="danger" size="sm" onclick="return confirmDestructive(event, 'Are you sure you want to delete this member?', 'Delete Member')">
                     <x-icon name="trash" class="h-3 w-3" /> Delete
                 </x-button>
             </form>

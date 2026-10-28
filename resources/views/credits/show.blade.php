@@ -4,13 +4,6 @@
 
 @section('content')
 <div class="mx-auto max-w-4xl">
-    @if(session('success'))
-        <div class="mb-6 flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
-            <x-icon name="check-circle" class="h-3.5 w-3.5" />
-            {{ session('success') }}
-        </div>
-    @endif
-
     <div class="mb-6 flex items-center gap-3">
         <a href="{{ route('credits.index') }}" class="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-sm text-slate-600 transition-colors hover:bg-slate-50">
             <x-icon name="arrow-left" class="h-4 w-4" />

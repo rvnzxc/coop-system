@@ -4,13 +4,6 @@
 
 @section('content')
 <div class="mx-auto max-w-7xl">
-    @if(session('success'))
-        <div class="mb-6 flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
-            <x-icon name="check-circle" class="h-3.5 w-3.5" />
-            {{ session('success') }}
-        </div>
-    @endif
-
     <div class="mb-6 flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
         <div class="min-w-0">
             <h2 class="text-xl font-bold text-slate-900">Credit Management</h2>

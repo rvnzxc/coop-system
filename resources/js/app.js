@@ -67,7 +67,12 @@ const downloadSvgAsPng = async (link) => {
         URL.revokeObjectURL(svgUrl);
     } catch (error) {
         console.error(error);
-        window.alert('Unable to download the image. Please try again.');
+        var message = 'Unable to download the image. Please try again.';
+        if (typeof window.showToast === 'function') {
+            window.showToast(message, 'error');
+        } else {
+            console.error(message);
+        }
     } finally {
         delete link.dataset.downloading;
     }

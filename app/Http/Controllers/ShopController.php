@@ -96,6 +96,8 @@ class ShopController extends Controller
             'member_id' => ['nullable'],
             'is_non_member' => ['nullable'],
             'payment_method' => ['nullable', 'in:cash,credit'],
+            'amount_received' => ['nullable', 'numeric', 'min:0'],
+            'change_amount' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         $cartItems = $validated['items'];
@@ -177,6 +179,32 @@ class ShopController extends Controller
         $totalAmount = round($totalAmount, 2);
         $saleRef = now()->format('Y-m-d H:i:s');
 
+        $amountReceived = null;
+        $changeAmount = null;
+
+        if ($paymentMethod === 'cash') {
+            $receivedInput = $request->input('amount_received');
+            if ($receivedInput === null || $receivedInput === '') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Amount received is required for cash payments.'
+                ], 400);
+            }
+
+            $amountReceivedCents = (int) round((float) $receivedInput * 100);
+            $totalAmountCents = (int) round($totalAmount * 100);
+            if ($amountReceivedCents < $totalAmountCents) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Amount received is less than the total amount.'
+                ], 400);
+            }
+
+            $changeAmountCents = $amountReceivedCents - $totalAmountCents;
+            $amountReceived = $amountReceivedCents / 100;
+            $changeAmount = $changeAmountCents / 100;
+        }
+
         DB::beginTransaction();
 
         try {
@@ -189,6 +217,8 @@ class ShopController extends Controller
                 'customer_type' => $isNonMember ? 'non_member' : 'member',
                 'payment_method' => $isNonMember ? 'cash' : $paymentMethod,
                 'total' => $totalAmount,
+                'amount_received' => $amountReceived,
+                'change_amount' => $changeAmount,
                 'status' => Sale::STATUS_COMPLETED,
             ]);
 
@@ -280,6 +310,10 @@ class ShopController extends Controller
             'success' => true,
             'message' => $message,
             'transaction_id' => $sale->id,
+            'total' => $totalAmount,
+            'payment_method' => $sale->payment_method,
+            'amount_received' => $amountReceived !== null ? (float) $amountReceived : null,
+            'change_amount' => $changeAmount !== null ? (float) $changeAmount : null,
         ]);
     }
 }

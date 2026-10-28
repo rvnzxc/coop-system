@@ -17,6 +17,8 @@ class Sale extends Model
         'customer_type',
         'payment_method',
         'total',
+        'amount_received',
+        'change_amount',
         'status',
         'voided_by',
         'void_reason',
@@ -25,6 +27,8 @@ class Sale extends Model
 
     protected $casts = [
         'total' => 'decimal:2',
+        'amount_received' => 'decimal:2',
+        'change_amount' => 'decimal:2',
         'voided_at' => 'datetime',
     ];
 
@@ -96,6 +100,8 @@ class Sale extends Model
             'member_number' => $this->member_number ?: $this->member?->member_number,
             'payment_method' => $this->payment_method,
             'total' => (float) $this->total,
+            'amount_received' => $this->amount_received !== null ? (float) $this->amount_received : null,
+            'change_amount' => $this->change_amount !== null ? (float) $this->change_amount : null,
             'status' => $this->status,
             'status_label' => $this->status_label,
             'created_at' => $this->created_at?->format('M d, Y g:i A'),

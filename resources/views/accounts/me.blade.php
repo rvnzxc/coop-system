@@ -18,13 +18,6 @@
         </x-button>
     </div>
 
-    @if(session('success'))
-        <div class="mb-6 flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
-            <x-icon name="check-circle" class="h-4 w-4" />
-            {{ session('success') }}
-        </div>
-    @endif
-
     <x-card>
         <form action="{{ route('accounts.me.update') }}" method="POST" class="space-y-5">
             @csrf

@@ -15,8 +15,7 @@
 
 <div class="mx-auto max-w-7xl">
     {{-- Toast container --}}
-    <div id="toastContainer" class="pointer-events-none fixed right-4 top-20 z-[60] flex w-full max-w-sm flex-col gap-2"></div>
-
+    
     {{-- Page header --}}
     <div class="mb-6">
         <h2 class="text-[22px] font-bold text-slate-900">Accounts</h2>
@@ -436,14 +435,6 @@
     const MODAL_IDS = ['addCashierModal', 'editCashierModal', 'resetPasswordModal', 'selfAccountModal'];
 
     document.addEventListener('DOMContentLoaded', function () {
-        @if(session('success'))
-            showToast(@json(session('success')), 'success');
-        @endif
-
-        @if(session('error'))
-            showToast(@json(session('error')), 'error');
-        @endif
-
         @if($errors->any())
             showToast(@json($errors->first()), 'error');
 
@@ -687,38 +678,5 @@
         }
     }
 
-    function showToast(message, type) {
-        const container = document.getElementById('toastContainer');
-        if (!container) return;
-
-        const success = type === 'success';
-        const toast = document.createElement('div');
-        toast.className = 'pointer-events-auto flex items-start gap-3 overflow-hidden rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-[0_10px_25px_rgba(15,23,42,.12)] transition-all duration-200';
-        toast.style.borderLeft = '4px solid ' + (success ? '#16a34a' : '#dc2626');
-
-        const text = document.createElement('span');
-        text.className = 'min-w-0 flex-1 font-medium';
-        text.textContent = message;
-
-        const close = document.createElement('button');
-        close.type = 'button';
-        close.className = 'shrink-0 rounded px-1 text-lg leading-none text-slate-400 transition-colors hover:text-slate-600';
-        close.textContent = '\u00d7';
-        close.setAttribute('aria-label', 'Dismiss');
-        close.addEventListener('click', function () {
-            toast.remove();
-        });
-
-        toast.append(text, close);
-        container.appendChild(toast);
-
-        window.setTimeout(function () {
-            toast.style.opacity = '0';
-            toast.style.transform = 'translateY(-4px)';
-            window.setTimeout(function () {
-                toast.remove();
-            }, 200);
-        }, 4500);
-    }
 </script>
 @endsection

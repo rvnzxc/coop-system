@@ -166,6 +166,14 @@
                 <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">Total</dt>
                 <dd id="myDetailTotal" class="mt-0.5 font-semibold text-slate-900"></dd>
             </div>
+            <div id="myDetailAmountReceivedWrap">
+                <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">Amount Received</dt>
+                <dd id="myDetailAmountReceived" class="mt-0.5 font-medium text-slate-900"></dd>
+            </div>
+            <div id="myDetailChangeWrap">
+                <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">Change</dt>
+                <dd id="myDetailChange" class="mt-0.5 font-semibold text-emerald-700"></dd>
+            </div>
         </dl>
 
         <div class="mt-5 overflow-hidden rounded-lg border border-slate-200">
@@ -240,6 +248,20 @@
             : sale.member;
         document.getElementById('myDetailPayment').textContent = sale.payment_method === 'credit' ? 'Credit' : 'Cash';
         document.getElementById('myDetailTotal').textContent = myMoney(sale.total);
+
+        const receivedWrap = document.getElementById('myDetailAmountReceivedWrap');
+        const receivedEl = document.getElementById('myDetailAmountReceived');
+        const changeWrap = document.getElementById('myDetailChangeWrap');
+        const changeEl = document.getElementById('myDetailChange');
+        if (sale.payment_method === 'cash' && sale.amount_received !== null && sale.amount_received !== undefined) {
+            receivedWrap.style.display = '';
+            changeWrap.style.display = '';
+            receivedEl.textContent = myMoney(sale.amount_received);
+            changeEl.textContent = myMoney(sale.change_amount);
+        } else {
+            receivedWrap.style.display = 'none';
+            changeWrap.style.display = 'none';
+        }
 
         const container = document.getElementById('myDetailStatus');
         const badge = document.createElement('span');

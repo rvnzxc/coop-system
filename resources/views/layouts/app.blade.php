@@ -4,14 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CCFMPC - @yield('title')</title>
+    <link rel="icon" type="image/png" href="{{ asset('images/logotunay-round.png') }}">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="{{ asset('css/style.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/notify.css') }}">
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <script src="{{ asset('js/notify.js') }}" defer></script>
 </head>
 <body class="min-h-screen bg-brand-50 text-slate-900 antialiased">
     @php
@@ -26,9 +29,7 @@
         <aside id="sidebar" class="sidebar fixed inset-y-0 left-0 z-50 flex w-[250px] -translate-x-full flex-col border-r border-[#DCEFE3] bg-white shadow-xl transition-transform duration-200 lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:shrink-0 lg:translate-x-0 lg:border-b-0 lg:shadow-none">
             <div class="flex items-center justify-between gap-3 border-b border-[#DCEFE3] px-4 py-3 lg:h-16 lg:px-5">
                 <div class="flex items-center gap-3">
-                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-white">
-                        <x-icon name="leaf" />
-                    </div>
+                    <img src="{{ asset('images/logotunay.jpg') }}" alt="CCFMPC logo" class="h-9 w-9 shrink-0 rounded-full object-cover" />
                     <div class="min-w-0 leading-tight">
                         <p class="truncate text-sm font-semibold text-slate-900">CCFMPC</p>
                         <p class="hidden truncate text-xs text-slate-500 lg:block">Cooperative Store</p>
@@ -73,9 +74,6 @@
                         </a>
                         <a href="{{ route('credits.index') }}" class="flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-colors {{ request()->routeIs('credits.*') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' }}">
                             <x-icon name="credit-card" /> Credits
-                        </a>
-                        <a href="{{ route('my-transactions.index') }}" class="flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-colors {{ request()->routeIs('my-transactions.*') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' }}">
-                            <x-icon name="money" /> My Transactions
                         </a>
                     @endif
 
@@ -240,6 +238,17 @@
             document.getElementById('sidebar').classList.remove('open');
             document.getElementById('sidebarBackdrop').classList.add('hidden');
         }
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            @if(session('success'))
+                showToast(@json(session('success')), 'success');
+            @endif
+            @if(session('error'))
+                showToast(@json(session('error')), 'error');
+            @endif
+        });
     </script>
 
     </body>

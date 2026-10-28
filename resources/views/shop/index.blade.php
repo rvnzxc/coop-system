@@ -102,7 +102,7 @@
 
           <!-- Non-member toggle -->
           <div class="mt-3 text-center">
-            <button onclick="setNonMember()" id="nonMemberBtn" class="cursor-pointer rounded-full border border-slate-300 bg-white px-4 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50">
+            <button onclick="setNonMember()" id="nonMemberBtn" class="inline-block cursor-pointer rounded-full border border-slate-300 bg-white px-4 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50">
               Continue as Non-Member
             </button>
             <div id="nonMemberBadge" style="display: none; align-items: center; justify-content: space-between;" class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
@@ -122,10 +122,10 @@
           <div class="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Payment Method</div>
           <div class="flex gap-2">
             <button onclick="setPaymentMethod('cash')" id="btnCash" class="flex-1 cursor-pointer rounded-lg border-2 border-brand-600 bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-700 transition-colors">
-              <x-icon name="money" class="mr-1 h-3.5 w-3.5" /> Cash
+              <x-icon name="money" class="mr-1 h-3.5 w-3.5" /> Cash (F11)
             </button>
             <button onclick="setPaymentMethod('credit')" id="btnCredit" class="flex-1 cursor-pointer rounded-lg border-2 border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition-colors hover:border-brand-300 hover:text-brand-600">
-              <x-icon name="credit-card" class="mr-1 h-3.5 w-3.5" /> Credit
+              <x-icon name="credit-card" class="mr-1 h-3.5 w-3.5" /> Credit (F12)
             </button>
           </div>
         </div>
@@ -133,8 +133,9 @@
         <div class="total mt-4 -mx-5 shrink-0 border-t border-slate-100 px-5 py-3 text-right text-lg font-bold text-slate-900">TOTAL P0.00</div>
         <div class="checkout-actions mt-1 flex shrink-0 gap-3">
             <button class="btn-cancel flex-1 cursor-pointer rounded-lg border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50" onclick="cancelCheckout()">CANCEL</button>
-            <button class="btn-pay flex-1 cursor-pointer rounded-lg bg-brand-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300" onclick="processPayment()">PAY (P0.00)</button>
+            <button class="btn-pay flex-1 cursor-pointer rounded-lg bg-brand-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300" onclick="openCashPayment()">PAY (P0.00)</button>
         </div>
+        <div class="mt-1 text-center text-[10px] text-slate-400">Scan items - Enter = Pay - F11 Cash - F12 Credit (members)</div>
 
         <!-- Hidden inputs for member tracking -->
         <input type="hidden" id="selectedMemberIdInput" name="member_id" value="">
@@ -143,7 +144,90 @@
     </aside>
 </div>
 
-<div id="posToast" class="pointer-events-none fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white opacity-0 shadow-lg transition-opacity duration-200"></div>
+<div id="cashPaymentModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 p-4" role="dialog" aria-modal="true" aria-labelledby="cashPaymentTitle" tabindex="-1">
+    <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl" role="document">
+        <div class="mb-4 flex items-start justify-between gap-3">
+            <div>
+                <h3 id="cashPaymentTitle" class="text-lg font-bold text-slate-900">Cash Payment</h3>
+                <p class="mt-1 text-sm text-slate-500">Enter the amount received from the customer</p>
+            </div>
+            <button type="button" onclick="closeCashPayment()" class="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600" aria-label="Close">&times;</button>
+        </div>
+
+        <div class="mb-4 rounded-lg bg-slate-50 p-4 text-center">
+            <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Total Amount Due</div>
+            <div id="cashDueAmount" class="mt-1 text-3xl font-bold text-slate-900">P0.00</div>
+        </div>
+
+        <div class="mb-3">
+            <label for="cashReceivedInput" class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">Amount Received</label>
+            <input type="number" id="cashReceivedInput" inputmode="decimal" step="0.01" min="0" placeholder="0.00" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm text-slate-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30" oninput="updateCashChange()">
+        </div>
+
+        <div class="mb-4 flex flex-wrap gap-2">
+            <button type="button" onclick="setCashAmount('exact')" class="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50">Exact</button>
+            <button type="button" onclick="setCashAmount(50)" class="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50">50</button>
+            <button type="button" onclick="setCashAmount(100)" class="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50">100</button>
+            <button type="button" onclick="setCashAmount(200)" class="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50">200</button>
+            <button type="button" onclick="setCashAmount(500)" class="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50">500</button>
+            <button type="button" onclick="setCashAmount(1000)" class="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50">1000</button>
+        </div>
+
+        <div class="mb-5 rounded-lg border border-slate-200 p-4">
+            <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Change</div>
+            <div id="cashChangeDisplay" class="mt-1 text-2xl font-bold text-slate-900">P0.00</div>
+            <div id="cashShortDisplay" class="mt-1 hidden text-sm font-semibold text-red-600"></div>
+        </div>
+
+        <div class="flex gap-3">
+            <button type="button" onclick="closeCashPayment()" class="flex-1 cursor-pointer rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50">Cancel</button>
+            <button id="cashConfirmBtn" type="button" onclick="confirmCashPayment()" class="flex-1 cursor-pointer rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300">Confirm Payment</button>
+        </div>
+    </div>
+</div>
+
+<!-- Credit Payment Confirmation Modal -->
+<div id="creditPaymentModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 p-4" role="dialog" aria-modal="true" aria-labelledby="creditPaymentTitle" tabindex="-1">
+    <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl" role="document">
+        <div class="mb-4 flex items-start justify-between gap-3">
+            <div>
+                <h3 id="creditPaymentTitle" class="text-lg font-bold text-slate-900">Credit Payment</h3>
+                <p class="mt-1 text-sm text-slate-500">Confirm credit charge</p>
+            </div>
+            <button type="button" onclick="closeCreditPayment()" class="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600" aria-label="Close">&times;</button>
+        </div>
+
+        <div class="mb-4 rounded-lg bg-slate-50 p-4">
+            <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Member</div>
+            <div id="creditMemberName" class="mt-1 text-base font-semibold text-slate-900">-</div>
+            <div id="creditMemberId" class="text-xs text-slate-500">-</div>
+        </div>
+
+        <div class="mb-4 rounded-lg bg-slate-50 p-4 text-center">
+            <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Total Amount Due</div>
+            <div id="creditDueAmount" class="mt-1 text-3xl font-bold text-slate-900">P0.00</div>
+        </div>
+
+        <div class="mb-4 rounded-lg border border-slate-200 p-4">
+            <div class="flex items-center justify-between text-sm">
+                <span class="text-slate-600">Available Credit / Balance</span>
+                <span id="creditAvailable" class="font-semibold text-slate-900">P0.00</span>
+            </div>
+            <div class="mt-2 flex items-center justify-between text-sm">
+                <span class="text-slate-600">Remaining After Purchase</span>
+                <span id="creditRemaining" class="font-semibold text-slate-900">P0.00</span>
+            </div>
+            <div id="creditModalError" class="mt-2 hidden text-sm font-semibold text-red-600"></div>
+        </div>
+
+        <div class="mb-4 text-center text-xs text-slate-500">Press Enter to confirm - Esc to cancel</div>
+
+        <div class="flex gap-3">
+            <button type="button" onclick="closeCreditPayment()" class="flex-1 cursor-pointer rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50">Cancel</button>
+            <button id="creditConfirmBtn" type="button" onclick="confirmCreditPayment()" class="flex-1 cursor-pointer rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300">Confirm Payment</button>
+        </div>
+    </div>
+</div>
 
 <script>
 // POS functionality
@@ -164,6 +248,70 @@ let lastSearchKeyAt = 0;
 let scannerBurst = false;
 let burstResetTimer = null;
 let searchFilterTimer = null;
+
+    document.getElementById('cashPaymentModal').addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            event.stopPropagation();
+            closeCashPayment();
+            return;
+        }
+        if (event.key === 'Enter') {
+            if (event.repeat) {
+                event.preventDefault();
+                event.stopPropagation();
+                return;
+            }
+            event.preventDefault();
+            event.stopPropagation();
+            if (!document.getElementById('cashConfirmBtn').disabled) {
+                confirmCashPayment();
+            }
+            return;
+        }
+    });
+
+    document.getElementById('creditPaymentModal').addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            event.stopPropagation();
+            closeCreditPayment();
+            return;
+        }
+        if (event.key === 'Enter') {
+            if (event.repeat) {
+                event.preventDefault();
+                event.stopPropagation();
+                return;
+            }
+            event.preventDefault();
+            event.stopPropagation();
+            const btn = document.getElementById('creditConfirmBtn');
+            if (btn && !btn.disabled) {
+                confirmCreditPayment();
+            }
+            return;
+        }
+    });
+
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+            const cashModal = document.getElementById('cashPaymentModal');
+            if (cashModal && !cashModal.classList.contains('hidden')) {
+                event.preventDefault();
+                event.stopPropagation();
+                closeCashPayment();
+                return;
+            }
+            const creditModal = document.getElementById('creditPaymentModal');
+            if (creditModal && !creditModal.classList.contains('hidden')) {
+                event.preventDefault();
+                event.stopPropagation();
+                closeCreditPayment();
+                return;
+            }
+        }
+    });
 
 document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('search-input');
@@ -195,13 +343,12 @@ document.addEventListener('DOMContentLoaded', function() {
         if (event.key !== 'Enter') return;
 
         event.preventDefault();
+        event.stopPropagation();
         clearTimeout(searchFilterTimer);
 
         const value = this.value.trim();
         if (!value) return;
 
-        // Short manual entries such as "48" stay searches, even if a fast
-        // typist trips the burst detector.
         const fromScanner = scannerBurst && value.length >= 4;
         scannerBurst = false;
         clearTimeout(burstResetTimer);
@@ -225,12 +372,173 @@ document.addEventListener('DOMContentLoaded', function() {
             const name = this.dataset.name;
             const price = parseFloat(this.querySelector('.product-price').textContent.replace(',', ''));
             addToCart(id, name, price);
-            focusSearch();
         });
     });
 
-    focusSearch();
 });
+
+function isAnyModalOpen() {
+    const cashModal = document.getElementById('cashPaymentModal');
+    if (cashModal && !cashModal.classList.contains('hidden')) {
+        return true;
+    }
+    const creditModal = document.getElementById('creditPaymentModal');
+    if (creditModal && !creditModal.classList.contains('hidden')) {
+        return true;
+    }
+    return false;
+}
+
+function isCheckoutProcessing() {
+    const payBtn = document.querySelector('.btn-pay');
+    if (!payBtn) return false;
+    return payBtn.disabled && payBtn.textContent.trim().toLowerCase() === 'processing...';
+}
+
+let posShortcutIgnoreUntil = 0;
+let posEnterIgnoreUntil = 0;
+
+function triggerCashPaymentShortcut() {
+    const now = Date.now();
+    if (now < posShortcutIgnoreUntil) {
+        return;
+    }
+    if (cart.length === 0) {
+        showToast('Cart is empty', 'warning');
+        return;
+    }
+    if (isCheckoutProcessing()) {
+        showToast('Checkout is processing', 'warning');
+        return;
+    }
+    if (isAnyModalOpen()) {
+        return;
+    }
+
+    setPaymentMethod('cash');
+    document.getElementById('paymentMethodInput').value = 'cash';
+    selectedPaymentMethod = 'cash';
+    if (document.activeElement && document.activeElement.tagName === 'INPUT') {
+        try { document.activeElement.blur(); } catch (e) {}
+    }
+    posShortcutIgnoreUntil = Date.now() + 350;
+}
+
+function triggerCreditPaymentShortcut() {
+    const now = Date.now();
+    if (now < posShortcutIgnoreUntil) {
+        return;
+    }
+    if (cart.length === 0) {
+        showToast('Cart is empty', 'warning');
+        return;
+    }
+    if (isCheckoutProcessing()) {
+        showToast('Checkout is processing', 'warning');
+        return;
+    }
+    if (isAnyModalOpen()) {
+        return;
+    }
+
+    if (!currentMember || isNonMember) {
+        showToast('Credit is for members only. Scan a member card first.', 'error');
+        return;
+    }
+
+    setPaymentMethod('credit');
+    document.getElementById('paymentMethodInput').value = 'credit';
+    selectedPaymentMethod = 'credit';
+    if (document.activeElement && document.activeElement.tagName === 'INPUT') {
+        try { document.activeElement.blur(); } catch (e) {}
+    }
+    posShortcutIgnoreUntil = Date.now() + 350;
+}
+
+document.addEventListener('keydown', function (event) {
+    if (event.key === 'F11') {
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.repeat) return;
+        triggerCashPaymentShortcut();
+        return;
+    }
+    if (event.key === 'F12') {
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.repeat) return;
+        triggerCreditPaymentShortcut();
+        return;
+    }
+
+    if (event.key === 'Enter') {
+        if (event.repeat) return;
+        const target = event.target;
+        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+            if (target.id === 'memberScanInput') {
+                return;
+            }
+            if (target.id === 'search-input') {
+                const val = target.value.trim();
+                if (val !== '') {
+                    return;
+                }
+            } else {
+                return;
+            }
+        }
+        if (isAnyModalOpen()) {
+            return;
+        }
+        const searchInput = document.getElementById('search-input');
+        if (searchInput && document.activeElement === searchInput && searchInput.value.trim() !== '') {
+            return;
+        }
+        const memberInput = document.getElementById('memberScanInput');
+        if (memberInput && document.activeElement === memberInput && memberInput.value.trim() !== '') {
+            return;
+        }
+        if (Date.now() - lastItemAddedAt < 400) {
+            return;
+        }
+        if (Date.now() < posEnterIgnoreUntil) {
+            return;
+        }
+        if (cart.length === 0) {
+            showToast('Cart is empty', 'warning');
+            return;
+        }
+        if (isCheckoutProcessing()) {
+            showToast('Checkout is processing', 'warning');
+            return;
+        }
+        const paymentMethod = document.getElementById('paymentMethodInput').value === 'credit' ? 'credit' : 'cash';
+        if (paymentMethod === 'cash') {
+            event.preventDefault();
+            event.stopPropagation();
+            setPaymentMethod('cash');
+            document.getElementById('paymentMethodInput').value = 'cash';
+            selectedPaymentMethod = 'cash';
+            openCashPayment();
+            posEnterIgnoreUntil = Date.now() + 300;
+            return;
+        }
+        if (paymentMethod === 'credit') {
+            event.preventDefault();
+            event.stopPropagation();
+            if (!currentMember || isNonMember) {
+                showToast('Credit is for members only. Scan a member card first.', 'error');
+                return;
+            }
+            setPaymentMethod('credit');
+            document.getElementById('paymentMethodInput').value = 'credit';
+            selectedPaymentMethod = 'credit';
+            openCreditPayment();
+            posEnterIgnoreUntil = Date.now() + 300;
+            return;
+        }
+    }
+}, true);
 
 function applyProductFilter() {
     const searchInput = document.getElementById('search-input');
@@ -268,21 +576,6 @@ function focusSearch() {
     if (input) input.focus();
 }
 
-function showToast(message) {
-    const toast = document.getElementById('posToast');
-    if (!toast) return;
-
-    toast.textContent = message;
-    toast.classList.remove('opacity-0');
-    toast.classList.add('opacity-100');
-
-    clearTimeout(toast.hideTimer);
-    toast.hideTimer = setTimeout(() => {
-        toast.classList.add('opacity-0');
-        toast.classList.remove('opacity-100');
-    }, 2500);
-}
-
 // Cart lines are keyed by item id, so two products that share a name never
 // collide. `name` is kept purely for display.
 function addToCart(id, name, price) {
@@ -293,6 +586,15 @@ function addToCart(id, name, price) {
         cart.push({ id, name, price, quantity: 1 });
     }
     updateCart();
+    lastItemAddedAt = Date.now();
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+        searchInput.value = '';
+        searchInput.blur();
+    }
+    if (document.activeElement && document.activeElement.tagName === 'INPUT') {
+        try { document.activeElement.blur(); } catch (e) {}
+    }
 }
 
 // Look up a scanned product barcode and add it to the cart.
@@ -306,12 +608,17 @@ async function scanItem(code) {
         const response = await fetch(`/items/lookup?code=${encodeURIComponent(value)}`);
         const data = await response.json();
 
-        if (data.found) {
-            addToCart(data.item.id, data.item.display_name, data.item.price);
-            return true;
+    if (data.found) {
+        addToCart(data.item.id, data.item.display_name, data.item.price);
+        const si = document.getElementById('search-input');
+        if (si) {
+            si.value = '';
+            si.blur();
         }
+        return true;
+    }
 
-        return false;
+    return false;
     } catch (e) {
         console.error('Item scan error:', e);
         return false;
@@ -319,6 +626,7 @@ async function scanItem(code) {
 }
 
 let scanBuffer = '';
+let lastItemAddedAt = 0;
 
 document.addEventListener('focusin', function () {
     scanBuffer = '';
@@ -327,23 +635,28 @@ document.addEventListener('focusin', function () {
 document.addEventListener('keydown', function (event) {
     const target = event.target;
     if (target !== document.body && target !== document.documentElement) return;
+    if (event.ctrlKey || event.altKey || event.metaKey) return;
 
     if (event.key === 'Enter') {
         event.preventDefault();
         const value = scanBuffer.trim();
         scanBuffer = '';
-        if (value) routeScan(value, true);
+        if (value) {
+            routeScan(value, true);
+        }
         return;
     }
 
-    if (event.key.length === 1) {
+    if (event.key.length === 1 && !event.repeat) {
         scanBuffer += event.key;
         event.preventDefault();
-
         const searchInput = document.getElementById('search-input');
-        if (searchInput) searchInput.value = scanBuffer;
+        if (searchInput) {
+            searchInput.value = scanBuffer;
+            searchInput.focus();
+        }
     }
-});
+}, true);
 
 async function routeScan(code, fromScanner = false, fromMemberInput = false) {
     const value = (code || '').trim();
@@ -360,7 +673,10 @@ async function routeScan(code, fromScanner = false, fromMemberInput = false) {
     if (memberError) memberError.style.display = 'none';
 
     const resetScans = () => {
-        if (searchInput) searchInput.value = '';
+        if (searchInput) {
+            searchInput.value = '';
+            searchInput.blur();
+        }
         if (memberInput) memberInput.value = '';
     };
 
@@ -388,7 +704,7 @@ async function routeScan(code, fromScanner = false, fromMemberInput = false) {
         resetScans();
         resetProductFilter();
     } else if (fromScanner) {
-        showToast('Item/Member not found');
+        showToast('Item/Member not found', 'warning');
         resetScans();
         resetProductFilter();
     } else {
@@ -459,57 +775,422 @@ function setPaymentMethod(method) {
     }
 }
 
-async function processPayment() {
+let cashModalLastFocus = null;
+
+function toCents(value) {
+    if (value === null || value === undefined) return 0;
+    const str = String(value).replace(/[^0-9.\-]/g, '');
+    if (str === '' || str === '-' || str === '.') return 0;
+    const num = Number(str);
+    if (isNaN(num)) return 0;
+    return Math.round((num + Number.EPSILON) * 100);
+}
+
+function fromCents(cents) {
+    const c = Math.round(Number(cents) || 0);
+    return c / 100;
+}
+
+function moneyPFromCents(cents) {
+    const c = Math.round(Number(cents) || 0);
+    const pesos = c / 100;
+    return 'P' + pesos.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function moneyP(value) {
+    if (typeof value === 'string') {
+        const s = value.trim();
+        if (s.indexOf('.') === -1 && /^-?\d+$/.test(s) && s.length > 4) {
+            const c = parseInt(s, 10);
+            const pesos = Math.round(c) / 100;
+            return 'P' + pesos.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+    }
+    const cents = toCents(value);
+    const pesos = Math.round(cents) / 100;
+    return 'P' + pesos.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function pesosToString(value) {
+    return (Math.round(toCents(value)) / 100).toFixed(2);
+}
+
+function openCashPayment() {
     if (cart.length === 0) {
-        alert('Your cart is empty!');
+        showToast('Cart is empty', 'warning');
         return;
     }
 
     if (!currentMember && !isNonMember) {
-        alert('Please scan a member or select Non-Member before paying.');
+        isNonMember = true;
+        selectedPaymentMethod = 'cash';
+        document.getElementById('selectedMemberIdInput').value = '';
+        document.getElementById('isNonMemberInput').value = '1';
+        document.getElementById('paymentMethodInput').value = 'cash';
+    } else if (!isNonMember && currentMember) {
+        selectedPaymentMethod = 'cash';
+        document.getElementById('paymentMethodInput').value = 'cash';
+    } else {
+        selectedPaymentMethod = 'cash';
+        document.getElementById('paymentMethodInput').value = 'cash';
+    }
+
+    cashModalLastFocus = document.querySelector('.btn-pay');
+    document.getElementById('cashDueAmount').textContent = moneyP(total);
+    const input = document.getElementById('cashReceivedInput');
+    input.value = '';
+    document.getElementById('cashChangeDisplay').textContent = moneyPFromCents(0);
+    document.getElementById('cashChangeDisplay').className = 'mt-1 text-2xl font-bold text-slate-900';
+    document.getElementById('cashShortDisplay').classList.add('hidden');
+    document.getElementById('cashShortDisplay').textContent = '';
+    const btn = document.getElementById('cashConfirmBtn');
+    btn.disabled = true;
+    btn.textContent = 'Confirm Payment';
+
+    const modal = document.getElementById('cashPaymentModal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    window.setTimeout(() => {
+        input.focus();
+        input.select();
+    }, 50);
+}
+
+function closeCashPayment() {
+    const modal = document.getElementById('cashPaymentModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    if (cashModalLastFocus && typeof cashModalLastFocus.focus === 'function') {
+        cashModalLastFocus.focus();
+    } else {
+        focusSearch();
+    }
+}
+
+let creditModalLastFocus = null;
+
+function openCreditPayment() {
+    if (cart.length === 0) {
+        showToast('Cart is empty', 'warning');
         return;
+    }
+    if (isCheckoutProcessing()) {
+        showToast('Checkout is processing', 'warning');
+        return;
+    }
+    if (isAnyModalOpen()) {
+        return;
+    }
+
+    if (!currentMember || isNonMember) {
+        showToast('Credit is for members only. Scan a member card first.', 'error');
+        return;
+    }
+
+    creditModalLastFocus = document.querySelector('.btn-pay');
+
+    document.getElementById('creditMemberName').textContent = currentMember.first_name + ' ' + currentMember.last_name;
+    document.getElementById('creditMemberId').textContent = 'ID: ' + (currentMember.member_number || currentMember.id || '-');
+    document.getElementById('creditDueAmount').textContent = moneyP(total);
+    const available = parseFloat(currentOutstandingBalance) || 0;
+    document.getElementById('creditAvailable').textContent = moneyP(available);
+    const remaining = available - total;
+    document.getElementById('creditRemaining').textContent = moneyP(remaining);
+    const errEl = document.getElementById('creditModalError');
+    errEl.classList.add('hidden');
+    errEl.textContent = '';
+    const btn = document.getElementById('creditConfirmBtn');
+    btn.disabled = remaining < 0 ? true : false;
+    btn.textContent = 'Confirm Payment';
+    if (remaining < 0) {
+        errEl.textContent = 'Insufficient credit. Please select another payment method.';
+        errEl.classList.remove('hidden');
+    }
+
+    const modal = document.getElementById('creditPaymentModal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    window.setTimeout(() => {
+        btn.focus();
+    }, 50);
+}
+
+function closeCreditPayment() {
+    const modal = document.getElementById('creditPaymentModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    if (creditModalLastFocus && typeof creditModalLastFocus.focus === 'function') {
+        creditModalLastFocus.focus();
+    } else {
+        focusSearch();
+    }
+}
+
+async function confirmCreditPayment() {
+    if (cart.length === 0) {
+        showToast('Cart is empty', 'warning');
+        closeCreditPayment();
+        return;
+    }
+    if (isCheckoutProcessing()) {
+        return;
+    }
+    if (!currentMember || isNonMember) {
+        showToast('Credit is for members only. Scan a member card first.', 'error');
+        closeCreditPayment();
+        return;
+    }
+    const available = parseFloat(currentOutstandingBalance) || 0;
+    if (available < total - 0.00001) {
+        const errEl = document.getElementById('creditModalError');
+        errEl.textContent = 'Insufficient credit. Please select another payment method.';
+        errEl.classList.remove('hidden');
+        document.getElementById('creditConfirmBtn').disabled = true;
+        return;
+    }
+
+    const btn = document.getElementById('creditConfirmBtn');
+    btn.disabled = true;
+    btn.textContent = 'Processing...';
+
+    setPaymentMethod('credit');
+    document.getElementById('paymentMethodInput').value = 'credit';
+    selectedPaymentMethod = 'credit';
+
+    await processPayment({ closeDialog: false });
+    closeCreditPayment();
+}
+
+function setCashAmount(val) {
+    const input = document.getElementById('cashReceivedInput');
+    if (val === 'exact') {
+        input.value = (Math.round(toCents(total)) / 100).toFixed(2);
+    } else {
+        input.value = (Math.round(toCents(val)) / 100).toFixed(2);
+    }
+    updateCashChange();
+    input.focus();
+}
+
+function updateCashChange() {
+    const input = document.getElementById('cashReceivedInput');
+    const changeEl = document.getElementById('cashChangeDisplay');
+    const shortEl = document.getElementById('cashShortDisplay');
+    const btn = document.getElementById('cashConfirmBtn');
+
+    const totalC = toCents(total);
+    const rawReceived = input.value;
+    if (rawReceived === '' || rawReceived === null) {
+        changeEl.textContent = moneyPFromCents(0);
+        changeEl.className = 'mt-1 text-2xl font-bold text-slate-900';
+        shortEl.classList.add('hidden');
+        shortEl.textContent = '';
+        btn.disabled = true;
+        return;
+    }
+
+    const receivedC = toCents(rawReceived);
+    if (receivedC < 0) {
+        changeEl.textContent = moneyPFromCents(0);
+        changeEl.className = 'mt-1 text-2xl font-bold text-slate-900';
+        shortEl.classList.add('hidden');
+        shortEl.textContent = '';
+        btn.disabled = true;
+        return;
+    }
+
+    if (receivedC >= totalC) {
+        const changeC = receivedC - totalC;
+        changeEl.textContent = moneyPFromCents(changeC);
+        changeEl.className = 'mt-1 text-2xl font-bold text-emerald-700';
+        shortEl.classList.add('hidden');
+        shortEl.textContent = '';
+        btn.disabled = false;
+    } else {
+        const shortC = totalC - receivedC;
+        changeEl.textContent = moneyPFromCents(0);
+        changeEl.className = 'mt-1 text-2xl font-bold text-slate-900';
+        shortEl.textContent = 'Short by ' + moneyPFromCents(shortC);
+        shortEl.classList.remove('hidden');
+        btn.disabled = true;
+    }
+}
+
+async function confirmCashPayment() {
+    const input = document.getElementById('cashReceivedInput');
+    const btn = document.getElementById('cashConfirmBtn');
+    const totalC = toCents(total);
+    const receivedC = toCents(input.value);
+
+    if (receivedC < totalC) {
+        updateCashChange();
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Processing...';
+
+    await processPayment({ amountReceived: (receivedC / 100), closeDialog: true });
+}
+
+async function processPayment(options) {
+    options = options || {};
+    if (cart.length === 0) {
+        showToast('Your cart is empty!', 'warning');
+        return;
+    }
+
+    if (!currentMember && !isNonMember) {
+        isNonMember = true;
+        selectedPaymentMethod = 'cash';
+        document.getElementById('selectedMemberIdInput').value = '';
+        document.getElementById('isNonMemberInput').value = '1';
+        document.getElementById('paymentMethodInput').value = 'cash';
+    } else if (!isNonMember && currentMember) {
+        selectedPaymentMethod = document.getElementById('paymentMethodInput').value === 'credit' ? 'credit' : 'cash';
+    } else {
+        selectedPaymentMethod = 'cash';
+        document.getElementById('paymentMethodInput').value = 'cash';
     }
 
     const payButton = document.querySelector('.btn-pay');
     payButton.disabled = true;
     payButton.textContent = 'Processing...';
+    let paymentSucceeded = false;
+
+    const paymentMethod = document.getElementById('paymentMethodInput').value === 'credit' ? 'credit' : 'cash';
 
     try {
+    const body = {
+        items: cart.map(item => ({ id: item.id, name: item.name, quantity: item.quantity })),
+        member_id: document.getElementById('selectedMemberIdInput').value,
+        is_non_member: document.getElementById('isNonMemberInput').value,
+        payment_method: paymentMethod
+    };
+
+    if (paymentMethod === 'cash' && options.amountReceived !== undefined && options.amountReceived !== null) {
+        body.amount_received = toCents(options.amountReceived) / 100;
+    }
+
         const response = await fetch('/checkout', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
             },
-            body: JSON.stringify({
-                items: cart.map(item => ({ id: item.id, name: item.name, quantity: item.quantity })),
-                member_id: document.getElementById('selectedMemberIdInput').value,
-                is_non_member: document.getElementById('isNonMemberInput').value,
-                payment_method: document.getElementById('paymentMethodInput').value
-            })
+            body: JSON.stringify(body)
         });
 
         const result = await response.json();
 
         if (result.success) {
-            alert(result.message || 'Payment successful! Inventory updated.');
+            paymentSucceeded = true;
+
+            if (options.closeDialog) {
+                closeCashPayment();
+            }
+
+            const paidAmount = toCents(result.total !== undefined ? result.total : total) / 100;
+            const paidMethod = result.payment_method === 'credit' ? 'Credit' : 'Cash';
+            const customerName = currentMember
+                ? `${currentMember.first_name} ${currentMember.last_name}`
+                : 'Non-Member';
+
             cart = [];
             total = 0;
             selectedPaymentMethod = 'cash';
+            document.getElementById('paymentMethodInput').value = 'cash';
+            const btnCash = document.getElementById('btnCash');
+            const btnCredit = document.getElementById('btnCredit');
+            if (btnCash) btnCash.className = 'flex-1 cursor-pointer rounded-lg border-2 border-brand-600 bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-700 transition-colors';
+            if (btnCredit) btnCredit.className = 'flex-1 cursor-pointer rounded-lg border-2 border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition-colors hover:border-brand-300 hover:text-brand-600';
             updateCart();
-            clearMember();
-            setTimeout(() => {
-                window.location.reload();
-            }, 1500);
+            clearMember(false);
+            const si = document.getElementById('search-input');
+            if (si) {
+                si.value = '';
+                si.blur();
+            }
+            if (document.activeElement && document.activeElement.tagName === 'INPUT') {
+                try { document.activeElement.blur(); } catch (e) {}
+            }
+
+            if (paidMethod === 'Cash' && result.amount_received !== null && result.amount_received !== undefined && result.change_amount !== null && result.change_amount !== undefined) {
+            showToast(
+                `Total ${moneyPFromCents(toCents(paidAmount))} • Received ${moneyPFromCents(toCents(result.amount_received))} • Change ${moneyPFromCents(toCents(result.change_amount))}`,
+                'success',
+                { title: 'Payment Successful', duration: 4000 }
+            );
+            } else {
+                showToast(
+                    `${moneyP(paidAmount)} \u2022 ${paidMethod} \u2022 ${customerName}`,
+                    'success',
+                    { title: 'Payment Successful' }
+                );
+            }
         } else {
-            alert('Payment failed: ' + result.message);
+            showToast('Payment failed: ' + result.message, 'error');
         }
     } catch (error) {
-        alert('Error processing payment: ' + error.message);
+        showToast('Error processing payment: ' + error.message, 'error');
     } finally {
-        payButton.disabled = false;
-        payButton.textContent = `PAY (P${total.toFixed(2)})`;
-        focusSearch();
+        if (paymentSucceeded) {
+            payButton.disabled = false;
+            if (document.getElementById('paymentMethodInput').value === 'credit') {
+                payButton.textContent = `CHARGE TO CREDIT (P${total.toFixed(2)})`;
+            } else {
+                payButton.textContent = `PAY (P${total.toFixed(2)})`;
+            }
+        } else {
+            if (document.getElementById('paymentMethodInput').value === 'credit') {
+                payButton.textContent = `CHARGE TO CREDIT (P${total.toFixed(2)})`;
+            } else {
+                payButton.textContent = `PAY (P${total.toFixed(2)})`;
+            }
+            payButton.disabled = false;
+            const si = document.getElementById('search-input');
+            if (si) {
+                si.value = '';
+                si.blur();
+            }
+            if (document.activeElement && document.activeElement.tagName === 'INPUT') {
+                try { document.activeElement.blur(); } catch (e) {}
+            }
+        }
+
+        const cashBtn = document.getElementById('cashConfirmBtn');
+        if (cashBtn) {
+            if (paymentSucceeded) {
+                cashBtn.disabled = false;
+                cashBtn.textContent = 'Confirm Payment';
+            } else {
+                cashBtn.disabled = false;
+                cashBtn.textContent = 'Confirm Payment';
+                updateCashChange();
+            }
+        }
+
+        const creditBtn = document.getElementById('creditConfirmBtn');
+        if (creditBtn) {
+            if (paymentSucceeded) {
+                creditBtn.disabled = false;
+                creditBtn.textContent = 'Confirm Payment';
+            } else {
+                creditBtn.disabled = false;
+                creditBtn.textContent = 'Confirm Payment';
+                const errEl = document.getElementById('creditModalError');
+                if (errEl) {
+                    errEl.classList.add('hidden');
+                    errEl.textContent = '';
+                }
+                const available = parseFloat(currentOutstandingBalance) || 0;
+                if (available < total - 0.00001) {
+                    errEl.textContent = 'Insufficient credit. Please select another payment method.';
+                    errEl.classList.remove('hidden');
+                    creditBtn.disabled = true;
+                }
+            }
+        }
     }
 }
 
@@ -582,7 +1263,7 @@ function setNonMember() {
   focusSearch();
 }
 
-function clearMember() {
+function clearMember(focus = true) {
   currentMember = null;
   isNonMember = false;
   currentOutstandingBalance = 0;
@@ -590,7 +1271,7 @@ function clearMember() {
   document.getElementById('selectedMemberDisplay').style.display = 'none';
   document.getElementById('nonMemberBadge').style.display = 'none';
   document.getElementById('scannerInputSection').style.display = 'block';
-  document.getElementById('nonMemberBtn').style.display = 'block';
+  document.getElementById('nonMemberBtn').style.display = '';
   document.getElementById('memberScanInput').value = '';
   document.getElementById('selectedMemberIdInput').value = '';
   document.getElementById('isNonMemberInput').value = '0';
@@ -598,7 +1279,9 @@ function clearMember() {
   document.getElementById('creditBalanceSection').style.display = 'none';
   document.getElementById('paymentMethodInput').value = 'cash';
   selectedPaymentMethod = 'cash';
-  focusSearch();
+  if (focus) {
+    focusSearch();
+  }
 }
 
 // Pay credit modal
@@ -635,7 +1318,7 @@ function closePayCreditModal() {
 async function submitCreditPayment() {
   const amount = parseFloat(document.getElementById('payCreditAmount').value);
   if (!amount || amount <= 0) {
-    alert('Please enter a valid amount.');
+    showToast('Please enter a valid amount.', 'warning');
     return;
   }
 
@@ -675,12 +1358,12 @@ async function submitCreditPayment() {
         form.submit();
       } else {
         // Fallback: pay against the first outstanding credit via API
-        alert('Could not find the credit record. Please use the Credits page to record this payment.');
+        showToast('Could not find the credit record. Please use the Credits page to record this payment.', 'error');
       }
     }
   } catch (e) {
     console.error('Pay credit error:', e);
-    alert('Error recording payment. Please try again.');
+    showToast('Error recording payment. Please try again.', 'error');
   }
 }
 </script>

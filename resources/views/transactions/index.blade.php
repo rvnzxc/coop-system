@@ -10,8 +10,7 @@
 @endphp
 
 <div class="mx-auto max-w-7xl">
-    <div id="toastContainer" class="pointer-events-none fixed right-4 top-20 z-[60] flex w-full max-w-sm flex-col gap-2"></div>
-
+    
     <div class="mb-6">
         <h2 class="text-xl font-bold text-slate-900">Transactions</h2>
         <p class="mt-0.5 text-sm text-slate-500">Review every sale, filter by cashier or date, and export the results</p>
@@ -269,6 +268,14 @@
                 <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">Total</dt>
                 <dd id="detailTotal" class="mt-0.5 font-semibold text-slate-900"></dd>
             </div>
+            <div id="detailAmountReceivedWrap">
+                <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">Amount Received</dt>
+                <dd id="detailAmountReceived" class="mt-0.5 font-medium text-slate-900"></dd>
+            </div>
+            <div id="detailChangeWrap">
+                <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">Change</dt>
+                <dd id="detailChange" class="mt-0.5 font-semibold text-emerald-700"></dd>
+            </div>
         </dl>
 
         <div class="mt-5 overflow-hidden rounded-lg border border-slate-200">
@@ -297,10 +304,6 @@
     document.addEventListener('DOMContentLoaded', function () {
         @if($errors->any())
             showToast(@json($errors->first()), 'error');
-        @endif
-
-        @if(session('success'))
-            showToast(@json(session('success')), 'success');
         @endif
     });
 
@@ -354,6 +357,20 @@
             : sale.member;
         document.getElementById('detailPayment').textContent = sale.payment_method === 'credit' ? 'Credit' : 'Cash';
         document.getElementById('detailTotal').textContent = money(sale.total);
+
+        const receivedWrap = document.getElementById('detailAmountReceivedWrap');
+        const receivedEl = document.getElementById('detailAmountReceived');
+        const changeWrap = document.getElementById('detailChangeWrap');
+        const changeEl = document.getElementById('detailChange');
+        if (sale.payment_method === 'cash' && sale.amount_received !== null && sale.amount_received !== undefined) {
+            receivedWrap.style.display = '';
+            changeWrap.style.display = '';
+            receivedEl.textContent = money(sale.amount_received);
+            changeEl.textContent = money(sale.change_amount);
+        } else {
+            receivedWrap.style.display = 'none';
+            changeWrap.style.display = 'none';
+        }
 
         setDetailStatus(sale);
 
@@ -413,34 +430,5 @@
         document.getElementById('saleDetailModal').style.display = 'none';
     }
 
-    function showToast(message, type) {
-        const container = document.getElementById('toastContainer');
-        if (!container) return;
-
-        const success = type === 'success';
-        const toast = document.createElement('div');
-        toast.className = 'pointer-events-auto flex items-start gap-3 rounded-lg border px-4 py-3 text-sm font-medium shadow-lg ' +
-            (success ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-red-200 bg-red-50 text-red-700');
-
-        const text = document.createElement('span');
-        text.className = 'min-w-0 flex-1';
-        text.textContent = message;
-
-        const close = document.createElement('button');
-        close.type = 'button';
-        close.className = 'shrink-0 rounded px-1 text-lg leading-none opacity-60 transition-opacity hover:opacity-100';
-        close.textContent = '\u00d7';
-        close.setAttribute('aria-label', 'Dismiss');
-        close.addEventListener('click', function () {
-            toast.remove();
-        });
-
-        toast.append(text, close);
-        container.appendChild(toast);
-
-        window.setTimeout(function () {
-            toast.remove();
-        }, 4500);
-    }
 </script>
 @endsection

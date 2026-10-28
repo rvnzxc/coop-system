@@ -4,15 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - CCF Multi-Purpose Cooperative</title>
+    <link rel="icon" type="image/png" href="{{ asset('images/logotunay-round.png') }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-screen bg-cover bg-center bg-no-repeat" style="background-image: url('/images/login-bg.png'); background-color: #052e16;">
     <div class="flex min-h-screen w-full items-center justify-center px-4 py-8" style="background-color: rgba(5, 46, 22, 0.7);">
     <div class="w-full max-w-md">
         <div class="mb-8 text-center">
-            <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-600 text-3xl text-white shadow-lg shadow-brand-600/30">
-                <x-icon name="leaf" class="h-8 w-8" />
-            </div>
+            <img src="{{ asset('images/logotunay.jpg') }}" alt="CCFMPC logo" class="mx-auto mb-4 h-16 w-16 rounded-2xl object-contain" />
             <h1 class="text-2xl font-bold text-white" style="text-shadow: 0 2px 8px rgba(0,0,0,0.5);">CCFMPC</h1>
             <p class="mt-1 text-sm text-white" style="text-shadow: 0 1px 4px rgba(0,0,0,0.5);">Point of Sale System</p>
         </div>

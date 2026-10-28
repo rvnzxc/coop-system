@@ -1,0 +1,343 @@
+/*
+ * Shared in-page notification system (toasts, success modal, confirm dialog).
+ * Loaded on every app page after the legacy stylesheet and before Tailwind
+ * utilities. All classes are namespaced with `ntf-` to avoid collisions.
+ */
+
+:root {
+    --ntf-green: #16a34a;
+    --ntf-green-dark: #15803d;
+    --ntf-green-light: #f0fdf4;
+}
+
+.ntf-body-lock {
+    overflow: hidden;
+}
+
+/* ------------------------------------------------------------------ Toasts */
+
+.ntf-toast-container {
+    position: fixed;
+    top: 1.25rem;
+    left: 50%;
+    z-index: 100000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.625rem;
+    width: max-content;
+    max-width: min(24rem, calc(100vw - 2rem));
+    transform: translateX(-50%);
+    pointer-events: none;
+}
+
+.ntf-toast {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    padding: 0.75rem 0.95rem;
+    border-radius: 0.75rem;
+    border-left: 4px solid var(--ntf-green);
+    background: #ffffff;
+    color: #0f172a;
+    font-family: inherit;
+    font-size: 0.875rem;
+    line-height: 1.45;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18), 0 2px 8px rgba(15, 23, 42, 0.08);
+    opacity: 0;
+    transform: translateY(-120%);
+    transition: opacity 0.28s ease, transform 0.32s cubic-bezier(0.2, 0.8, 0.3, 1);
+    pointer-events: none;
+    user-select: none;
+}
+
+.ntf-toast--visible {
+    opacity: 1;
+    transform: none;
+}
+
+.ntf-toast--success { border-left-color: #16a34a; }
+.ntf-toast--error { border-left-color: #dc2626; }
+.ntf-toast--warning { border-left-color: #d97706; }
+.ntf-toast--info { border-left-color: #0284c7; }
+
+.ntf-toast-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.ntf-toast-icon--success { background: #dcfce7; color: #15803d; }
+.ntf-toast-icon--error { background: #fee2e2; color: #b91c1c; }
+.ntf-toast-icon--warning { background: #fef3c7; color: #b45309; }
+.ntf-toast-icon--info { background: #e0f2fe; color: #0369a1; }
+
+.ntf-toast-check {
+    display: block;
+    width: 1rem;
+    height: 1rem;
+}
+
+.ntf-toast-check-circle,
+.ntf-toast-check-mark {
+    fill: none;
+    stroke: #16a34a;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.ntf-toast-check-circle {
+    stroke-width: 2.5;
+    stroke-dasharray: 63;
+    stroke-dashoffset: 63;
+    animation: ntf-toast-draw-circle 0.4s ease-out forwards;
+}
+
+.ntf-toast-check-mark {
+    stroke-width: 3;
+    stroke-dasharray: 16;
+    stroke-dashoffset: 16;
+    animation: ntf-toast-draw-mark 0.3s 0.25s ease-out forwards;
+}
+
+@keyframes ntf-toast-draw-circle {
+    to { stroke-dashoffset: 0; }
+}
+
+@keyframes ntf-toast-draw-mark {
+    to { stroke-dashoffset: 0; }
+}
+
+.ntf-toast-body {
+    min-width: 0;
+}
+
+.ntf-toast-title {
+    margin: 0 0 0.1rem;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.ntf-toast-text {
+    min-width: 0;
+    word-break: break-word;
+}
+
+/* ------------------------------------------------------------------ Modals */
+
+.ntf-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100001;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: rgba(15, 23, 42, 0.55);
+    -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px);
+    font-family: inherit;
+    opacity: 0;
+    transition: opacity 0.18s ease;
+}
+
+.ntf-overlay--visible {
+    opacity: 1;
+}
+
+.ntf-modal {
+    width: 100%;
+    max-width: 26rem;
+    padding: 1.75rem 1.5rem 1.5rem;
+    border-radius: 1rem;
+    background: #ffffff;
+    box-shadow: 0 24px 64px rgba(15, 23, 42, 0.3);
+    text-align: center;
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+    transition: opacity 0.18s ease, transform 0.22s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+.ntf-overlay--visible .ntf-modal {
+    opacity: 1;
+    transform: none;
+}
+
+.ntf-title {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.ntf-message {
+    margin: 0.4rem 0 0;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: #64748b;
+}
+
+/* Animated checkmark */
+
+.ntf-check {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 5rem;
+    height: 5rem;
+    margin: 0 auto 1rem;
+    border-radius: 9999px;
+    background: var(--ntf-green-light);
+}
+
+.ntf-check svg {
+    display: block;
+    width: 3.5rem;
+    height: 3.5rem;
+}
+
+.ntf-check-circle,
+.ntf-check-mark {
+    stroke: var(--ntf-green);
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.ntf-check-circle {
+    stroke-width: 2.5;
+    stroke-dasharray: 151;
+    stroke-dashoffset: 151;
+    animation: ntf-draw-circle 0.55s ease-out forwards;
+}
+
+.ntf-check-mark {
+    stroke-width: 3.5;
+    stroke-dasharray: 42;
+    stroke-dashoffset: 42;
+    animation: ntf-draw-mark 0.35s 0.45s ease-out forwards;
+}
+
+@keyframes ntf-draw-circle {
+    to { stroke-dashoffset: 0; }
+}
+
+@keyframes ntf-draw-mark {
+    to { stroke-dashoffset: 0; }
+}
+
+/* Confirm icon */
+
+.ntf-confirm-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 3.25rem;
+    height: 3.25rem;
+    margin: 0 auto 1rem;
+    border-radius: 9999px;
+    background: #fef3c7;
+    color: #b45309;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+/* Detail rows */
+
+.ntf-details {
+    margin: 1.25rem 0 0;
+    padding: 0.15rem 0.9rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    background: #f8fafc;
+    text-align: left;
+}
+
+.ntf-detail-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid #eef2f7;
+    font-size: 0.875rem;
+}
+
+.ntf-detail-row:last-child {
+    border-bottom: 0;
+}
+
+.ntf-detail-label {
+    flex: 0 0 auto;
+    color: #64748b;
+}
+
+.ntf-detail-value {
+    flex: 1 1 auto;
+    font-weight: 600;
+    color: #0f172a;
+    text-align: right;
+    word-break: break-word;
+}
+
+/* Actions */
+
+.ntf-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+}
+
+.ntf-btn {
+    flex: 1 1 0;
+    padding: 0.7rem 1rem;
+    border: 0;
+    border-radius: 0.75rem;
+    font-family: inherit;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.25;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.ntf-btn:focus-visible {
+    outline: 2px solid var(--ntf-green);
+    outline-offset: 2px;
+}
+
+.ntf-btn-primary {
+    background: var(--ntf-green);
+    color: #ffffff;
+}
+
+.ntf-btn-primary:hover {
+    background: var(--ntf-green-dark);
+}
+
+.ntf-btn-danger {
+    background: #dc2626;
+    color: #ffffff;
+}
+
+.ntf-btn-danger:hover {
+    background: #b91c1c;
+}
+
+.ntf-btn-ghost {
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #475569;
+}
+
+.ntf-btn-ghost:hover {
+    background: #f8fafc;
+}

@@ -4,13 +4,6 @@
 
 @section('content')
 <div class="mx-auto max-w-7xl">
-    @if(session('success'))
-        <div class="mb-6 flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
-            <x-icon name="check-circle" class="h-3.5 w-3.5" />
-            {{ session('success') }}
-        </div>
-    @endif
-
     {{-- Page header --}}
     <div class="mb-6 flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
         <div class="min-w-0">
@@ -126,7 +119,7 @@
                                 <form action="{{ route('inventory.destroy', $item->id) }}" method="POST" class="delete-form">
                                     @csrf
                                     @method('DELETE')
-                                    <x-button type="submit" color="dangerGhost" size="sm" onclick="return confirm('Are you sure you want to delete this item?')">
+                                    <x-button type="submit" color="dangerGhost" size="sm" onclick="return confirmDestructive(event, 'Are you sure you want to delete this item?', 'Delete Item')">
                                         <x-icon name="trash" class="h-3 w-3" /> Remove
                                     </x-button>
                                 </form>
