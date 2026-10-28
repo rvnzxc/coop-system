@@ -214,14 +214,10 @@
             <div id="creditDueAmount" class="mt-1 text-3xl font-bold text-slate-900">P0.00</div>
         </div>
 
-        <div class="mb-4 rounded-lg border border-slate-200 p-4">
+        <div class="mb-4 rounded-lg border border-slate-200 px-4 py-3">
             <div class="flex items-center justify-between text-sm">
-                <span class="text-slate-600">Available Credit / Balance</span>
+                <span class="text-slate-600">Credit/Balance</span>
                 <span id="creditAvailable" class="font-semibold text-slate-900">P0.00</span>
-            </div>
-            <div class="mt-2 flex items-center justify-between text-sm">
-                <span class="text-slate-600">Remaining After Purchase</span>
-                <span id="creditRemaining" class="font-semibold text-slate-900">P0.00</span>
             </div>
             <div id="creditModalError" class="mt-2 hidden text-sm font-semibold text-red-600"></div>
         </div>
@@ -981,14 +977,16 @@ function openCreditPayment() {
     document.getElementById('creditDueAmount').textContent = moneyP(total);
     const available = parseFloat(currentOutstandingBalance) || 0;
     document.getElementById('creditAvailable').textContent = moneyP(available);
-    const remaining = available - total;
-    document.getElementById('creditRemaining').textContent = moneyP(remaining);
     const errEl = document.getElementById('creditModalError');
     errEl.classList.add('hidden');
     errEl.textContent = '';
     const btn = document.getElementById('creditConfirmBtn');
-    btn.disabled = false;
+    btn.disabled = available < total - 0.00001 ? true : false;
     btn.textContent = 'Confirm Payment';
+    if (available < total - 0.00001) {
+        errEl.textContent = 'Insufficient credit. Please select another payment method.';
+        errEl.classList.remove('hidden');
+    }
 
     const modal = document.getElementById('creditPaymentModal');
     modal.classList.remove('hidden');
@@ -1023,7 +1021,14 @@ async function confirmCreditPayment() {
         closeCreditPayment();
         return;
     }
-    // Credit limit removed; allow credit regardless of balance.
+    const available = parseFloat(currentOutstandingBalance) || 0;
+    if (available < total - 0.00001) {
+        const errEl = document.getElementById('creditModalError');
+        errEl.textContent = 'Insufficient credit. Please select another payment method.';
+        errEl.classList.remove('hidden');
+        document.getElementById('creditConfirmBtn').disabled = true;
+        return;
+    }
 
     const btn = document.getElementById('creditConfirmBtn');
     btn.disabled = true;
