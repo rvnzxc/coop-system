@@ -208,6 +208,25 @@ class ShopController extends Controller
         DB::beginTransaction();
 
         try {
+            // Re-validate stock with locks to avoid race conditions
+            $lockedLines = [];
+            foreach ($lines as $line) {
+                $item = Item::where('id', $line['item']->id)->lockForUpdate()->first();
+                if (!$item) {
+                    throw new \Exception("Item {$this->cartItemLabel(['id' => $line['item']->id])} not found in inventory");
+                }
+                if ($item->quantity < $line['quantity']) {
+                    throw new \Exception("Not enough stock for {$item->item_name}. Available: {$item->quantity}, Required: {$line['quantity']}");
+                }
+                $lockedLines[] = [
+                    'item' => $item,
+                    'quantity' => $line['quantity'],
+                    'unit_price' => $line['unit_price'],
+                    'subtotal' => $line['subtotal'],
+                ];
+            }
+            $lines = $lockedLines;
+
             // The cashier always comes from the authenticated session; a
             // cashier id posted by the browser is never trusted.
             $sale = Sale::create([
@@ -306,6 +325,16 @@ class ShopController extends Controller
             $message = 'Credit sale recorded. Member owes ₱' . number_format($totalAmount, 2) . '.';
         }
 
+        $updatedItems = [];
+        foreach ($lines as $line) {
+            $item = $line['item'];
+            $item->refresh();
+            $updatedItems[] = [
+                'id' => $item->id,
+                'quantity' => $item->quantity,
+            ];
+        }
+
         return response()->json([
             'success' => true,
             'message' => $message,
@@ -314,6 +343,7 @@ class ShopController extends Controller
             'payment_method' => $sale->payment_method,
             'amount_received' => $amountReceived !== null ? (float) $amountReceived : null,
             'change_amount' => $changeAmount !== null ? (float) $changeAmount : null,
+            'items' => $updatedItems,
         ]);
     }
 }

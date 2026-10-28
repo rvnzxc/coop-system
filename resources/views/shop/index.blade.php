@@ -39,9 +39,15 @@
         <div class="product-grid grid min-h-0 min-w-0 flex-1 auto-rows-[7rem] grid-cols-2 gap-3 overflow-y-auto p-1 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-3 2xl:grid-cols-4">
             @if($items->count() > 0)
                 @foreach($items as $item)
-                    <div class="product-card flex min-w-0 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-3 text-center transition-all hover:-translate-y-0.5 hover:border-brand-300 hover:bg-brand-50 hover:shadow-md" data-category="{{ $item->category ?? 'other' }}" data-id="{{ $item->id }}" data-name="{{ $item->item_name }}" data-barcode="{{ $item->barcode }}" data-manufacturer-barcode="{{ $item->manufacturer_barcode }}">
+                    @php $stockQty = (int) ($item->quantity ?? 0); @endphp
+                    <div class="product-card flex min-w-0 {{ $stockQty <= 0 ? 'cursor-not-allowed opacity-60' : 'cursor-pointer' }} flex-col items-center justify-center overflow-hidden rounded-xl border {{ $stockQty <= 0 ? 'border-slate-200 bg-slate-100' : 'border-slate-200 bg-slate-50 hover:-translate-y-0.5 hover:border-brand-300 hover:bg-brand-50 hover:shadow-md' }} p-3 text-center transition-all" data-category="{{ $item->category ?? 'other' }}" data-id="{{ $item->id }}" data-name="{{ $item->item_name }}" data-barcode="{{ $item->barcode }}" data-manufacturer-barcode="{{ $item->manufacturer_barcode }}" data-stock="{{ $stockQty }}" data-price="{{ $item->price }}">
                         <div class="product-name mb-1 line-clamp-2 text-sm font-semibold text-slate-700">{{ ucwords($item->item_name) }}</div>
                         <div class="product-price text-base font-bold text-brand-700">{{ number_format($item->price, 2) }}</div>
+                        @if($stockQty <= 0)
+                            <div class="mt-1 text-[10px] font-semibold uppercase tracking-wide text-red-600">Out of stock</div>
+                        @elseif($stockQty <= 5)
+                            <div class="mt-1 text-[10px] font-medium text-amber-600">Low: {{ $stockQty }} left</div>
+                        @endif
                     </div>
                 @endforeach
             @else
@@ -368,10 +374,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // Product click to add to cart
     document.querySelectorAll('.product-card').forEach(product => {
         product.addEventListener('click', function() {
-            const id = parseInt(this.dataset.id, 10);
+        const stock = parseInt(this.dataset.stock || '0', 10);
+        if (isNaN(stock) || stock <= 0) {
             const name = this.dataset.name;
-            const price = parseFloat(this.querySelector('.product-price').textContent.replace(',', ''));
-            addToCart(id, name, price);
+            showToast(name + ' is out of stock', 'warning');
+            return;
+        }
+        const id = parseInt(this.dataset.id, 10);
+        const name = this.dataset.name;
+        const price = parseFloat(this.dataset.price !== undefined ? this.dataset.price : (this.querySelector('.product-price').textContent.replace(/,/g, '')));
+        addToCart(id, name, price);
         });
     });
 
@@ -578,11 +590,64 @@ function focusSearch() {
 
 // Cart lines are keyed by item id, so two products that share a name never
 // collide. `name` is kept purely for display.
+function getItemStock(id) {
+    const card = document.querySelector('.product-card[data-id="' + id + '"]');
+    if (!card) return null;
+    const stock = parseInt(card.dataset.stock || '0', 10);
+    if (isNaN(stock)) return null;
+    return stock;
+}
+
+function updateProductCardStock(id, stock) {
+    const card = document.querySelector('.product-card[data-id="' + id + '"]');
+    if (!card) return;
+    card.dataset.stock = stock;
+    if (parseInt(stock, 10) <= 0) {
+        card.classList.remove('cursor-pointer', 'hover:-translate-y-0.5', 'hover:border-brand-300', 'hover:bg-brand-50', 'hover:shadow-md');
+        card.classList.add('cursor-not-allowed', 'opacity-60');
+        card.classList.remove('bg-slate-50');
+        card.classList.add('bg-slate-100');
+        const existingBadge = card.querySelector('.stock-badge');
+        if (existingBadge) existingBadge.remove();
+        const badge = document.createElement('div');
+        badge.className = 'stock-badge mt-1 text-[10px] font-semibold uppercase tracking-wide text-red-600';
+        badge.textContent = 'Out of stock';
+        card.appendChild(badge);
+    } else {
+        card.classList.remove('cursor-not-allowed', 'opacity-60');
+        card.classList.add('cursor-pointer', 'hover:-translate-y-0.5', 'hover:border-brand-300', 'hover:bg-brand-50', 'hover:shadow-md');
+        card.classList.remove('bg-slate-100');
+        card.classList.add('bg-slate-50');
+        const existingBadge = card.querySelector('.stock-badge');
+        if (existingBadge) existingBadge.remove();
+        if (parseInt(stock, 10) <= 5) {
+            const badge = document.createElement('div');
+            badge.className = 'stock-badge mt-1 text-[10px] font-medium text-amber-600';
+            badge.textContent = 'Low: ' + stock + ' left';
+            card.appendChild(badge);
+        }
+    }
+}
+
 function addToCart(id, name, price) {
+    const stock = getItemStock(id);
+    if (stock !== null && stock <= 0) {
+        showToast(name + ' is out of stock', 'warning');
+        return;
+    }
     const existingItem = cart.find(item => item.id === id);
-    if(existingItem) {
+    if (existingItem) {
+        if (stock !== null && existingItem.quantity + 1 > stock) {
+            showToast('Only ' + stock + ' ' + name + ' left in stock', 'warning');
+            updateCart();
+            return;
+        }
         existingItem.quantity++;
     } else {
+        if (stock !== null && stock < 1) {
+            showToast(name + ' is out of stock', 'warning');
+            return;
+        }
         cart.push({ id, name, price, quantity: 1 });
     }
     updateCart();
@@ -609,6 +674,14 @@ async function scanItem(code) {
         const data = await response.json();
 
     if (data.found) {
+        const stock = data.item.quantity !== undefined && data.item.quantity !== null ? parseInt(data.item.quantity, 10) : null;
+        if (stock !== null && !isNaN(stock)) {
+            updateProductCardStock(data.item.id, stock);
+        }
+        if (stock !== null && !isNaN(stock) && stock <= 0) {
+            showToast(data.item.display_name + ' is out of stock', 'warning');
+            return true;
+        }
         addToCart(data.item.id, data.item.display_name, data.item.price);
         const si = document.getElementById('search-input');
         if (si) {
@@ -723,17 +796,21 @@ function updateCart() {
         cartContainer.innerHTML = '<div class="empty-cart py-8 text-center text-sm text-slate-400">No items in cart</div>';
         total = 0;
     } else {
-        cartContainer.innerHTML = cart.map((item, index) => `
+        cartContainer.innerHTML = cart.map((item, index) => {
+            const stock = getItemStock(item.id);
+            const canIncrease = stock === null ? true : item.quantity < stock;
+            return `
             <div class="checkout-item flex items-center justify-between gap-2 border-b border-slate-100 py-2.5 last:border-0">
                 <span class="min-w-0 flex-1 truncate text-sm font-medium text-slate-700">${item.name}</span>
                 <div class="qty-control flex shrink-0 items-center gap-2">
                     <button onclick="updateQuantity(${index}, -1)" class="flex h-7 w-7 items-center justify-center rounded-md border border-slate-300 bg-white text-sm font-bold text-slate-600 transition-colors hover:bg-slate-50">-</button>
                     <span class="min-w-5 text-center text-sm font-semibold text-slate-900">${item.quantity}</span>
-                    <button onclick="updateQuantity(${index}, 1)" class="flex h-7 w-7 items-center justify-center rounded-md border border-slate-300 bg-white text-sm font-bold text-slate-600 transition-colors hover:bg-slate-50">+</button>
+                    <button onclick="updateQuantity(${index}, 1)" ${!canIncrease ? 'disabled' : ''} title="${!canIncrease ? 'No more stock' : ''}" class="flex h-7 w-7 items-center justify-center rounded-md border border-slate-300 bg-white text-sm font-bold text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40">+</button>
                 </div>
                 <span class="shrink-0 text-sm font-semibold text-slate-900">P${(item.price * item.quantity).toFixed(2)}</span>
             </div>
-        `).join('');
+        `;
+        }).join('');
         total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     }
     
@@ -742,8 +819,18 @@ function updateCart() {
 }
 
 function updateQuantity(index, change) {
-    cart[index].quantity += change;
-    if(cart[index].quantity <= 0) {
+    const item = cart[index];
+    if (!item) return;
+    if (change > 0) {
+        const stock = getItemStock(item.id);
+        if (stock !== null && item.quantity + 1 > stock) {
+            showToast('Only ' + stock + ' ' + item.name + ' left in stock', 'warning');
+            updateCart();
+            return;
+        }
+    }
+    item.quantity += change;
+    if (item.quantity <= 0) {
         cart.splice(index, 1);
     }
     updateCart();
@@ -1093,6 +1180,15 @@ async function processPayment(options) {
             const btnCredit = document.getElementById('btnCredit');
             if (btnCash) btnCash.className = 'flex-1 cursor-pointer rounded-lg border-2 border-brand-600 bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-700 transition-colors';
             if (btnCredit) btnCredit.className = 'flex-1 cursor-pointer rounded-lg border-2 border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition-colors hover:border-brand-300 hover:text-brand-600';
+            if (result.items && Array.isArray(result.items)) {
+                result.items.forEach(function(it) {
+                    if (it && it.id !== undefined && it.quantity !== undefined && it.quantity !== null) {
+                        updateProductCardStock(it.id, it.quantity);
+                    }
+                });
+            }
+            cart = [];
+            total = 0;
             updateCart();
             clearMember(false);
             const si = document.getElementById('search-input');
