@@ -900,12 +900,8 @@ function openCreditPayment() {
     errEl.classList.add('hidden');
     errEl.textContent = '';
     const btn = document.getElementById('creditConfirmBtn');
-    btn.disabled = remaining < 0 ? true : false;
+    btn.disabled = false;
     btn.textContent = 'Confirm Payment';
-    if (remaining < 0) {
-        errEl.textContent = 'Insufficient credit. Please select another payment method.';
-        errEl.classList.remove('hidden');
-    }
 
     const modal = document.getElementById('creditPaymentModal');
     modal.classList.remove('hidden');
@@ -940,14 +936,7 @@ async function confirmCreditPayment() {
         closeCreditPayment();
         return;
     }
-    const available = parseFloat(currentOutstandingBalance) || 0;
-    if (available < total - 0.00001) {
-        const errEl = document.getElementById('creditModalError');
-        errEl.textContent = 'Insufficient credit. Please select another payment method.';
-        errEl.classList.remove('hidden');
-        document.getElementById('creditConfirmBtn').disabled = true;
-        return;
-    }
+    // Credit limit removed; allow credit regardless of balance.
 
     const btn = document.getElementById('creditConfirmBtn');
     btn.disabled = true;
@@ -1172,24 +1161,18 @@ async function processPayment(options) {
 
         const creditBtn = document.getElementById('creditConfirmBtn');
         if (creditBtn) {
-            if (paymentSucceeded) {
-                creditBtn.disabled = false;
-                creditBtn.textContent = 'Confirm Payment';
-            } else {
-                creditBtn.disabled = false;
-                creditBtn.textContent = 'Confirm Payment';
-                const errEl = document.getElementById('creditModalError');
-                if (errEl) {
-                    errEl.classList.add('hidden');
-                    errEl.textContent = '';
-                }
-                const available = parseFloat(currentOutstandingBalance) || 0;
-                if (available < total - 0.00001) {
-                    errEl.textContent = 'Insufficient credit. Please select another payment method.';
-                    errEl.classList.remove('hidden');
-                    creditBtn.disabled = true;
-                }
+        if (paymentSucceeded) {
+            creditBtn.disabled = false;
+            creditBtn.textContent = 'Confirm Payment';
+        } else {
+            creditBtn.disabled = false;
+            creditBtn.textContent = 'Confirm Payment';
+            const errEl = document.getElementById('creditModalError');
+            if (errEl) {
+                errEl.classList.add('hidden');
+                errEl.textContent = '';
             }
+        }
         }
     }
 }
