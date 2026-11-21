@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Middleware\EnsureAccountIsActive;
+use App\Http\Middleware\PreventResponseCaching;
+use App\Http\Middleware\SetUtf8ContentType;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -15,9 +18,17 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->append(PreventResponseCaching::class);
+        $middleware->append(SetUtf8ContentType::class);
+
+        $middleware->web(append: [
+            EnsureAccountIsActive::class,
+        ]);
+
         $middleware->alias([
             'role.cashier' => \App\Http\Middleware\RoleMiddleware::class.':cashier',
             'role.admin' => \App\Http\Middleware\RoleMiddleware::class.':admin',
+            'inventory.write' => \App\Http\Middleware\EnsureInventoryWriteAccess::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

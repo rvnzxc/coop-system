@@ -58,12 +58,197 @@ body {
 }
 
 /*
- * Mobile/tablet off-canvas sidebar drawer. The `-translate-x-full` base
- * utility is layered, so this unlayered rule reliably wins when `.open`
- * is toggled by the inline hamburger script in layouts/app.blade.php.
+ * Mobile/tablet off-canvas sidebar drawer. Tailwind v4 uses the standalone
+ * `translate` property (driven by --tw-translate-x/y) for its translate
+ * utilities. Reset those variables (and provide a transform fallback) so the
+ * drawer actually slides in instead of leaving the backdrop over the header.
  */
 .sidebar.open {
+    --tw-translate-x: 0px;
+    --tw-translate-y: 0px;
     transform: translateX(0);
+}
+
+body.sidebar-open {
+    overflow: hidden;
+}
+
+/* Once the persistent sidebar layout kicks in, always show it. */
+@media (min-width: 1024px) {
+    .sidebar {
+        --tw-translate-x: 0px;
+        --tw-translate-y: 0px;
+        transform: none;
+    }
+}
+
+/*
+ * Shared responsive data tables (Inventory, Members, Sales, Cashier Accounts).
+ * Only the table area scrolls horizontally; page-level overflow must never
+ * happen. Keep this in one place so every table stays consistent.
+ */
+.app-table-frame {
+    position: relative;
+    min-width: 0;
+    max-width: 100%;
+}
+
+/* Right-edge fade hints that the table can be scrolled sideways. */
+.app-table-frame::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 24px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    background: linear-gradient(to right, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.95));
+    z-index: 1;
+}
+
+.app-table-frame.is-scrollable:not(.is-at-end)::after {
+    opacity: 1;
+}
+
+.app-table-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+.app-table-wrap::-webkit-scrollbar {
+    height: 8px;
+}
+
+.app-table-wrap::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+
+.app-table-wrap::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 999px;
+}
+
+.app-table-wrap::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+.app-table {
+    width: 100%;
+    min-width: var(--table-min, 720px);
+    text-align: left;
+    font-size: 0.875rem;
+}
+
+.app-table--sales {
+    --table-min: 980px;
+}
+
+.app-table--accounts {
+    --table-min: 760px;
+}
+
+.app-table--members {
+    --table-min: 0;
+}
+
+.app-table th,
+.app-table td {
+    white-space: nowrap;
+}
+
+/* Only descriptive/name cells may wrap. */
+.app-table .cell-wrap {
+    white-space: normal;
+    min-width: 140px;
+}
+
+/* Compact icon-only row actions. */
+.app-table .table-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.25rem;
+}
+
+/* Tablet-only helper: hide low-priority columns between 768 and 1023px. */
+.tablet-only {
+    display: none !important;
+}
+
+@media (min-width: 768px) {
+    .app-table .col-sticky-left {
+        position: sticky;
+        left: 0;
+        z-index: 2;
+        background-color: #ffffff;
+    }
+
+    .app-table .col-sticky-right {
+        position: sticky;
+        right: 0;
+        z-index: 2;
+        background-color: #ffffff;
+        box-shadow: -10px 0 12px -12px rgba(15, 23, 42, 0.55);
+    }
+
+    .app-table thead .col-sticky-left,
+    .app-table thead .col-sticky-right {
+        background-color: #f8fafc;
+        z-index: 3;
+    }
+
+    .app-table tbody tr:hover .col-sticky-left,
+    .app-table tbody tr:hover .col-sticky-right {
+        background-color: #f8fafc;
+    }
+}
+
+@media (min-width: 768px) and (max-width: 1023.98px) {
+    .app-table {
+        min-width: 640px;
+    }
+
+    .app-table th,
+    .app-table td {
+        padding: 0.5rem 0.625rem;
+        font-size: 0.75rem;
+    }
+
+    .app-table .cell-empty {
+        padding: 2.5rem 0.625rem;
+    }
+
+    .app-table .tablet-hide {
+        display: none !important;
+    }
+
+    .tablet-only {
+        display: inline-flex !important;
+    }
+}
+
+/* Shared table toolbars: inputs shrink, action buttons never wrap. */
+.table-toolbar {
+    min-width: 0;
+}
+
+.table-toolbar .table-search-input {
+    min-width: 0;
+    flex: 1 1 10rem;
+}
+
+.table-toolbar .table-toolbar-btn {
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 /* Legacy stylesheet is kept for JS-injected markup below */

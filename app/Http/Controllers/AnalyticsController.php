@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Purchase;
+use App\Models\Sale;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
-use App\Models\Purchase;
 
 class AnalyticsController extends Controller
 {
@@ -22,7 +23,7 @@ class AnalyticsController extends Controller
             'daily' => $this->getDailyData($purchases),
             'weekly' => $this->getWeeklyData($purchases),
             'monthly' => $this->getMonthlyData($purchases),
-            'yearly' => $this->getYearlyData($purchases)
+            'yearly' => $this->getYearlyData($purchases),
         ];
 
         return view('analytics.index', compact('salesData'));
@@ -32,46 +33,47 @@ class AnalyticsController extends Controller
     {
         $period = $request->query('period', 'daily');
         $data = [];
+        $dailyDate = null;
 
         // Debug: Check if we have any purchases at all
         $allPurchases = Purchase::all();
-        \Log::info('Total purchases in database: ' . $allPurchases->count());
-        
+        \Log::info('Total purchases in database: '.$allPurchases->count());
+
         if ($allPurchases->count() > 0) {
-            \Log::info('Sample purchase: ' . json_encode($allPurchases->first()));
+            \Log::info('Sample purchase: '.json_encode($allPurchases->first()));
         }
 
         switch ($period) {
 
             case 'daily':
-                // Days within the selected ISO week (Mon–Sun), one point per day
-                $weekParam = $request->query('week');
-                if (!$weekParam) {
-                    // Default to the current ISO week
-                    $weekStart = Carbon::now()->startOfWeek();
-                } else {
-                    list($year, $week) = explode('-', $weekParam);
-                    $weekStart = Carbon::now()->setISODate((int)$year, (int)$week)->startOfWeek();
+                // Hourly totals for one selected day (local Manila time)
+                $dailyDate = $this->resolveDailyDate($request->query('date'));
+                $day = Carbon::createFromFormat('Y-m-d', $dailyDate, 'Asia/Manila');
+                $start = $day->copy()->startOfDay();
+                $end = $day->copy()->endOfDay();
+
+                $hourly = array_fill(0, 24, 0.0);
+
+                $sales = DB::table('sales')
+                    ->select('created_at', 'total')
+                    ->where('status', Sale::STATUS_COMPLETED)
+                    ->whereBetween('created_at', [
+                        $start->format('Y-m-d H:i:s'),
+                        $end->format('Y-m-d H:i:s'),
+                    ])
+                    ->get();
+
+                foreach ($sales as $sale) {
+                    $hour = Carbon::parse($sale->created_at, 'Asia/Manila')->hour;
+                    $hourly[$hour] += (float) $sale->total;
                 }
 
-                $startDate = $weekStart->format('Y-m-d');
-                $endDate = $weekStart->copy()->endOfWeek()->format('Y-m-d');
-
-                $rows = DB::select("
-                    SELECT DATE(created_at) as grp, SUM(amount) as value 
-                    FROM purchases 
-                    WHERE created_at >= ? AND created_at <= ?
-                    GROUP BY DATE(created_at) 
-                    ORDER BY grp
-                ", [$startDate, $endDate]);
-                $rows = collect($rows)->keyBy('grp');
-
-                for ($i = 0; $i < 7; $i++) {
-                    $date = $weekStart->copy()->addDays($i);
-                    $key = $date->format('Y-m-d');
+                for ($hour = 0; $hour < 24; $hour++) {
                     $data[] = [
-                        'label' => $date->format('D, M j'),
-                        'value' => isset($rows[$key]) ? (float)$rows[$key]->value : 0,
+                        'hour' => $hour,
+                        'label' => Carbon::createFromTime($hour, 0, 0, 'Asia/Manila')->format('g A'),
+                        'value' => round($hourly[$hour], 2),
+                        'total' => round($hourly[$hour], 2),
                     ];
                 }
                 break;
@@ -79,7 +81,7 @@ class AnalyticsController extends Controller
             case 'weekly':
                 // ISO weeks within the selected month, summed per week
                 $monthParam = $request->query('month');
-                if (!$monthParam) {
+                if (! $monthParam) {
                     // Default to the most recent month with purchases
                     $latestPurchase = Purchase::orderBy('created_at', 'desc')->first();
                     $selectedMonth = $latestPurchase
@@ -93,27 +95,27 @@ class AnalyticsController extends Controller
                 $endDate = $selectedMonth->copy()->endOfMonth()->format('Y-m-d');
 
                 // Daily totals for the selected month, then roll up into ISO weeks
-                $rows = DB::select("
+                $rows = DB::select('
                     SELECT DATE(created_at) as grp, SUM(amount) as value 
                     FROM purchases 
                     WHERE created_at >= ? AND created_at <= ?
                     GROUP BY DATE(created_at) 
                     ORDER BY grp
-                ", [$startDate, $endDate]);
+                ', [$startDate, $endDate]);
                 $rows = collect($rows)->keyBy('grp');
 
                 $weeks = [];
                 for ($i = 1; $i <= $selectedMonth->daysInMonth; $i++) {
                     $date = $selectedMonth->copy()->startOfMonth()->addDays($i - 1);
                     $key = $date->format('Y-m-d');
-                    $weekKey = $date->isoWeekYear() . '-' . str_pad((string)$date->isoWeek(), 2, '0', STR_PAD_LEFT);
-                    if (!isset($weeks[$weekKey])) {
+                    $weekKey = $date->isoWeekYear().'-'.str_pad((string) $date->isoWeek(), 2, '0', STR_PAD_LEFT);
+                    if (! isset($weeks[$weekKey])) {
                         $weeks[$weekKey] = [
-                            'label' => 'W' . $date->isoWeek(),
+                            'label' => 'W'.$date->isoWeek(),
                             'value' => 0,
                         ];
                     }
-                    $weeks[$weekKey]['value'] += isset($rows[$key]) ? (float)$rows[$key]->value : 0;
+                    $weeks[$weekKey]['value'] += isset($rows[$key]) ? (float) $rows[$key]->value : 0;
                 }
                 $data = array_values($weeks);
                 break;
@@ -121,7 +123,7 @@ class AnalyticsController extends Controller
             case 'monthly':
                 // Months within the selected year, one point per month
                 $yearParam = $request->query('year');
-                if (!$yearParam) {
+                if (! $yearParam) {
                     // Default to the most recent year with purchases
                     $latestPurchase = Purchase::orderBy('created_at', 'desc')->first();
                     $selectedYear = $latestPurchase
@@ -148,23 +150,23 @@ class AnalyticsController extends Controller
                     $key = $month->format('Y-m');
                     $data[] = [
                         'label' => $month->format('M'),
-                        'value' => isset($rows[$key]) ? (float)$rows[$key]->value : 0,
+                        'value' => isset($rows[$key]) ? (float) $rows[$key]->value : 0,
                     ];
                 }
                 break;
 
             case 'yearly':
                 // Annual totals across all years with purchases
-                $rows = DB::select("
+                $rows = DB::select('
                     SELECT YEAR(created_at) as grp, SUM(amount) as value 
                     FROM purchases 
                     GROUP BY YEAR(created_at) 
                     ORDER BY grp
-                ");
+                ');
                 $rows = collect($rows)->keyBy('grp');
 
                 $years = $rows->keys()->map(function ($yr) {
-                    return (int)$yr;
+                    return (int) $yr;
                 });
                 if ($years->isEmpty()) {
                     // No purchases at all yet; still show the current year as a zero point
@@ -173,8 +175,8 @@ class AnalyticsController extends Controller
 
                 foreach ($years as $yr) {
                     $data[] = [
-                        'label' => (string)$yr,
-                        'value' => isset($rows[$yr]) ? (float)$rows[$yr]->value : 0,
+                        'label' => (string) $yr,
+                        'value' => isset($rows[$yr]) ? (float) $rows[$yr]->value : 0,
                     ];
                 }
                 break;
@@ -185,12 +187,39 @@ class AnalyticsController extends Controller
         $avg = count($values) > 0 ? $total / count($values) : 0;
         $peak = count($values) > 0 ? max($values) : 0;
 
-        return response()->json([
-            'data'          => $data,
+        $response = [
+            'data' => $data,
             'total_revenue' => round($total, 2),
             'average_sales' => round($avg, 2),
-            'peak_sales'    => round($peak, 2),
-        ]);
+            'peak_sales' => round($peak, 2),
+        ];
+
+        if ($dailyDate !== null) {
+            $response['date'] = $dailyDate;
+        }
+
+        return response()->json($response);
+    }
+
+    private function resolveDailyDate(?string $date): string
+    {
+        $today = Carbon::now('Asia/Manila')->format('Y-m-d');
+
+        if (! $date || ! preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            return $today;
+        }
+
+        try {
+            $parsed = Carbon::createFromFormat('Y-m-d', $date, 'Asia/Manila');
+        } catch (\Throwable $e) {
+            return $today;
+        }
+
+        if ($parsed->format('Y-m-d') !== $date || $parsed->greaterThan(Carbon::now('Asia/Manila')->endOfDay())) {
+            return $today;
+        }
+
+        return $date;
     }
 
     private function getDailyData($purchases)
@@ -201,12 +230,13 @@ class AnalyticsController extends Controller
             $dayPurchases = $purchases->filter(function ($purchase) use ($date) {
                 return Carbon::parse($purchase->created_at)->format('Y-m-d') === $date;
             });
-            
+
             $dailyData[] = [
                 'date' => Carbon::parse($date)->format('M d'),
-                'sales' => $dayPurchases->sum('amount')
+                'sales' => $dayPurchases->sum('amount'),
             ];
         }
+
         return $dailyData;
     }
 
@@ -216,17 +246,19 @@ class AnalyticsController extends Controller
         for ($i = 11; $i >= 0; $i--) {
             $weekStart = Carbon::now()->subWeeks($i)->startOfWeek();
             $weekEnd = $weekStart->copy()->endOfWeek();
-            
+
             $weekPurchases = $purchases->filter(function ($purchase) use ($weekStart, $weekEnd) {
                 $purchaseDate = Carbon::parse($purchase->created_at);
+
                 return $purchaseDate->between($weekStart, $weekEnd);
             });
-            
+
             $weeklyData[] = [
-                'date' => 'Week ' . ($weekStart->weekOfYear),
-                'sales' => $weekPurchases->sum('amount')
+                'date' => 'Week '.($weekStart->weekOfYear),
+                'sales' => $weekPurchases->sum('amount'),
             ];
         }
+
         return $weeklyData;
     }
 
@@ -237,17 +269,19 @@ class AnalyticsController extends Controller
             $month = Carbon::now()->subMonths($i);
             $monthStart = $month->copy()->startOfMonth();
             $monthEnd = $month->copy()->endOfMonth();
-            
+
             $monthPurchases = $purchases->filter(function ($purchase) use ($monthStart, $monthEnd) {
                 $purchaseDate = Carbon::parse($purchase->created_at);
+
                 return $purchaseDate->between($monthStart, $monthEnd);
             });
-            
+
             $monthlyData[] = [
                 'date' => $month->format('M'),
-                'sales' => $monthPurchases->sum('amount')
+                'sales' => $monthPurchases->sum('amount'),
             ];
         }
+
         return $monthlyData;
     }
 
@@ -258,39 +292,47 @@ class AnalyticsController extends Controller
             $year = Carbon::now()->subYears($i);
             $yearStart = $year->copy()->startOfYear();
             $yearEnd = $year->copy()->endOfYear();
-            
+
             $yearPurchases = $purchases->filter(function ($purchase) use ($yearStart, $yearEnd) {
                 $purchaseDate = Carbon::parse($purchase->created_at);
+
                 return $purchaseDate->between($yearStart, $yearEnd);
             });
-            
+
             $yearlyData[] = [
                 'date' => $year->format('Y'),
-                'sales' => $yearPurchases->sum('amount')
+                'sales' => $yearPurchases->sum('amount'),
             ];
         }
+
         return $yearlyData;
     }
 
     public function getCustomerTypeBreakdown(Request $request)
     {
         $period = $request->query('period', 'monthly');
+
+        if ($period === 'daily') {
+            $date = $this->resolveDailyDate($request->query('date'));
+            $day = Carbon::createFromFormat('Y-m-d', $date, 'Asia/Manila');
+
+            $breakdown = DB::table('sales')
+                ->select('customer_type', DB::raw('SUM(total) as total'), DB::raw('COUNT(*) as count'))
+                ->where('status', Sale::STATUS_COMPLETED)
+                ->whereBetween('created_at', [
+                    $day->copy()->startOfDay()->format('Y-m-d H:i:s'),
+                    $day->copy()->endOfDay()->format('Y-m-d H:i:s'),
+                ])
+                ->groupBy('customer_type')
+                ->get();
+
+            return response()->json($this->formatCustomerTypeBreakdown($breakdown));
+        }
+
         $startDate = null;
         $endDate = null;
 
         switch ($period) {
-            case 'daily':
-                $weekParam = $request->query('week');
-                if ($weekParam) {
-                    list($year, $week) = explode('-', $weekParam);
-                    $weekStart = Carbon::now()->setISODate((int)$year, (int)$week)->startOfWeek();
-                } else {
-                    $weekStart = Carbon::now()->startOfWeek();
-                }
-                $startDate = $weekStart->format('Y-m-d');
-                $endDate = $weekStart->copy()->endOfWeek()->format('Y-m-d');
-                break;
-
             case 'weekly':
                 $monthParam = $request->query('month');
                 if ($monthParam) {
@@ -328,6 +370,11 @@ class AnalyticsController extends Controller
 
         $breakdown = $query->groupBy('customer_type')->get();
 
+        return response()->json($this->formatCustomerTypeBreakdown($breakdown));
+    }
+
+    private function formatCustomerTypeBreakdown($breakdown): array
+    {
         $memberTotal = 0;
         $nonMemberTotal = 0;
         $memberCount = 0;
@@ -343,11 +390,11 @@ class AnalyticsController extends Controller
             }
         }
 
-        return response()->json([
-            'member_total'     => round($memberTotal, 2),
+        return [
+            'member_total' => round($memberTotal, 2),
             'non_member_total' => round($nonMemberTotal, 2),
-            'member_count'     => $memberCount,
+            'member_count' => $memberCount,
             'non_member_count' => $nonMemberCount,
-        ]);
+        ];
     }
 }

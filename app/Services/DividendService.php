@@ -73,7 +73,7 @@ class DividendService
     {
         $totals = $this->getSalesTotals($startDate, $endDate);
 
-        $activeMembers = Member::where('is_active', true)->count();
+        $activeMembers = Member::active()->where('is_active', true)->count();
 
         // Placeholder: even split of non-member pool across all active members
         $dividendPerMember = $activeMembers > 0

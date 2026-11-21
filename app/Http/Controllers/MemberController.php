@@ -2,23 +2,42 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Member;
+use App\Services\AuditLogger;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class MemberController extends Controller
 {
     public function index(Request $request)
     {
+        $tab = $request->input('tab') === 'archived' ? 'archived' : 'active';
         $search = $request->input('search');
 
-        $members = Member::when($search, function ($query, $search) {
-            return $query->where('first_name', 'like', "%{$search}%")
-                         ->orWhere('last_name', 'like', "%{$search}%")
-                         ->orWhere('email', 'like', "%{$search}%");
-        })->orderBy('last_name', 'asc')->get();
+        $membersQuery = $tab === 'archived' ? Member::archived() : Member::active();
 
-        return view('members.index', compact('members', 'search'));
+        $members = $membersQuery
+            ->when($search, function ($query, $search) {
+                return $query->where(function ($query) use ($search) {
+                    $query->where('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                });
+            })
+            ->when($tab === 'archived', function ($query) {
+                return $query->orderByDesc('archived_at');
+            })
+            ->orderBy('last_name', 'asc')
+            ->get();
+
+        return view('members.index', [
+            'members' => $members,
+            'search' => $search,
+            'tab' => $tab,
+            'archivedCount' => Member::archived()->count(),
+        ]);
     }
 
     public function create()
@@ -28,18 +47,29 @@ class MemberController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'first_name' => 'required|string|max:255',
-            'last_name'  => 'required|string|max:255',
+        $this->normalizeMemberInput($request);
+
+        $validated = $request->validate([
+            'first_name' => ['required', 'string', 'max:255', 'regex:/^[\p{L}\p{M} \'.-]+$/u'],
+            'last_name'  => ['required', 'string', 'max:255', 'regex:/^[\p{L}\p{M} \'.-]+$/u'],
             'email'      => 'nullable|email|unique:members,email',
-            'phone'      => 'nullable|string|max:20',
+            'phone'      => ['nullable', 'regex:/^\+639\d{9}$/'],
+            'photo'      => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+        ], [
+            'first_name.regex' => 'First name must contain letters only.',
+            'last_name.regex' => 'Last name must contain letters only.',
+            'phone.regex' => 'Enter a valid PH mobile number (e.g. +63 912 345 6789).',
+            'photo.image' => 'Please upload a JPG, PNG, or WebP image.',
+            'photo.mimes' => 'Please upload a JPG, PNG, or WebP image.',
+            'photo.max' => 'Photo must not be larger than 2 MB.',
         ]);
 
         $member = Member::create([
-            'first_name'   => $request->first_name,
-            'last_name'    => $request->last_name,
-            'email'        => $request->email,
-            'phone'        => $request->phone,
+            'first_name'   => $validated['first_name'],
+            'last_name'    => $validated['last_name'],
+            'email'        => $validated['email'] ?? null,
+            'phone'        => $validated['phone'] ?? null,
+            'photo'        => $this->storeMemberPhoto($request),
             'member_number'=> 'MEM' . str_pad(Member::max('id') + 1, 5, '0', STR_PAD_LEFT),
         ]);
 
@@ -57,32 +87,142 @@ class MemberController extends Controller
 
     public function update(Request $request, $id)
     {
-        $request->validate([
-            'first_name' => 'required|string|max:255',
-            'last_name'  => 'required|string|max:255',
+        $this->normalizeMemberInput($request);
+
+        $validated = $request->validate([
+            'first_name' => ['required', 'string', 'max:255', 'regex:/^[\p{L}\p{M} \'.-]+$/u'],
+            'last_name'  => ['required', 'string', 'max:255', 'regex:/^[\p{L}\p{M} \'.-]+$/u'],
             'email'      => 'nullable|email|unique:members,email,' . $id,
-            'phone'      => 'nullable|string|max:20',
+            'phone'      => ['nullable', 'regex:/^\+639\d{9}$/'],
+            'photo'      => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
             'is_active'  => 'boolean',
+        ], [
+            'first_name.regex' => 'First name must contain letters only.',
+            'last_name.regex' => 'Last name must contain letters only.',
+            'phone.regex' => 'Enter a valid PH mobile number (e.g. +63 912 345 6789).',
+            'photo.image' => 'Please upload a JPG, PNG, or WebP image.',
+            'photo.mimes' => 'Please upload a JPG, PNG, or WebP image.',
+            'photo.max' => 'Photo must not be larger than 2 MB.',
         ]);
 
         $member = Member::findOrFail($id);
 
-        $member->update([
-            'first_name' => $request->first_name,
-            'last_name'  => $request->last_name,
-            'email'      => $request->email,
-            'phone'      => $request->phone,
+        $updateData = [
+            'first_name' => $validated['first_name'],
+            'last_name'  => $validated['last_name'],
+            'email'      => $validated['email'] ?? null,
+            'phone'      => $validated['phone'] ?? null,
             'is_active'  => $request->has('is_active'),
-        ]);
+        ];
+
+        if ($request->hasFile('photo')) {
+            $updateData['photo'] = $this->storeMemberPhoto($request);
+            $this->deleteMemberPhoto($member->photo);
+        }
+
+        $member->update($updateData);
 
         return redirect()
             ->route('members.index')
             ->with('success', 'Member updated successfully!');
     }
 
+    public function archive(Request $request, $id)
+    {
+        $member = Member::findOrFail($id);
+        $indexQuery = $this->memberIndexQuery($request);
+
+        if ($member->credits()->sum('amount') > 0) {
+            return redirect()
+                ->route('members.index', $indexQuery)
+                ->with('error', "This member still has an unpaid credit balance and can't be archived.");
+        }
+
+        if (! $member->is_archived) {
+            $member->forceFill([
+                'archived_at' => now(),
+                'is_active' => false,
+            ])->save();
+        }
+
+        return redirect()
+            ->route('members.index', $indexQuery)
+            ->with('success', 'Member archived successfully.');
+    }
+
+    public function restore(Request $request, $id)
+    {
+        $member = Member::archived()->findOrFail($id);
+
+        $member->forceFill([
+            'archived_at' => null,
+            'is_active' => true,
+        ])->save();
+
+        $indexQuery = ['tab' => 'archived'] + $this->memberIndexQuery($request);
+
+        return redirect()
+            ->route('members.index', $indexQuery)
+            ->with('success', 'Member restored successfully.');
+    }
+
+    private function memberIndexQuery(Request $request): array
+    {
+        $search = trim((string) $request->input('search'));
+
+        return $search !== '' ? ['search' => $search] : [];
+    }
+
+    private function storeMemberPhoto(Request $request): ?string
+    {
+        if (! $request->hasFile('photo')) {
+            return null;
+        }
+
+        return $request->file('photo')->store('members/photos', 'public');
+    }
+
+    private function deleteMemberPhoto(?string $photo): void
+    {
+        if (! $photo || Str::startsWith($photo, ['data:', 'http://', 'https://', '/', 'storage/'])) {
+            return;
+        }
+
+        Storage::disk('public')->delete($photo);
+    }
+
+    private function normalizeMemberInput(Request $request): void
+    {
+        $normalizeName = function ($value) {
+            $value = trim((string) $value);
+            $value = preg_replace('/\s+/u', ' ', $value);
+            return $value;
+        };
+
+        $phone = trim((string) $request->input('phone', ''));
+        $normalizedPhone = null;
+        if ($phone !== '') {
+            $digits = preg_replace('/\D+/', '', $phone);
+            if (str_starts_with($digits, '63')) {
+                $digits = substr($digits, 2);
+            } elseif (str_starts_with($digits, '0')) {
+                $digits = substr($digits, 1);
+            }
+            $normalizedPhone = $digits !== '' ? '+63' . $digits : null;
+        }
+
+        $request->merge([
+            'first_name' => $normalizeName($request->input('first_name')),
+            'last_name'  => $normalizeName($request->input('last_name')),
+            'phone'      => $normalizedPhone,
+        ]);
+    }
+
     public function destroy($id)
     {
         $member = Member::findOrFail($id);
+
+        $this->deleteMemberPhoto($member->photo);
 
         $member->delete();
 
@@ -101,7 +241,7 @@ class MemberController extends Controller
         $lastPurchaseDate = $member->last_purchase_date;
 
         // Get all members data for analytics
-        $allMembers = Member::with(['purchases' => function($query) {
+        $allMembers = Member::active()->with(['purchases' => function ($query) {
             $query->orderBy('purchase_date', 'desc');
         }])->get();
         
@@ -171,31 +311,48 @@ class MemberController extends Controller
         if ($request->boolean('exact')) {
             // A scan only counts as a member when it is the card/ID itself,
             // never a partial or name-based match.
-            $member = Member::where('member_number', $q)
-                ->orWhere('member_number', $memberNumber)
-                ->orWhere('member_number', '#' . $paddedQ)
-                ->orWhere('member_number', $paddedQ)
+            $member = Member::active()
+                ->where(function ($query) use ($q, $memberNumber, $paddedQ) {
+                    $query->where('member_number', $q)
+                        ->orWhere('member_number', $memberNumber)
+                        ->orWhere('member_number', '#' . $paddedQ)
+                        ->orWhere('member_number', $paddedQ);
+                })
                 ->first();
         } else {
-            $member = Member::where('member_number', $q)
-                ->orWhere('member_number', $memberNumber)
-                ->orWhere('member_number', '#' . $paddedQ)
-                ->orWhere('member_number', $paddedQ)
-                ->orWhere('member_number', 'LIKE', "%{$paddedQ}%")
-                ->orWhere(
-                    DB::raw("CONCAT(first_name, ' ', last_name)"),
-                    'LIKE',
-                    "%{$q}%"
-                )
+            $member = Member::active()
+                ->where(function ($query) use ($q, $memberNumber, $paddedQ) {
+                    $query->where('member_number', $q)
+                        ->orWhere('member_number', $memberNumber)
+                        ->orWhere('member_number', '#' . $paddedQ)
+                        ->orWhere('member_number', $paddedQ)
+                        ->orWhere('member_number', 'LIKE', "%{$paddedQ}%")
+                        ->orWhere(
+                            DB::raw("CONCAT(first_name, ' ', last_name)"),
+                            'LIKE',
+                            "%{$q}%"
+                        );
+                })
                 ->orderByRaw("CASE WHEN member_number = ? THEN 0 WHEN member_number = ? THEN 1 ELSE 2 END", [$q, $memberNumber])
                 ->first();
         }
 
         if ($member) {
+            if (! $member->is_active) {
+                AuditLogger::inactiveMemberBlocked($member, 'lookup');
+
+                return response()->json([
+                    'found' => true,
+                    'is_active' => false,
+                    'member' => $member,
+                    'message' => 'This member is inactive',
+                ], 403);
+            }
+
             return response()->json([
                 'found' => true,
+                'is_active' => true,
                 'member' => $member,
-                'outstanding_credit_balance' => $member->outstanding_credit_balance,
             ]);
         }
 
@@ -207,7 +364,7 @@ class MemberController extends Controller
     public function analyticsIndex()
     {
         // Get all members data for analytics
-        $allMembers = Member::with(['purchases' => function($query) {
+        $allMembers = Member::active()->with(['purchases' => function ($query) {
             $query->orderBy('purchase_date', 'desc');
         }])->get();
         

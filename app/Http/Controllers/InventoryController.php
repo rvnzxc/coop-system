@@ -12,12 +12,21 @@ class InventoryController extends Controller
     public function index(Request $request)
     {
         $search = $request->input('search');
-        $items = Item::when($search, function ($query, $search) {
-            return $query->where('item_name', 'like', "%{$search}%")
-                         ->orWhere('id', $search);
-        })->orderBy('id', 'asc')->get();
+        $sort = in_array($request->input('sort'), ['high', 'low'], true) ? $request->input('sort') : null;
 
-        return view('inventory.index', compact('items', 'search'));
+        $items = Item::query()
+            ->when($search, function ($query, $search) {
+                $query->where(function ($query) use ($search) {
+                    $query->where('item_name', 'like', "%{$search}%")
+                          ->orWhere('id', $search);
+                });
+            })
+            ->when($sort === 'high', fn ($query) => $query->orderByDesc('quantity'))
+            ->when($sort === 'low', fn ($query) => $query->orderBy('quantity'))
+            ->orderBy('id', 'asc')
+            ->get();
+
+        return view('inventory.index', compact('items', 'search', 'sort'));
     }
 
     public function create()

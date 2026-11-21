@@ -112,17 +112,31 @@ class ShopController extends Controller
             ], 400);
         }
 
-        $member = null;
+        $member = $memberId ? Member::find($memberId) : null;
 
-        if (!$isNonMember && $memberId) {
-            $member = Member::find($memberId);
+        if ($member && $member->is_archived) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This member is archived.',
+            ], 400);
+        }
 
-            if (!$member) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Member not found.'
-                ], 400);
-            }
+        if ($member && !$member->is_active) {
+            AuditLogger::inactiveMemberBlocked($member, 'checkout');
+
+            return response()->json([
+                'success' => false,
+                'is_active' => false,
+                'member_id' => $member->id,
+                'message' => 'This member is inactive',
+            ], 403);
+        }
+
+        if (!$isNonMember && $memberId && !$member) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Member not found.'
+            ], 400);
         }
 
         // Credit is only for members
@@ -133,7 +147,7 @@ class ShopController extends Controller
                     'message' => 'Credit payment is only available for members.'
                 ], 400);
             }
-            if (!$member || !$member->is_active) {
+            if (!$member) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Credit is only available for active members.'
@@ -294,8 +308,6 @@ class ShopController extends Controller
                 Credit::create([
                     'member_id'      => $member->id,
                     'amount'         => $totalAmount,
-                    'amount_paid'    => 0,
-                    'status'         => 'unpaid',
                     'sale_reference' => $saleRef,
                     'notes'          => count($lines) . ' item(s) purchased on credit',
                     'items_snapshot' => $itemsSnapshot,
@@ -322,7 +334,7 @@ class ShopController extends Controller
 
         $message = 'Checkout completed successfully!';
         if ($paymentMethod === 'credit') {
-            $message = 'Credit sale recorded. Member owes ₱' . number_format($totalAmount, 2) . '.';
+            $message = "Credit sale recorded. Member owes \u{20B1}".number_format($totalAmount, 2).'.';
         }
 
         $updatedItems = [];

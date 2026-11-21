@@ -34,7 +34,7 @@
                 <x-icon name="money" class="h-4 w-4" />
             </div>
             <div class="min-w-0">
-                <div class="truncate text-xl font-bold text-slate-900">₱{{ number_format($summary['total_sales'], 2) }}</div>
+                <div class="truncate text-xl font-bold text-slate-900">&#8369;{{ number_format($summary['total_sales'], 2) }}</div>
                 <div class="text-xs text-slate-500">Total sales</div>
             </div>
         </div>
@@ -43,8 +43,8 @@
                 <x-icon name="credit-card" class="h-4 w-4" />
             </div>
             <div class="min-w-0">
-                <div class="truncate text-xl font-bold text-slate-900">₱{{ number_format($summary['cash_total'], 2) }}</div>
-                <div class="text-xs text-slate-500">Cash total</div>
+                <div class="truncate text-xl font-bold text-slate-900">&#8369;{{ number_format($summary['cash_total'], 2) }}</div>
+                <div class="text-xs text-slate-500">Total cash</div>
             </div>
         </div>
         <div class="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -52,8 +52,8 @@
                 <x-icon name="clock-o" class="h-4 w-4" />
             </div>
             <div class="min-w-0">
-                <div class="truncate text-xl font-bold text-slate-900">₱{{ number_format($summary['credit_total'], 2) }}</div>
-                <div class="text-xs text-slate-500">Credit total</div>
+                <div class="truncate text-xl font-bold text-slate-900">&#8369;{{ number_format($summary['credit_total'], 2) }}</div>
+                <div class="text-xs text-slate-500">Total credit</div>
             </div>
         </div>
     </div>
@@ -109,18 +109,18 @@
             <div class="mt-4 flex flex-col gap-3 border-t border-slate-100 pt-4 lg:flex-row lg:items-center lg:justify-between">
                 <div class="flex flex-wrap items-center gap-2">
                     <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Quick range</span>
-                    <button type="button" onclick="setRange('today')" class="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50">Today</button>
-                    <button type="button" onclick="setRange('week')" class="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50">This Week</button>
-                    <button type="button" onclick="setRange('month')" class="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50">This Month</button>
+                    <button type="button" onclick="setRange('today')" class="whitespace-nowrap rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50">Today</button>
+                    <button type="button" onclick="setRange('week')" class="whitespace-nowrap rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50">This Week</button>
+                    <button type="button" onclick="setRange('month')" class="whitespace-nowrap rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50">This Month</button>
                 </div>
                 <div class="flex flex-wrap items-center gap-2">
                     @if($hasFilters)
-                        <x-button href="{{ route('transactions.index') }}" color="ghost" size="sm">Reset</x-button>
+                        <x-button href="{{ route('transactions.index') }}" color="ghost" size="sm" class="table-toolbar-btn">Reset</x-button>
                     @endif
-                    <x-button href="{{ route('transactions.export', request()->query()) }}" color="secondary" size="sm">
-                        <x-icon name="archive" class="h-3 w-3" /> Export CSV
+                    <x-button id="transactionsExportButton" href="{{ route('transactions.export', request()->query()) }}" color="secondary" size="sm" class="table-toolbar-btn">
+                        <x-icon name="archive" class="h-3 w-3" /> <span data-export-label>Export Excel</span>
                     </x-button>
-                    <x-button type="submit" color="primary" size="sm">
+                    <x-button type="submit" color="primary" size="sm" class="table-toolbar-btn">
                         <x-icon name="search" class="h-3 w-3" /> Apply filters
                     </x-button>
                 </div>
@@ -134,14 +134,15 @@
             <h3 class="text-sm font-semibold text-slate-900">Sales</h3>
             <p class="mt-0.5 text-xs text-slate-500">{{ number_format($sales->total()) }} transaction{{ $sales->total() === 1 ? '' : 's' }} found. Click a row to view its items.</p>
         </div>
-        <div class="overflow-x-auto">
-            <table class="w-full min-w-[980px] text-left text-sm">
+        <div class="app-table-frame min-w-0 max-w-full" data-table-frame>
+            <div class="app-table-wrap" data-table-scroll>
+            <table class="app-table app-table--sales">
                 <thead class="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
                     <tr>
                         <th class="px-5 py-3.5 font-semibold">Date / Time</th>
                         <th class="px-5 py-3.5 font-semibold">Transaction ID</th>
-                        <th class="px-5 py-3.5 font-semibold">Cashier</th>
-                        <th class="px-5 py-3.5 font-semibold">Member</th>
+                        <th class="tablet-hide px-5 py-3.5 font-semibold">Cashier</th>
+                        <th class="tablet-hide px-5 py-3.5 font-semibold">Member</th>
                         <th class="px-5 py-3.5 font-semibold">Payment</th>
                         <th class="px-5 py-3.5 text-right font-semibold">Total</th>
                         <th class="px-5 py-3.5 font-semibold">Status</th>
@@ -155,8 +156,8 @@
                                 <div class="font-semibold text-slate-900">#{{ $sale->id }}</div>
                                 <div class="text-xs text-slate-400">{{ $sale->items->count() }} item{{ $sale->items->count() === 1 ? '' : 's' }}</div>
                             </td>
-                            <td class="whitespace-nowrap px-5 py-3.5 text-slate-600">{{ $sale->cashier_name }}</td>
-                            <td class="whitespace-nowrap px-5 py-3.5 text-slate-600">{{ $sale->member_name }}</td>
+                            <td class="tablet-hide whitespace-nowrap px-5 py-3.5 text-slate-600">{{ $sale->cashier_name }}</td>
+                            <td class="tablet-hide whitespace-nowrap px-5 py-3.5 text-slate-600">{{ $sale->member_name }}</td>
                             <td class="whitespace-nowrap px-5 py-3.5">
                                 @if($sale->payment_method === 'credit')
                                     <x-badge color="amber">Credit</x-badge>
@@ -164,7 +165,7 @@
                                     <x-badge color="blue">Cash</x-badge>
                                 @endif
                             </td>
-                            <td class="whitespace-nowrap px-5 py-3.5 text-right font-semibold text-slate-900">₱{{ number_format((float) $sale->total, 2) }}</td>
+                            <td class="whitespace-nowrap px-5 py-3.5 text-right font-semibold text-slate-900">&#8369;{{ number_format((float) $sale->total, 2) }}</td>
                             <td class="whitespace-nowrap px-5 py-3.5">
                                 @if($sale->status === 'voided')
                                     <x-badge color="red">Voided</x-badge>
@@ -175,7 +176,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="px-5 py-16 text-center">
+                            <td colspan="7" class="cell-empty px-5 py-16 text-center">
                                 <div class="flex flex-col items-center">
                                     <div class="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-slate-400">
                                         <x-icon name="money" class="h-6 w-6" />
@@ -188,6 +189,7 @@
                     @endforelse
                 </tbody>
             </table>
+            </div>
         </div>
 
         @if($sales->hasPages())
@@ -225,7 +227,7 @@
                         <tr class="transition-colors hover:bg-slate-50">
                             <td class="px-5 py-3.5 font-medium text-slate-900">{{ $row['cashier'] }}</td>
                             <td class="px-5 py-3.5 text-right text-slate-600">{{ number_format($row['transactions']) }}</td>
-                            <td class="px-5 py-3.5 text-right font-semibold text-slate-900">₱{{ number_format($row['total_sales'], 2) }}</td>
+                            <td class="px-5 py-3.5 text-right font-semibold text-slate-900">&#8369;{{ number_format($row['total_sales'], 2) }}</td>
                         </tr>
                     @empty
                         <tr>
@@ -305,6 +307,62 @@
         @if($errors->any())
             showToast(@json($errors->first()), 'error');
         @endif
+
+        const exportButton = document.getElementById('transactionsExportButton');
+
+        if (!exportButton) {
+            return;
+        }
+
+        exportButton.addEventListener('click', async function (event) {
+            if (exportButton.dataset.loading === 'true') {
+                event.preventDefault();
+                return;
+            }
+
+            event.preventDefault();
+
+            const originalHtml = exportButton.innerHTML;
+            exportButton.dataset.loading = 'true';
+            exportButton.setAttribute('aria-busy', 'true');
+            exportButton.classList.add('pointer-events-none', 'opacity-60');
+            exportButton.innerHTML = '<span class="inline-flex items-center gap-1.5"><svg class="h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg> Preparing Excel…</span>';
+
+            try {
+                const response = await fetch(exportButton.href, {
+                    headers: { 'Accept': 'application/json' },
+                    credentials: 'same-origin',
+                });
+                const contentType = response.headers.get('Content-Type') || '';
+
+                if (!response.ok || !contentType.includes('spreadsheetml')) {
+                    const payload = await response.json().catch(() => ({}));
+                    showToast(payload.message || 'Unable to export transactions right now.', 'error');
+                    return;
+                }
+
+                const blob = await response.blob();
+                const disposition = response.headers.get('Content-Disposition') || '';
+                const filenameMatch = disposition.match(/filename="([^"]+)"/i);
+                const filename = filenameMatch ? filenameMatch[1] : 'CCFMPC_Transactions.xlsx';
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+
+                link.href = url;
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                URL.revokeObjectURL(url);
+            } catch (error) {
+                showToast('Unable to export transactions right now.', 'error');
+            } finally {
+                exportButton.dataset.loading = 'false';
+                exportButton.removeAttribute('aria-busy');
+                exportButton.classList.remove('pointer-events-none', 'opacity-60');
+                exportButton.innerHTML = originalHtml;
+            }
+        });
     });
 
     function setRange(range) {
@@ -333,11 +391,15 @@
         return year + '-' + month + '-' + day;
     }
 
+    const moneyFormatter = new Intl.NumberFormat('en-PH', {
+        style: 'currency',
+        currency: 'PHP',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+
     function money(value) {
-        return '₱' + Number(value || 0).toLocaleString('en-PH', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        });
+        return moneyFormatter.format(Number(value || 0));
     }
 
     function openSaleDetail(row) {

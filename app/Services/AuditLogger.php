@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AuditLog;
+use App\Models\Member;
 use Illuminate\Support\Facades\Auth;
 
 class AuditLogger
@@ -24,6 +25,19 @@ class AuditLogger
             'target_type' => $targetType,
             'target_id' => $targetId,
             'details' => static::sanitize($details),
+        ]);
+    }
+
+    public static function inactiveMemberBlocked(Member $member, string $source): void
+    {
+        $user = Auth::user();
+
+        self::log(AuditLog::ACTION_INACTIVE_MEMBER_BLOCKED, 'member', $member->id, [
+            'username' => $user?->username,
+            'member_id' => $member->id,
+            'member_number' => $member->member_number,
+            'member_name' => $member->full_name,
+            'source' => $source,
         ]);
     }
 

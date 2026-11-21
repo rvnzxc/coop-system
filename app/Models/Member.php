@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class Member extends Model
 {
@@ -12,22 +14,63 @@ class Member extends Model
         'last_name', 
         'email',
         'phone',
+        'photo',
         'total_purchases',
         'purchase_count',
         'last_purchase_date',
         'is_active',
+        'archived_at',
         'member_number'
     ];
 
     protected $casts = [
         'total_purchases' => 'decimal:2',
         'last_purchase_date' => 'datetime',
-        'is_active' => 'boolean'
+        'is_active' => 'boolean',
+        'archived_at' => 'datetime',
     ];
 
     public function getFullNameAttribute()
     {
         return "{$this->first_name} {$this->last_name}";
+    }
+
+    public function getIsArchivedAttribute(): bool
+    {
+        return $this->archived_at !== null;
+    }
+
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->whereNull('archived_at');
+    }
+
+    public function scopeArchived(Builder $query): Builder
+    {
+        return $query->whereNotNull('archived_at');
+    }
+
+    public function getPhotoUrlAttribute(): ?string
+    {
+        $photo = $this->photo;
+
+        if (! $photo) {
+            return null;
+        }
+
+        if (Str::startsWith($photo, ['data:'])) {
+            return $photo;
+        }
+
+        $url = Str::startsWith($photo, ['http://', 'https://', '/'])
+            ? $photo
+            : Storage::disk('public')->url($photo);
+
+        if ($this->updated_at) {
+            return $url.(Str::contains($url, '?') ? '&' : '?').'v='.$this->updated_at->getTimestamp();
+        }
+
+        return $url;
     }
 
     public function updatePurchaseStats($amount)
@@ -46,15 +89,5 @@ class Member extends Model
     public function credits()
     {
         return $this->hasMany(Credit::class);
-    }
-
-    public function getOutstandingCreditBalanceAttribute()
-    {
-        return (float) $this->credits()->outstanding()->sum(DB::raw('amount - amount_paid'));
-    }
-
-    public function getHasUnpaidCreditAttribute()
-    {
-        return $this->credits()->outstanding()->exists();
     }
 }

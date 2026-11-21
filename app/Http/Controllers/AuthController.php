@@ -14,9 +14,31 @@ class AuthController extends Controller
     /**
      * Show login form
      */
-    public function showLoginForm()
+    public function showLoginForm(Request $request)
     {
+        $user = Auth::user();
+
+        if ($user && $user->is_active) {
+            return redirect($user->role === 'admin' ? '/analytics' : '/pos');
+        }
+
+        if ($user) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
+
         return view('auth.login');
+    }
+
+    /**
+     * Lightweight endpoint used by the client to detect a disabled account.
+     */
+    public function status(Request $request)
+    {
+        return response()->json([
+            'active' => (bool) $request->user()->is_active,
+        ]);
     }
 
     /**
@@ -63,7 +85,7 @@ class AuthController extends Controller
         if ($user && $this->passwordMatches($user, $password, $isLegacyPlain)) {
             if (! $user->is_active) {
                 return back()->withErrors([
-                    'username' => 'This account has been disabled. Please contact an administrator.',
+                    'username' => 'Your account has been disabled. Contact an administrator.',
                 ])->onlyInput('username', 'email');
             }
 
@@ -153,6 +175,13 @@ class AuthController extends Controller
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'redirect' => '/login',
+            ]);
+        }
 
         return redirect('/login');
     }

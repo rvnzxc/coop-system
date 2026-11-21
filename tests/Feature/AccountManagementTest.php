@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\AuditLog;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
@@ -47,12 +49,17 @@ class AccountManagementTest extends TestCase
         $response->assertSee($cashier->username);
     }
 
-    public function test_cashier_cannot_access_account_management(): void
+    public function test_cashier_is_redirected_away_from_account_management(): void
     {
         $cashier = $this->createCashier();
 
-        $this->actingAs($cashier)->get(route('accounts.index'))->assertForbidden();
-        $this->actingAs($cashier)->get(route('accounts.create'))->assertForbidden();
+        $this->actingAs($cashier)
+            ->get(route('accounts.index'))
+            ->assertRedirect(route('shop.index'));
+
+        $this->actingAs($cashier)
+            ->get(route('accounts.create'))
+            ->assertRedirect(route('shop.index'));
     }
 
     public function test_admin_can_create_a_cashier_account_with_a_hashed_password(): void
@@ -192,7 +199,9 @@ class AccountManagementTest extends TestCase
             'password' => 'cashierpass123',
         ]);
 
-        $response->assertSessionHasErrors('username');
+        $response->assertSessionHasErrors([
+            'username' => 'Your account has been disabled. Contact an administrator.',
+        ]);
         $this->assertGuest();
     }
 
@@ -204,6 +213,7 @@ class AccountManagementTest extends TestCase
         $response = $this->actingAs($admin)->post(route('accounts.status', $cashier));
 
         $response->assertRedirect(route('accounts.index'));
+        $response->assertSessionHas('success', 'Account disabled. Active sessions were ended.');
         $this->assertFalse($cashier->fresh()->is_active);
     }
 
@@ -217,5 +227,183 @@ class AccountManagementTest extends TestCase
         ])->assertRedirect('/pos');
 
         $this->assertAuthenticatedAs($cashier);
+    }
+
+    public function test_login_page_shows_the_disabled_account_message(): void
+    {
+        $this->get('/login?account_disabled=1')
+            ->assertOk()
+            ->assertSee('Your account has been disabled by an administrator. Contact an administrator.');
+    }
+
+    public function test_active_cashier_can_poll_account_status(): void
+    {
+        $cashier = $this->createCashier();
+
+        $this->actingAs($cashier)
+            ->getJson(route('account.status'))
+            ->assertOk()
+            ->assertJson(['active' => true]);
+    }
+
+    public function test_disabling_a_cashier_revokes_the_old_session_and_logs_forced_logout(): void
+    {
+        $admin = $this->createAdmin();
+        $cashier = $this->createCashier();
+
+        $this->actingAs($admin)
+            ->postJson(route('accounts.status', $cashier), ['is_active' => '0'])
+            ->assertOk()
+            ->assertJson([
+                'success' => true,
+                'is_active' => false,
+                'message' => 'Account disabled. Active sessions were ended.',
+            ]);
+
+        $this->actingAs($cashier)
+            ->getJson(route('account.status'))
+            ->assertStatus(401)
+            ->assertJson([
+                'reason' => 'account_disabled',
+                'code' => 'account_disabled',
+            ]);
+
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => AuditLog::ACTION_ACCOUNT_FORCED_LOGOUT,
+            'target_type' => 'user',
+            'target_id' => $cashier->id,
+        ]);
+    }
+
+    public function test_disabled_cashier_is_redirected_to_login(): void
+    {
+        $admin = $this->createAdmin();
+        $cashier = $this->createCashier();
+
+        $this->actingAs($admin)
+            ->postJson(route('accounts.status', $cashier), ['is_active' => '0'])
+            ->assertOk();
+
+        $this->actingAs($cashier)
+            ->get('/pos')
+            ->assertRedirect(route('login', ['account_disabled' => 1]));
+    }
+
+    public function test_disabled_cashier_cannot_checkout_and_no_sale_is_created(): void
+    {
+        $admin = $this->createAdmin();
+        $cashier = $this->createCashier();
+
+        $this->actingAs($admin)
+            ->postJson(route('accounts.status', $cashier), ['is_active' => '0'])
+            ->assertOk();
+
+        $this->actingAs($cashier)
+            ->postJson('/checkout', [])
+            ->assertStatus(401)
+            ->assertJson(['reason' => 'account_disabled']);
+
+        $this->assertSame(0, DB::table('sales')->count());
+    }
+
+    public function test_admin_cannot_disable_their_own_account(): void
+    {
+        $admin = $this->createAdmin();
+
+        $this->actingAs($admin)
+            ->postJson(route('accounts.status', $admin), ['is_active' => '0'])
+            ->assertStatus(422)
+            ->assertJson(['message' => 'You cannot disable your own account.']);
+
+        $this->assertTrue($admin->fresh()->is_active);
+    }
+
+    public function test_admin_cannot_disable_their_own_account_through_update(): void
+    {
+        $admin = $this->createAdmin();
+
+        $this->actingAs($admin)
+            ->putJson(route('accounts.update', $admin), [
+                'name' => $admin->name,
+                'username' => $admin->username,
+                'is_active' => '0',
+            ])
+            ->assertStatus(422)
+            ->assertJson(['message' => 'You cannot disable your own account.']);
+
+        $this->assertTrue($admin->fresh()->is_active);
+    }
+
+    public function test_re_enabling_a_cashier_allows_login_again(): void
+    {
+        $admin = $this->createAdmin();
+        $cashier = $this->createCashier();
+
+        $this->actingAs($admin)
+            ->postJson(route('accounts.status', $cashier), ['is_active' => '0'])
+            ->assertOk();
+
+        $this->actingAs($admin)
+            ->postJson(route('accounts.status', $cashier), ['is_active' => '1'])
+            ->assertOk()
+            ->assertJson([
+                'success' => true,
+                'is_active' => true,
+                'message' => 'Account re-enabled. The cashier can log in again.',
+            ]);
+
+        $this->post('/logout');
+
+        $this->post('/login', [
+            'username' => $cashier->username,
+            'password' => 'cashierpass123',
+        ])->assertRedirect('/pos');
+
+        $this->assertAuthenticatedAs($cashier);
+    }
+
+    public function test_disabling_a_cashier_deletes_database_sessions_and_clears_remember_token(): void
+    {
+        config(['session.driver' => 'database']);
+
+        $admin = $this->createAdmin();
+        $cashier = $this->createCashier();
+        $cashier->forceFill(['remember_token' => 'remember-me'])->save();
+
+        DB::table('sessions')->insert([
+            'id' => 'cashier-session',
+            'user_id' => $cashier->id,
+            'ip_address' => '127.0.0.1',
+            'user_agent' => 'phpunit',
+            'payload' => base64_encode(serialize([])),
+            'last_activity' => now()->timestamp,
+        ]);
+
+        $this->actingAs($admin)
+            ->postJson(route('accounts.status', $cashier), ['is_active' => '0'])
+            ->assertOk();
+
+        $this->assertDatabaseMissing('sessions', ['user_id' => $cashier->id]);
+        $this->assertNull($cashier->fresh()->remember_token);
+    }
+
+    public function test_updating_a_cashier_to_inactive_revokes_the_old_session(): void
+    {
+        $admin = $this->createAdmin();
+        $cashier = $this->createCashier();
+
+        $this->actingAs($admin)->put(route('accounts.update', $cashier), [
+            'name' => $cashier->name,
+            'username' => $cashier->username,
+            'email' => $cashier->email,
+            'is_active' => '0',
+        ])->assertRedirect(route('accounts.index'));
+
+        $this->assertFalse($cashier->fresh()->is_active);
+
+        $this->actingAs($cashier)
+            ->getJson('/pos')
+            ->assertStatus(401)
+            ->assertJson(['reason' => 'account_disabled']);
     }
 }
