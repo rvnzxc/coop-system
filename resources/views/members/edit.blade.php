@@ -3,139 +3,261 @@
 @section('title', 'Edit Member')
 
 @section('content')
-<div style="max-width: 600px; margin: 30px auto; padding: 0 20px;">
-    <!-- Page Header -->
-    <div style="margin-bottom: 20px;">
-        <h2 style="color: #1b3a1b; font-size: 24px; font-weight: bold; margin: 0;">Edit Member</h2>
-        <p style="color: #666; font-size: 14px; margin: 5px 0 0 0;">Update member information</p>
+@php
+    $inputClass = 'w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30';
+    $phoneGroupClass = 'flex w-full items-center rounded-lg border border-slate-300 bg-white text-sm text-slate-900 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/30';
+@endphp
+
+<div class="mx-auto max-w-xl">
+    <div class="mb-6 flex items-center justify-between gap-3">
+        <div>
+            <h2 class="text-xl font-bold text-slate-900">Edit Member</h2>
+            <p class="mt-0.5 text-sm text-slate-500">Update member information</p>
+        </div>
+        <x-button href="{{ route('members.index') }}" color="secondary" size="sm">
+            <x-icon name="arrow-left" class="h-3 w-3" /> Back
+        </x-button>
     </div>
 
-    <!-- Form Card -->
-    <div style="background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 30px;">
-        <form action="{{ route('members.update', $member->id) }}" method="POST">
+    <x-card>
+        <form id="memberForm" action="{{ route('members.update', $member->id) }}" method="POST" enctype="multipart/form-data" class="space-y-5" novalidate>
             @csrf
             @method('PUT')
-            
-            <!-- Form Row 1 -->
-            <div style="display: flex; gap: 20px; margin-bottom: 20px;">
-                <div style="flex: 1;">
-                    <label style="display: block; font-size: 14px; font-weight: bold; color: #333; margin-bottom: 6px;">
-                        First Name <span style="color: #d32f2f;">*</span>
-                    </label>
-                    <input type="text" 
-                           name="first_name" 
-                           value="{{ old('first_name', $member->first_name) }}" 
-                           required
-                           style="width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;"
-                           placeholder="Enter first name">
-                    @error('first_name')
-                        <div style="color: #d32f2f; font-size: 12px; margin-top: 4px;">{{ $message }}</div>
-                    @enderror
-                </div>
-                
-                <div style="flex: 1;">
-                    <label style="display: block; font-size: 14px; font-weight: bold; color: #333; margin-bottom: 6px;">
-                        Last Name <span style="color: #d32f2f;">*</span>
-                    </label>
-                    <input type="text" 
-                           name="last_name" 
-                           value="{{ old('last_name', $member->last_name) }}" 
-                           required
-                           style="width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;"
-                           placeholder="Enter last name">
-                    @error('last_name')
-                        <div style="color: #d32f2f; font-size: 12px; margin-top: 4px;">{{ $message }}</div>
-                    @enderror
-                </div>
+
+            <div class="grid gap-5 sm:grid-cols-2">
+                <x-field label="First Name" name="first_name" required>
+                    <input type="text" id="first_name" name="first_name" value="{{ old('first_name', $member->first_name) }}" required placeholder="Enter first name" autocomplete="given-name" class="{{ $inputClass }}">
+                    <p id="first_name_error" class="mt-1.5 hidden text-sm text-red-600"></p>
+                </x-field>
+
+                <x-field label="Last Name" name="last_name" required>
+                    <input type="text" id="last_name" name="last_name" value="{{ old('last_name', $member->last_name) }}" required placeholder="Enter last name" autocomplete="family-name" class="{{ $inputClass }}">
+                    <p id="last_name_error" class="mt-1.5 hidden text-sm text-red-600"></p>
+                </x-field>
             </div>
-            
-            <!-- Form Row 2 -->
-            <div style="display: flex; gap: 20px; margin-bottom: 20px;">
-                <div style="flex: 1;">
-                    <label style="display: block; font-size: 14px; font-weight: bold; color: #333; margin-bottom: 6px;">
-                        Email
-                    </label>
-                    <input type="email" 
-                           name="email" 
-                           value="{{ old('email', $member->email) }}" 
-                           style="width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;"
-                           placeholder="member@example.com">
-                    @error('email')
-                        <div style="color: #d32f2f; font-size: 12px; margin-top: 4px;">{{ $message }}</div>
-                    @enderror
-                </div>
-                
-                <div style="flex: 1;">
-                    <label style="display: block; font-size: 14px; font-weight: bold; color: #333; margin-bottom: 6px;">
-                        Phone
-                    </label>
-                    <input type="tel" 
-                           name="phone" 
-                           value="{{ old('phone', $member->phone) }}" 
-                           style="width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;"
-                           placeholder="09123456789">
-                    @error('phone')
-                        <div style="color: #d32f2f; font-size: 12px; margin-top: 4px;">{{ $message }}</div>
-                    @enderror
-                </div>
+
+            <div class="grid gap-5 sm:grid-cols-2">
+                <x-field label="Email" name="email">
+                    <input type="email" id="email" name="email" value="{{ old('email', $member->email) }}" placeholder="member@example.com" class="{{ $inputClass }}">
+                </x-field>
+
+                <x-field label="Phone" name="phone">
+                    <input type="hidden" id="phone" name="phone" value="{{ old('phone', $member->phone) }}">
+                    <div id="phone_group" class="{{ $phoneGroupClass }}">
+                        <span class="select-none border-r border-slate-200 pl-3.5 pr-3 text-sm text-slate-900">+63</span>
+                        <input type="tel" id="phone_display" inputmode="numeric" autocomplete="tel-national" maxlength="12" placeholder="912 345 6789" class="w-full rounded-r-lg border-0 bg-transparent py-2.5 pl-3 pr-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-0" aria-describedby="phone_error">
+                    </div>
+                <p id="phone_error" class="mt-1.5 text-sm text-red-600 {{ $errors->has('phone') ? '' : 'hidden' }}">{{ $errors->first('phone') }}</p>
+            </x-field>
             </div>
-            
-            <!-- Active Status -->
-            <div style="margin-bottom: 20px;">
-                <label style="display: flex; align-items: center; cursor: pointer;">
-                    <input type="checkbox" 
-                           name="is_active" 
-                           value="1"
-                           {{ old('is_active', $member->is_active) ? 'checked' : '' }}
-                           style="margin-right: 8px;">
-                    <span style="font-size: 14px; color: #333;">Active Member</span>
-                </label>
+
+            <div>
+                <span class="mb-1.5 block text-sm font-medium text-slate-700">Photo</span>
+                @include('members._photo-upload', ['member' => $member])
             </div>
-            
-            <!-- Member Information -->
-            <div style="background: #f8f9fa; border-radius: 6px; padding: 15px; margin-bottom: 20px;">
-                <h4 style="margin: 0 0 10px 0; font-size: 14px; color: #666; font-weight: bold;">Member Information</h4>
-                <div style="display: flex; gap: 20px;">
+
+            <label class="flex cursor-pointer items-center gap-2.5 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+
+                <input type="checkbox" name="is_active" value="1" {{ old('is_active', $member->is_active) ? 'checked' : '' }} class="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+                <span class="text-sm font-medium text-slate-700">Active Member</span>
+            </label>
+
+            <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <h4 class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Member Information</h4>
+                <div class="grid gap-4 sm:grid-cols-3">
                     <div>
-                        <span style="font-size: 12px; color: #666;">Member ID:</span><br>
-                        <span style="font-size: 14px; font-weight: bold; color: #1b3a1b;">{{ $member->member_number }}</span>
+                        <span class="text-xs text-slate-500">Member ID</span><br>
+                        <span class="text-sm font-semibold text-slate-900">{{ $member->member_number }}</span>
                     </div>
                     <div>
-                        <span style="font-size: 12px; color: #666;">Total Purchases:</span><br>
-                        <span style="font-size: 14px; font-weight: bold; color: #1b3a1b;">₱{{ number_format($member->total_purchases, 2) }}</span>
+                        <span class="text-xs text-slate-500">Total Purchases</span><br>
+                        <span class="text-sm font-semibold text-slate-900">&#8369;{{ number_format($member->total_purchases, 2) }}</span>
                     </div>
                     <div>
-                        <span style="font-size: 12px; color: #666;">Purchase Count:</span><br>
-                        <span style="font-size: 14px; font-weight: bold; color: #1b3a1b;">{{ $member->purchase_count }}</span>
+                        <span class="text-xs text-slate-500">Purchase Count</span><br>
+                        <span class="text-sm font-semibold text-slate-900">{{ $member->purchase_count }}</span>
                     </div>
                 </div>
             </div>
-            
-            <!-- Action Buttons -->
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 30px;">
-                <a href="{{ route('members.index') }}" 
-                   style="display: inline-flex; align-items: center; padding: 10px 20px; background: #f5f5f5; color: #666; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: bold; transition: background 0.3s ease;"
-                   onmouseover="this.style.background='#e0e0e0'" 
-                   onmouseout="this.style.background='#f5f5f5'">
-                    <i class="fa fa-arrow-left" style="margin-right: 6px;"></i> Back to Members
-                </a>
-                
-                <div style="display: flex; gap: 10px;">
-                    <a href="{{ route('members.analytics', $member->id) }}" 
-                       style="display: inline-flex; align-items: center; padding: 10px 20px; background: #1b3a1b; color: #d0ff00; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: bold; transition: background 0.3s ease;"
-                       onmouseover="this.style.background='#2d5a2d'" 
-                       onmouseout="this.style.background='#1b3a1b'">
-                        <i class="fa fa-chart-line" style="margin-right: 6px;"></i> View Analytics
-                    </a>
-                    <button type="submit" 
-                            style="display: inline-flex; align-items: center; padding: 10px 20px; background: #1b3a1b; color: #d0ff00; border: none; border-radius: 6px; font-size: 14px; font-weight: bold; cursor: pointer; transition: background 0.3s ease;"
-                            onmouseover="this.style.background='#2d5a2d'" 
-                            onmouseout="this.style.background='#1b3a1b'">
-                        <i class="fa fa-save" style="margin-right: 6px;"></i> Update Member
-                    </button>
-                </div>
+
+            <div class="flex justify-end gap-3 pt-2">
+                <x-button href="{{ route('members.analytics', $member->id) }}" color="secondary">
+                    <x-icon name="line-chart" class="h-3.5 w-3.5" /> View Analytics
+                </x-button>
+                <x-button type="submit" id="memberSubmit" color="primary">
+                    <x-icon name="save" class="h-3.5 w-3.5" /> Update Member
+                </x-button>
             </div>
         </form>
-    </div>
+    </x-card>
 </div>
+
+<script>
+(function () {
+    const form = document.getElementById('memberForm');
+    if (!form) return;
+
+    const fields = {
+        first_name: { input: document.getElementById('first_name'), error: document.getElementById('first_name_error'), msg: 'Letters only.' },
+        last_name: { input: document.getElementById('last_name'), error: document.getElementById('last_name_error'), msg: 'Letters only.' },
+    };
+    const phoneHidden = document.getElementById('phone');
+    const phoneDisplay = document.getElementById('phone_display');
+    const phoneGroup = document.getElementById('phone_group');
+    const phoneError = document.getElementById('phone_error');
+    const submitBtn = document.getElementById('memberSubmit');
+
+    const nameAllowedRe = /^[\p{L}\p{M} .'\-]*$/u;
+    const nameValidRe = /^[\p{L}\p{M} .'\-]+$/u;
+    const baseInput = ['border-slate-300', 'focus:border-brand-500', 'focus:ring-brand-500/30'];
+    const badInput = ['border-red-500', 'focus:border-red-500', 'focus:ring-red-500/30'];
+    const baseGroup = ['border-slate-300', 'focus-within:border-brand-500', 'focus-within:ring-brand-500/30'];
+    const badGroup = ['border-red-500', 'focus-within:border-red-500', 'focus-within:ring-red-500/30'];
+
+    function setInvalid(el, errEl, msg, group) {
+        if (group) { el.classList.remove(...baseGroup); el.classList.add(...badGroup); }
+        else { el.classList.remove(...baseInput); el.classList.add(...badInput); }
+        if (errEl) { errEl.textContent = msg || ''; errEl.classList.toggle('hidden', !msg); }
+    }
+    function setValid(el, errEl, group) {
+        if (group) { el.classList.remove(...badGroup); el.classList.add(...baseGroup); }
+        else { el.classList.remove(...badInput); el.classList.add(...baseInput); }
+        if (errEl) { errEl.textContent = ''; errEl.classList.add('hidden'); }
+    }
+    function cleanNameValue(v) {
+        let out = '';
+        for (const ch of (v || '')) { if (/[\p{L}\p{M} .'\-]/u.test(ch)) out += ch; }
+        return out;
+    }
+    function normalizeNameRaw(v) { return (v || '').trim().replace(/\s+/g, ' '); }
+
+    function validateName(key, opts) {
+        opts = opts || {};
+        const finalize = !!opts.finalize;
+        const forSubmit = !!opts.forSubmit;
+        const f = fields[key];
+        let v = f.input.value;
+        if (finalize) v = normalizeNameRaw(v);
+        f.input.value = v;
+        if (v === '') {
+            if (forSubmit) setInvalid(f.input, f.error, '');
+            else setValid(f.input, f.error);
+            return false;
+        }
+        if (!nameValidRe.test(v)) { setInvalid(f.input, f.error, f.msg); return false; }
+        setValid(f.input, f.error);
+        return true;
+    }
+
+    function attachNameHandlers(key) {
+        const f = fields[key];
+        f.input.addEventListener('beforeinput', (e) => { if (e.inputType === 'insertText' && e.data && !nameAllowedRe.test(e.data)) e.preventDefault(); });
+        f.input.addEventListener('paste', (e) => {
+            e.preventDefault();
+            const text = (e.clipboardData || window.clipboardData).getData('text') || '';
+            const cleaned = cleanNameValue(text);
+            if (text !== cleaned) setInvalid(f.input, f.error, f.msg);
+            const start = f.input.selectionStart || 0, end = f.input.selectionEnd || 0;
+            f.input.setRangeText(cleaned, start, end, 'end');
+            if (text === cleaned) validateName(key);
+            updateSubmit();
+        });
+        f.input.addEventListener('input', () => {
+            const before = f.input.value;
+            const cleaned = cleanNameValue(before);
+            if (before !== cleaned) { f.input.value = cleaned; setInvalid(f.input, f.error, f.msg); }
+            else { validateName(key); }
+            updateSubmit();
+        });
+        f.input.addEventListener('blur', () => { validateName(key, { finalize: true }); updateSubmit(); });
+    }
+
+    function extractPhoneDigits(raw) {
+        let d = (raw || '').replace(/\D+/g, '');
+        if (d.startsWith('63')) d = d.slice(2);
+        else if (d.startsWith('0')) d = d.slice(1);
+        return d.slice(0, 10);
+    }
+    function formatPhone(d) {
+        if (!d) return '';
+        let out = d.slice(0, 3);
+        if (d.length > 3) out += ' ' + d.slice(3, 6);
+        if (d.length > 6) out += ' ' + d.slice(6, 10);
+        return out;
+    }
+    function getPhoneDigits() { return extractPhoneDigits(phoneDisplay.value); }
+    function syncPhoneHidden() { const d = getPhoneDigits(); phoneHidden.value = d ? ('+63' + d) : ''; }
+
+    function validatePhone() {
+        const d = getPhoneDigits();
+        const hasAny = (phoneDisplay.value || '').trim() !== '' || d !== '';
+        syncPhoneHidden();
+        if (!hasAny) { setValid(phoneGroup, phoneError, true); return true; }
+        if (d.length !== 10 || d[0] !== '9') { setInvalid(phoneGroup, phoneError, 'Enter a valid PH mobile number (e.g. +63 912 345 6789).', true); return false; }
+        setValid(phoneGroup, phoneError, true);
+        return true;
+    }
+
+    phoneDisplay.addEventListener('beforeinput', (e) => {
+        if (e.inputType === 'insertText' && e.data && /\D/.test(e.data)) {
+            const digitsInData = e.data.replace(/\D/g, '');
+            if (!digitsInData) e.preventDefault();
+        }
+    });
+    phoneDisplay.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const text = (e.clipboardData || window.clipboardData).getData('text') || '';
+        phoneDisplay.value = formatPhone(extractPhoneDigits(text));
+        validatePhone(); updateSubmit();
+    });
+    phoneDisplay.addEventListener('input', () => {
+        let d = extractPhoneDigits(phoneDisplay.value);
+        if (d.length > 0 && d[0] !== '9') d = '';
+        phoneDisplay.value = formatPhone(d.slice(0, 10));
+        validatePhone(); updateSubmit();
+    });
+    phoneDisplay.addEventListener('blur', () => { validatePhone(); updateSubmit(); });
+
+    function updateSubmit() {
+        const fOk = nameValidRe.test(normalizeNameRaw(fields.first_name.input.value)) && nameValidRe.test(normalizeNameRaw(fields.last_name.input.value));
+        const d = getPhoneDigits();
+        const pEmpty = (phoneDisplay.value || '').replace(/\s/g, '') === '';
+        const pOk = pEmpty ? true : (d.length === 10 && d[0] === '9');
+        const ok = fOk && pOk;
+        if (submitBtn) {
+            submitBtn.disabled = !ok;
+            submitBtn.classList.toggle('opacity-50', !ok);
+            submitBtn.classList.toggle('cursor-not-allowed', !ok);
+        }
+    }
+
+    attachNameHandlers('first_name');
+    attachNameHandlers('last_name');
+
+    (function initPhone() {
+        const initial = phoneHidden.value || '';
+        const d = extractPhoneDigits(initial);
+        phoneDisplay.value = formatPhone(d);
+        syncPhoneHidden();
+    })();
+    setValid(fields.first_name.input, fields.first_name.error);
+    setValid(fields.last_name.input, fields.last_name.error);
+    if ((phoneDisplay.value || '').trim() !== '') validatePhone(); else { syncPhoneHidden(); setValid(phoneGroup, phoneError, true); }
+    updateSubmit();
+
+    form.addEventListener('submit', (e) => {
+        const ok1 = validateName('first_name', { finalize: true, forSubmit: true });
+        const ok2 = validateName('last_name', { finalize: true, forSubmit: true });
+        const ok3 = validatePhone();
+        updateSubmit();
+        if (!(ok1 && ok2 && ok3)) {
+            e.preventDefault();
+            const firstBad = form.querySelector('.border-red-500, .focus-within\\:border-red-500');
+            if (firstBad) { const inp = firstBad.querySelector('input') || firstBad; inp.focus(); }
+        } else {
+            syncPhoneHidden();
+        }
+    });
+})();
+</script>
 @endsection

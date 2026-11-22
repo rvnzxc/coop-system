@@ -2,47 +2,160 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
+use App\Models\User;
+use App\Services\AuditLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use App\Models\User;
 
 class AuthController extends Controller
 {
     /**
      * Show login form
      */
-    public function showLoginForm()
+    public function showLoginForm(Request $request)
     {
+        $user = Auth::user();
+
+        if ($user && $user->is_active) {
+            return redirect($user->role === 'admin' ? '/analytics' : '/pos');
+        }
+
+        if ($user) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
+
         return view('auth.login');
     }
 
     /**
-     * Handle login request
+     * Lightweight endpoint used by the client to detect a disabled account.
+     */
+    public function status(Request $request)
+    {
+        return response()->json([
+            'active' => (bool) $request->user()->is_active,
+        ]);
+    }
+
+    /**
+     * Handle login request.
+     *
+     * The login field accepts a username (case-insensitive) or an email
+     * address so existing accounts keep working while new cashier accounts
+     * are created with a username only.
      */
     public function login(Request $request)
     {
-        $credentials = $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
+        $request->validate([
+            'username' => 'nullable|string|max:255',
+            'email' => 'nullable|string|max:255',
+            'login' => 'nullable|string|max:255',
+            'password' => 'required|string',
         ]);
 
-        if (Auth::attempt($credentials)) {
+        $login = trim((string) (
+            $request->input('username')
+            ?? $request->input('email')
+            ?? $request->input('login')
+        ));
+        $password = (string) $request->input('password');
+
+        if ($login === '') {
+            return back()->withErrors([
+                'username' => 'The username field is required.',
+                'email' => 'The username field is required.',
+            ])->onlyInput('username', 'email');
+        }
+
+        $normalized = mb_strtolower($login);
+
+        $user = User::query()
+            ->where(function ($query) use ($normalized) {
+                $query->whereRaw('LOWER(username) = ?', [$normalized])
+                    ->orWhereRaw('LOWER(email) = ?', [$normalized]);
+            })
+            ->first();
+
+        $isLegacyPlain = false;
+
+        if ($user && $this->passwordMatches($user, $password, $isLegacyPlain)) {
+            if (! $user->is_active) {
+                return back()->withErrors([
+                    'username' => 'Your account has been disabled. Contact an administrator.',
+                ])->onlyInput('username', 'email');
+            }
+
+            $needsRehash = false;
+
+            if (! $isLegacyPlain) {
+                try {
+                    $needsRehash = Hash::needsRehash((string) $user->getAuthPassword());
+                } catch (\Throwable $e) {
+                    $needsRehash = false;
+                }
+            }
+
+            // Upgrade plain-text or outdated hashes on the next successful login.
+            if ($isLegacyPlain || $needsRehash) {
+                $user->password = $password;
+                $user->save();
+            }
+
+            Auth::login($user, $request->boolean('remember'));
             $request->session()->regenerate();
-            
-            $user = Auth::user();
-            
+
+            AuditLogger::log(AuditLog::ACTION_LOGIN, 'user', $user->id, [
+                'username' => $user->username,
+                'role' => $user->role,
+            ]);
+
             // Redirect based on role
             if ($user->role === 'admin') {
-                return redirect()->intended('/analytics');
-            } else {
-                return redirect()->intended('/pos');
+                return redirect('/analytics');
             }
+
+            return redirect('/pos');
         }
 
         return back()->withErrors([
-            'email' => 'The provided credentials do not match our records.',
-        ])->onlyInput('email');
+            'username' => 'The provided credentials do not match our records.',
+        ])->onlyInput('username', 'email');
+    }
+
+    /**
+     * Check a password against the stored value, accepting legacy plain-text
+     * values so they can be rehashed after a successful login.
+     */
+    private function passwordMatches(User $user, string $password, bool &$isLegacyPlain = false): bool
+    {
+        $stored = (string) $user->getAuthPassword();
+        $isLegacyPlain = false;
+
+        if ($stored === '') {
+            return false;
+        }
+
+        try {
+            if (Hash::check($password, $stored)) {
+                return true;
+            }
+        } catch (\Throwable $e) {
+            // Fall through to the legacy plain-text comparison.
+        }
+
+        $isHashed = (bool) preg_match('/^\$(2[aby]|argon2(id|i)?)\$/', $stored);
+
+        if (! $isHashed && hash_equals($stored, $password)) {
+            $isLegacyPlain = true;
+
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -50,11 +163,26 @@ class AuthController extends Controller
      */
     public function logout(Request $request)
     {
+        $user = Auth::user();
+
+        if ($user) {
+            AuditLogger::log(AuditLog::ACTION_LOGOUT, 'user', $user->id, [
+                'username' => $user->username,
+            ], $user->id);
+        }
+
         Auth::logout();
-        
+
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-        
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'redirect' => '/login',
+            ]);
+        }
+
         return redirect('/login');
     }
 }

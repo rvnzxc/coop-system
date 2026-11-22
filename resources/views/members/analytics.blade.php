@@ -1,251 +1,219 @@
 @extends('layouts.app')
 
+@section('title', 'Member Analytics')
+
 @section('content')
-<div style="max-width: 1400px; margin: 30px auto; padding: 0 20px; display: flex; flex-direction: column; gap: 20px;">
-    
-    <!-- TOP PROFILE CARD -->
-    <div style="background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 30px; display: flex; align-items: center; gap: 25px;">
-        <!-- Avatar -->
-        <div style="width: 80px; height: 80px; border-radius: 50%; background: #1b3a1b; display: flex; align-items: center; justify-content: center; color: #d0ff00; font-size: 32px;">
-            <i class="fas fa-user"></i>
+<div class="mx-auto flex max-w-6xl flex-col gap-6">
+
+    {{-- TOP PROFILE CARD --}}
+    <div class="flex flex-col gap-5 rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:flex-row sm:items-center">
+        <div class="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-brand-600 text-3xl text-white">
+            <x-icon name="user" class="h-8 w-8" />
         </div>
-        
-        <!-- Member Info -->
-        <div style="flex: 1;">
-            <h2 style="color: #1b3a1b; font-size: 26px; font-weight: bold; margin: 0 0 6px 0;">
+
+        <div class="min-w-0 flex-1">
+            <h2 class="truncate text-2xl font-bold text-slate-900">
                 {{ $member->first_name }} {{ $member->last_name }}
             </h2>
             @if($member->email)
-                <div style="color: #666; font-size: 14px; margin-bottom: 4px;">
-                    <i class="fas fa-envelope" style="margin-right: 8px;"></i>{{ $member->email }}
+                <div class="mt-1 text-sm text-slate-500">
+                    <x-icon name="envelope" class="mr-2 h-3.5 w-3.5" />{{ $member->email }}
                 </div>
             @endif
             @if($member->phone)
-                <div style="color: #666; font-size: 14px; margin-bottom: 4px;">
-                    <i class="fas fa-phone" style="margin-right: 8px;"></i>{{ $member->phone }}
+                <div class="mt-1 text-sm text-slate-500">
+                    <x-icon name="phone" class="mr-2 h-3.5 w-3.5" />{{ $member->phone }}
                 </div>
             @endif
-            <div style="margin-top: 8px; display: inline-block;">
+            <div class="mt-3">
                 @if($member->is_active)
-                    <span style="background: #e8f5e8; color: #2d5a2d; padding: 4px 14px; border-radius: 20px; font-size: 12px; font-weight: bold;">Active</span>
+                    <x-badge color="green"><x-icon name="circle" class="h-1.5 w-1.5" /> Active</x-badge>
                 @else
-                    <span style="background: #ffe8e8; color: #d32f2f; padding: 4px 14px; border-radius: 20px; font-size: 12px; font-weight: bold;">Inactive</span>
+                    <x-badge color="red"><x-icon name="circle" class="h-1.5 w-1.5" /> Inactive</x-badge>
                 @endif
             </div>
         </div>
-        
-        <!-- Action Buttons -->
-        <div style="display: flex; gap: 10px; margin-left: auto;">
-            <a href="{{ route('members.edit', $member->id) }}" style="background: #2196f3; color: #fff; padding: 8px 20px; border-radius: 6px; font-weight: bold; border: none; font-size: 13px; text-decoration: none; display: inline-block; transition: background 0.3s ease;" onmouseover="this.style.background='#1976d2'" onmouseout="this.style.background='#2196f3'">
-                Edit
-            </a>
-            <a href="{{ route('members.card', $member->id) }}" style="background: #1b3a1b; color: #d0ff00; padding: 8px 20px; border-radius: 6px; font-weight: bold; border: none; font-size: 13px; text-decoration: none; display: inline-block; transition: background 0.3s ease;" onmouseover="this.style.background='#2d5a2d'" onmouseout="this.style.background='#1b3a1b'">
-                <i class="fa fa-id-card"></i> Print Card
-            </a>
-            <form action="{{ route('members.destroy', $member->id) }}" method="POST" style="display: inline-block; margin: 0;">
+
+        <div class="flex flex-wrap items-center gap-2 sm:justify-end">
+            <x-button href="{{ route('members.edit', $member->id) }}" color="secondary" size="sm">
+                <x-icon name="edit" class="h-3 w-3" /> Edit
+            </x-button>
+            <x-button href="{{ route('members.card.download', $member->id) }}" color="primary" size="sm" data-download-png>
+                <x-download-icon class="h-3 w-3" /> Download Card
+            </x-button>
+            <form action="{{ route('members.destroy', $member->id) }}" method="POST">
                 @csrf
                 @method('DELETE')
-                <button type="submit" style="background: #f44336; color: #fff; padding: 8px 20px; border-radius: 6px; font-weight: bold; border: none; font-size: 13px; cursor: pointer; transition: background 0.3s ease;" onmouseover="this.style.background='#d32f2f'" onmouseout="this.style.background='#f44336'" onclick="return confirm('Are you sure you want to delete this member?')">
-                    Delete
-                </button>
+                <x-button type="submit" color="danger" size="sm" onclick="return confirmDestructive(event, 'Are you sure you want to delete this member?', 'Delete Member')">
+                    <x-icon name="trash" class="h-3 w-3" /> Delete
+                </x-button>
             </form>
         </div>
     </div>
-    
-    <!-- MIDDLE ROW -->
-    <div style="display: flex; gap: 20px;">
-        <!-- LEFT CARD - Quick Stats -->
-        <div style="background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 25px; flex: 1;">
-            <div style="font-size: 16px; font-weight: bold; color: #1b3a1b; margin-bottom: 18px; padding-bottom: 10px; border-bottom: 2px solid #f0f0f0;">
-                Quick Stats
-            </div>
-            
-            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f8f8f8;">
-                <span style="color: #666; font-size: 14px;">Member Since</span>
-                <span style="color: #333; font-size: 14px; font-weight: bold;">{{ $member->created_at->format('F d, Y') }}</span>
-            </div>
-            
-            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f8f8f8;">
-                <span style="color: #666; font-size: 14px;">Status</span>
-                <span style="color: #333; font-size: 14px; font-weight: bold;">{{ $member->is_active ? 'Active' : 'Inactive' }}</span>
-            </div>
-            
-            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f8f8f8;">
-                <span style="color: #666; font-size: 14px;">Last Purchase</span>
-                <span style="color: #333; font-size: 14px; font-weight: bold;">{{ $lastPurchaseDate ? $lastPurchaseDate->format('F d, Y') : 'Never' }}</span>
-            </div>
-            
-            <div style="display: flex; justify-content: space-between; padding: 10px 0;">
-                <span style="color: #666; font-size: 14px;">Total Purchases</span>
-                <span style="color: #333; font-size: 14px; font-weight: bold;">₱{{ number_format($member->total_purchases, 2) }}</span>
-            </div>
-        </div>
-        
-        <!-- RIGHT CARD - Purchase Analytics -->
-        <div style="background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 25px; flex: 1;">
-            <div style="font-size: 16px; font-weight: bold; color: #1b3a1b; margin-bottom: 18px; padding-bottom: 10px; border-bottom: 2px solid #f0f0f0;">
-                Purchase Analytics
-            </div>
-            
-            <div style="display: flex; gap: 12px;">
-                <div style="background: #f8f9fa; border-radius: 8px; padding: 15px; text-align: center; flex: 1;">
-                    <div style="font-size: 22px; font-weight: bold; color: #1b3a1b;">₱{{ number_format($totalPurchases, 2) }}</div>
-                    <div style="font-size: 12px; color: #666; margin-top: 4px;">Total Purchases</div>
+
+    {{-- MIDDLE ROW --}}
+    <div class="grid gap-6 lg:grid-cols-2">
+        <x-card title="Quick Stats">
+            <dl class="divide-y divide-slate-100">
+                <div class="flex items-center justify-between py-3 first:pt-0 last:pb-0">
+                    <dt class="text-sm text-slate-500">Member Since</dt>
+                    <dd class="text-sm font-semibold text-slate-900">{{ $member->created_at->format('F d, Y') }}</dd>
                 </div>
-                
-                <div style="background: #f8f9fa; border-radius: 8px; padding: 15px; text-align: center; flex: 1;">
-                    <div style="font-size: 22px; font-weight: bold; color: #1b3a1b;">{{ $purchaseCount }}</div>
-                    <div style="font-size: 12px; color: #666; margin-top: 4px;">Transactions</div>
+                <div class="flex items-center justify-between py-3">
+                    <dt class="text-sm text-slate-500">Status</dt>
+                    <dd class="text-sm font-semibold text-slate-900">{{ $member->is_active ? 'Active' : 'Inactive' }}</dd>
                 </div>
-                
-                <div style="background: #f8f9fa; border-radius: 8px; padding: 15px; text-align: center; flex: 1;">
-                    <div style="font-size: 22px; font-weight: bold; color: #1b3a1b;">₱{{ number_format($averagePurchase, 2) }}</div>
-                    <div style="font-size: 12px; color: #666; margin-top: 4px;">Average</div>
+                <div class="flex items-center justify-between py-3">
+                    <dt class="text-sm text-slate-500">Last Purchase</dt>
+                    <dd class="text-sm font-semibold text-slate-900">{{ $lastPurchaseDate ? $lastPurchaseDate->format('F d, Y') : 'Never' }}</dd>
+                </div>
+                <div class="flex items-center justify-between py-3 last:pb-0">
+                    <dt class="text-sm text-slate-500">Total Purchases</dt>
+                    <dd class="text-sm font-semibold text-slate-900">&#8369;{{ number_format($member->total_purchases, 2) }}</dd>
+                </div>
+            </dl>
+        </x-card>
+
+        <x-card title="Purchase Analytics">
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div class="rounded-lg bg-slate-50 p-4 text-center">
+                    <div class="text-xl font-bold text-slate-900">&#8369;{{ number_format($totalPurchases, 2) }}</div>
+                    <div class="mt-1 text-xs text-slate-500">Total Purchases</div>
+                </div>
+                <div class="rounded-lg bg-slate-50 p-4 text-center">
+                    <div class="text-xl font-bold text-slate-900">{{ $purchaseCount }}</div>
+                    <div class="mt-1 text-xs text-slate-500">Transactions</div>
+                </div>
+                <div class="rounded-lg bg-slate-50 p-4 text-center">
+                    <div class="text-xl font-bold text-slate-900">&#8369;{{ number_format($averagePurchase, 2) }}</div>
+                    <div class="mt-1 text-xs text-slate-500">Average</div>
                 </div>
             </div>
-        </div>
+        </x-card>
     </div>
-    
-    <!-- BOTTOM ROW -->
-    <div style="display: flex; gap: 20px;">
-        <!-- LEFT CARD - Purchase Behavior -->
-        <div style="background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 25px; flex: 1;">
-            <div style="font-size: 16px; font-weight: bold; color: #1b3a1b; margin-bottom: 18px; padding-bottom: 10px; border-bottom: 2px solid #f0f0f0;">
-                Purchase Behavior
-            </div>
-            
-            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f8f8f8;">
-                <span style="color: #666; font-size: 14px;">Frequency</span>
-                <span style="color: #333; font-size: 14px; font-weight: bold;">{{ $purchaseCount > 10 ? 'High' : ($purchaseCount > 5 ? 'Medium' : 'Low') }}</span>
-            </div>
-            
-            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f8f8f8;">
-                <span style="color: #666; font-size: 14px;">Average Value</span>
-                <span style="color: #333; font-size: 14px; font-weight: bold;">₱{{ number_format($averagePurchase, 2) }}</span>
-            </div>
-            
-            <div style="display: flex; justify-content: space-between; padding: 10px 0;">
-                <span style="color: #666; font-size: 14px;">Last Activity</span>
-                <span style="color: #333; font-size: 14px; font-weight: bold;">
-                    @if($lastPurchaseDate)
-                        {{ $lastPurchaseDate->setTimezone('Asia/Manila')->format('M d, Y h:i A') }}
-                        {{-- Debug: {{ $lastPurchaseDate->toDateTimeString() }} --}}
-                    @else
-                        Never
-                    @endif
-                </span>
-            </div>
-        </div>
-        
-        <!-- RIGHT CARD - Member Status -->
-        <div style="background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 25px; flex: 1;">
-            <div style="font-size: 16px; font-weight: bold; color: #1b3a1b; margin-bottom: 18px; padding-bottom: 10px; border-bottom: 2px solid #f0f0f0;">
-                Member Status
-            </div>
-            
-            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f8f8f8;">
-                <span style="color: #666; font-size: 14px;">Loyalty Level</span>
-                <span style="background: #e3f2fd; color: #1976d2; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: bold;">
-                    @if($totalPurchases >= 10000)
-                        Gold
-                    @elseif($totalPurchases >= 5000)
-                        Silver
-                    @elseif($totalPurchases > 0)
-                        Bronze
-                    @else
-                        New
-                    @endif
-                </span>
-            </div>
-            
-            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f8f8f8;">
-                <span style="color: #666; font-size: 14px;">Account Status</span>
-                <span style="color: #333; font-size: 14px; font-weight: bold;">{{ $member->is_active ? 'Active' : 'Inactive' }}</span>
-            </div>
-            
-            <div style="display: flex; justify-content: space-between; padding: 10px 0;">
-                <span style="color: #666; font-size: 14px;">Member ID</span>
-                <span style="font-family: monospace; font-size: 15px; color: #1b3a1b;">#{{ str_pad($member->id, 5, '0', STR_PAD_LEFT) }}</span>
-            </div>
-        </div>
+
+    {{-- BOTTOM ROW --}}
+    <div class="grid gap-6 lg:grid-cols-2">
+        <x-card title="Purchase Behavior">
+            <dl class="divide-y divide-slate-100">
+                <div class="flex items-center justify-between py-3 first:pt-0">
+                    <dt class="text-sm text-slate-500">Frequency</dt>
+                    <dd class="text-sm font-semibold text-slate-900">{{ $purchaseCount > 10 ? 'High' : ($purchaseCount > 5 ? 'Medium' : 'Low') }}</dd>
+                </div>
+                <div class="flex items-center justify-between py-3">
+                    <dt class="text-sm text-slate-500">Average Value</dt>
+                    <dd class="text-sm font-semibold text-slate-900">&#8369;{{ number_format($averagePurchase, 2) }}</dd>
+                </div>
+                <div class="flex items-center justify-between py-3 last:pb-0">
+                    <dt class="text-sm text-slate-500">Last Activity</dt>
+                    <dd class="text-sm font-semibold text-slate-900">
+                        @if($lastPurchaseDate)
+                            {{ $lastPurchaseDate->setTimezone('Asia/Manila')->format('M d, Y h:i A') }}
+                        @else
+                            Never
+                        @endif
+                    </dd>
+                </div>
+            </dl>
+        </x-card>
+
+        <x-card title="Member Status">
+            <dl class="divide-y divide-slate-100">
+                <div class="flex items-center justify-between py-3 first:pt-0">
+                    <dt class="text-sm text-slate-500">Loyalty Level</dt>
+                    <dd>
+                        @if($totalPurchases >= 10000)
+                            <x-badge color="amber">Gold</x-badge>
+                        @elseif($totalPurchases >= 5000)
+                            <x-badge color="gray">Silver</x-badge>
+                        @elseif($totalPurchases > 0)
+                            <x-badge color="teal">Bronze</x-badge>
+                        @else
+                            <x-badge color="blue">New</x-badge>
+                        @endif
+                    </dd>
+                </div>
+                <div class="flex items-center justify-between py-3">
+                    <dt class="text-sm text-slate-500">Account Status</dt>
+                    <dd class="text-sm font-semibold text-slate-900">{{ $member->is_active ? 'Active' : 'Inactive' }}</dd>
+                </div>
+                <div class="flex items-center justify-between py-3 last:pb-0">
+                    <dt class="text-sm text-slate-500">Member ID</dt>
+                    <dd class="font-mono text-sm font-semibold text-slate-900">#{{ str_pad($member->id, 5, '0', STR_PAD_LEFT) }}</dd>
+                </div>
+            </dl>
+        </x-card>
     </div>
-    
-    <!-- MEMBER ANALYTICS SECTION (NEW) -->
-    <div style="background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 25px; margin-bottom: 20px;">
-        <div style="font-size: 18px; font-weight: bold; color: #1b3a1b; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #f0f0f0;">
-            <i class="fas fa-chart-line" style="margin-right: 10px;"></i> Member Analytics - Per Member Breakdown
-        </div>
-        
-        <!-- Period Filter -->
-        <div style="display: flex; gap: 15px; margin-bottom: 20px; align-items: center;">
-            <label style="font-size: 14px; color: #666;">Analytics Period:</label>
-            <select id="periodFilter" onchange="filterMemberAnalytics()" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+
+    {{-- MEMBER ANALYTICS SECTION --}}
+    <x-card>
+        <h3 class="mb-4 flex items-center gap-2 text-lg font-bold text-slate-900">
+            <x-icon name="line-chart" class="text-brand-600" /> Member Analytics - Per Member Breakdown
+        </h3>
+
+        <div class="mb-4 flex flex-wrap items-center gap-4">
+            <label class="text-sm text-slate-500">Analytics Period:</label>
+            <select id="periodFilter" onchange="filterMemberAnalytics()" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30">
                 <option value="all">All Time</option>
                 <option value="weekly">Weekly</option>
                 <option value="monthly">Monthly</option>
                 <option value="yearly">Yearly</option>
             </select>
-            
-            <button onclick="window.print()" style="background: #d0ff00; color: #1b3a1b; padding: 8px 16px; border: none; border-radius: 4px; font-size: 14px; cursor: pointer;">
-                <i class="fas fa-print"></i> Print Report
-            </button>
         </div>
-        
-        <!-- Member Analytics Table -->
-        <div style="overflow-x: auto;">
-            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
                 <thead>
-                    <tr style="background: #1b3a1b; color: #fff;">
-                        <th style="padding: 12px; text-align: left; border: 1px solid #fff;">Member</th>
-                        <th style="padding: 12px; text-align: right; border: 1px solid #fff;">Total Purchases</th>
-                        <th style="padding: 12px; text-align: right; border: 1px solid #fff;">Transactions</th>
-                        <th style="padding: 12px; text-align: right; border: 1px solid #fff;">Average Purchase</th>
-                        <th style="padding: 12px; text-align: right; border: 1px solid #fff;">Last Purchase</th>
-                        <th style="padding: 12px; text-align: right; border: 1px solid #fff;">Purchase Frequency</th>
-                        <th style="padding: 12px; text-align: left; border: 1px solid #fff;">Status</th>
+                    <tr class="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
+                        <th class="px-4 py-3 font-semibold">Member</th>
+                        <th class="px-4 py-3 text-right font-semibold">Total Purchases</th>
+                        <th class="px-4 py-3 text-right font-semibold">Transactions</th>
+                        <th class="px-4 py-3 text-right font-semibold">Average Purchase</th>
+                        <th class="px-4 py-3 text-right font-semibold">Last Purchase</th>
+                        <th class="px-4 py-3 font-semibold">Purchase Frequency</th>
+                        <th class="px-4 py-3 font-semibold">Status</th>
                     </tr>
                 </thead>
-                <tbody id="memberAnalyticsTable">
+                <tbody id="memberAnalyticsTable" class="divide-y divide-slate-100">
                     <!-- Member data will be populated by JavaScript -->
                 </tbody>
             </table>
         </div>
-    </div>
-    
-    <!-- RECOMMENDATION CARD (full width) -->
-    <div style="background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 25px;">
+    </x-card>
+
+    {{-- RECOMMENDATION CARD --}}
+    <x-card>
         @if($purchaseCount == 0)
-            <div style="display: flex; align-items: center; gap: 15px;">
-                <i class="fas fa-lightbulb" style="color: #f39c12; font-size: 20px;"></i>
+            <div class="flex items-start gap-4">
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600"><x-icon name="lightbulb-o" class="h-4 w-4" /></div>
                 <div>
-                    <div style="font-weight: bold; color: #333; margin-bottom: 5px;">Recommendation</div>
-                    <div style="color: #666; font-size: 14px;">This member hasn't made any purchases yet. Consider sending promotional offers to encourage their first purchase.</div>
+                    <div class="font-semibold text-slate-900">Recommendation</div>
+                    <div class="mt-1 text-sm text-slate-500">This member hasn't made any purchases yet. Consider sending promotional offers to encourage their first purchase.</div>
                 </div>
             </div>
         @elseif($lastPurchaseDate && $lastPurchaseDate->diffInDays(now()) > 30)
-            <div style="display: flex; align-items: center; gap: 15px;">
-                <i class="fas fa-exclamation-triangle" style="color: #e67e22; font-size: 20px;"></i>
+            <div class="flex items-start gap-4">
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-600"><x-icon name="exclamation-triangle" class="h-4 w-4" /></div>
                 <div>
-                    <div style="font-weight: bold; color: #333; margin-bottom: 5px;">Attention Needed</div>
-                    <div style="color: #666; font-size: 14px;">This member hasn't purchased in over 30 days. Consider reaching out with special offers.</div>
+                    <div class="font-semibold text-slate-900">Attention Needed</div>
+                    <div class="mt-1 text-sm text-slate-500">This member hasn't purchased in over 30 days. Consider reaching out with special offers.</div>
                 </div>
             </div>
         @else
-            <div style="display: flex; align-items: center; gap: 15px;">
-                <i class="fas fa-check-circle" style="color: #27ae60; font-size: 20px;"></i>
+            <div class="flex items-start gap-4">
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600"><x-icon name="check-circle" class="h-4 w-4" /></div>
                 <div>
-                    <div style="font-weight: bold; color: #333; margin-bottom: 5px;">Great Member!</div>
-                    <div style="color: #666; font-size: 14px;">This member is actively purchasing and engaged with your cooperative.</div>
+                    <div class="font-semibold text-slate-900">Great Member!</div>
+                    <div class="mt-1 text-sm text-slate-500">This member is actively purchasing and engaged with your cooperative.</div>
                 </div>
             </div>
         @endif
-    </div>
-    
-    <!-- Back Button -->
-    <div style="text-align: center;">
-        <a href="{{ route('members.index') }}" style="background: #6c757d; color: #fff; padding: 12px 30px; border-radius: 6px; font-weight: bold; font-size: 14px; border: none; text-decoration: none; display: inline-block; transition: background 0.3s ease;" onmouseover="this.style.background='#5a6268'" onmouseout="this.style.background='#6c757d'">
-            Back to Members
-        </a>
+    </x-card>
+
+    <div class="text-center">
+        <x-button href="{{ route('members.index') }}" color="secondary">
+            <x-icon name="arrow-left" class="h-3.5 w-3.5" /> Back to Members
+        </x-button>
     </div>
 </div>
 
@@ -253,8 +221,18 @@
 // Use member analytics data from controller
 const memberAnalyticsData = @json($memberAnalytics ?? []);
 
+// Inline status dot (replaces the Font Awesome fa-circle glyph)
+const DOT = '<svg class="inline-block h-1.5 w-1.5" viewBox="0 0 1792 1792" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><path d="M1536 640q0 -209 -103 -385.5t-279.5 -279.5t-385.5 -103t-385.5 103t-279.5 279.5t-103 385.5t103 385.5t279.5 279.5t385.5 103t385.5 -103t279.5 -279.5t103 -385.5z"/></svg>';
+
 // Convert to array for easier filtering
 const allMembersData = Object.values(memberAnalyticsData);
+
+const memberPesoFormatter = new Intl.NumberFormat('en-PH', {
+    style: 'currency',
+    currency: 'PHP',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+});
 
 function filterMemberAnalytics() {
     const period = document.getElementById('periodFilter').value;
@@ -295,36 +273,35 @@ function filterMemberAnalytics() {
     // Populate table
     filteredMembers.forEach(member => {
         const row = document.createElement('tr');
-        row.style.cssText = 'border-bottom: 1px solid #e9ecef;';
+        row.className = 'transition-colors hover:bg-slate-50';
         
         // Member info
         const memberCell = document.createElement('td');
-        memberCell.style.cssText = 'padding: 12px;';
-        memberCell.style.width = '25%';
+        memberCell.className = 'px-4 py-3 w-1/4';
         memberCell.innerHTML = `
-            <div style="font-weight: bold;">${member.first_name} ${member.last_name}</div>
-            <div style="font-size: 12px; color: #666;">${member.member_number}</div>
+            <div class="font-medium text-slate-900">${member.first_name} ${member.last_name}</div>
+            <div class="text-xs text-slate-500">${member.member_number}</div>
         `;
         
         // Stats cells
         const totalPurchasesCell = document.createElement('td');
-        totalPurchasesCell.style.cssText = 'padding: 12px; text-align: right; width: 15%;';
-        totalPurchasesCell.textContent = `₱${member.total_purchases.toLocaleString()}`;
+        totalPurchasesCell.className = 'px-4 py-3 text-right w-[15%]';
+        totalPurchasesCell.textContent = memberPesoFormatter.format(Number(member.total_purchases || 0));
         
         const transactionCountCell = document.createElement('td');
-        transactionCountCell.style.cssText = 'padding: 12px; text-align: right; width: 15%;';
+        transactionCountCell.className = 'px-4 py-3 text-right w-[15%]';
         transactionCountCell.textContent = member.purchase_count;
         
         const averagePurchaseCell = document.createElement('td');
-        averagePurchaseCell.style.cssText = 'padding: 12px; text-align: right; width: 15%;';
-        averagePurchaseCell.textContent = member.purchase_count > 0 ? `₱${(member.total_purchases / member.purchase_count).toLocaleString()}` : '₱0';
+        averagePurchaseCell.className = 'px-4 py-3 text-right w-[15%]';
+        averagePurchaseCell.textContent = memberPesoFormatter.format(member.purchase_count > 0 ? Number(member.total_purchases) / Number(member.purchase_count) : 0);
         
         const lastPurchaseCell = document.createElement('td');
-        lastPurchaseCell.style.cssText = 'padding: 12px; width: 20%;';
+        lastPurchaseCell.className = 'px-4 py-3 text-right w-[20%]';
         lastPurchaseCell.textContent = member.last_purchase_date ? new Date(member.last_purchase_date).toLocaleDateString() : 'Never';
         
         const frequencyCell = document.createElement('td');
-        frequencyCell.style.cssText = 'padding: 12px; text-align: left; width: 10%;';
+        frequencyCell.className = 'px-4 py-3 w-[10%]';
         
         // Calculate frequency
         const now = new Date();
@@ -334,23 +311,23 @@ function filterMemberAnalytics() {
             const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
             
             if (diffDays <= 7) {
-                frequencyCell.innerHTML = '<span style="color: #27ae60;">● Weekly</span>';
+                frequencyCell.innerHTML = '<span class="text-emerald-600">' + DOT + ' Weekly</span>';
             } else if (diffDays <= 30) {
-                frequencyCell.innerHTML = '<span style="color: #f59e0b;">● Monthly</span>';
+                frequencyCell.innerHTML = '<span class="text-amber-500">' + DOT + ' Monthly</span>';
             } else if (diffDays <= 90) {
-                frequencyCell.innerHTML = '<span style="color: #e67e22;">● Quarterly</span>';
+                frequencyCell.innerHTML = '<span class="text-orange-500">' + DOT + ' Quarterly</span>';
             } else {
-                frequencyCell.innerHTML = '<span style="color: #e74c3c;">● Yearly</span>';
+                frequencyCell.innerHTML = '<span class="text-red-500">' + DOT + ' Yearly</span>';
             }
         } else {
-            frequencyCell.innerHTML = '<span style="color: #666;">Never</span>';
+            frequencyCell.innerHTML = '<span class="text-slate-500">Never</span>';
         }
         
         const statusCell = document.createElement('td');
-        statusCell.style.cssText = 'padding: 12px; text-align: left; width: 15%;';
+        statusCell.className = 'px-4 py-3 w-[15%]';
         statusCell.innerHTML = member.is_active ? 
-            '<span style="background: #e8f5e8; color: #2d5a2d; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: bold;">Active</span>' : 
-            '<span style="background: #ffe8e8; color: #d32f2f; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: bold;">Inactive</span>';
+            '<span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">' + DOT + ' Active</span>' : 
+            '<span class="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20">' + DOT + ' Inactive</span>';
         
         // Append cells to row
         row.appendChild(memberCell);
@@ -367,10 +344,8 @@ function filterMemberAnalytics() {
     
     // Update summary info
     const totalMembers = filteredMembers.length;
-    const totalPurchases = filteredMembers.reduce((sum, member) => sum + member.total_purchases, 0);
     const totalTransactions = filteredMembers.reduce((sum, member) => sum + member.purchase_count, 0);
     
-    // Update summary display (you can add this to the page if needed)
     console.log(`Showing ${totalMembers} members with ${totalTransactions} total transactions`);
 }
 

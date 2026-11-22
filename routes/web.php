@@ -1,10 +1,15 @@
 <?php
 
-use App\Http\Controllers\ShopController;
-use App\Http\Controllers\InventoryController;
-use App\Http\Controllers\MemberController;
+use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\CreditController;
+use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\MemberController;
+use App\Http\Controllers\MyTransactionController;
+use App\Http\Controllers\ShopController;
+use App\Http\Controllers\TransactionController;
 
 // Default route - redirect to login
 Route::get('/', function () {
@@ -16,21 +21,56 @@ Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
+Route::middleware(['auth'])->get('/account/status', [AuthController::class, 'status'])->name('account.status');
+
 // Shop / Home - Cashier only
 Route::middleware(['auth', 'role.cashier'])->group(function () {
     Route::get('/pos', [ShopController::class, 'index'])->name('shop.index');
     Route::post('/checkout', [ShopController::class, 'checkout'])->name('shop.checkout');
+    Route::get('/items/lookup', [ShopController::class, 'lookupItem'])->name('items.lookup');
     Route::get('/members/lookup', [MemberController::class, 'lookup'])->name('members.lookup');
 });
 
-// Inventory Management - Admin only
-Route::middleware(['auth', 'role.admin'])->prefix('inventory')->group(function () {
+// Credits Management - Admin and Cashier
+Route::middleware(['auth'])->group(function () {
+    Route::get('/credits', [CreditController::class, 'index'])->name('credits.index');
+    Route::get('/credits/{credit}', [CreditController::class, 'show'])->name('credits.show');
+});
+
+// Cashier's own transactions - always scoped to the session user
+Route::middleware(['auth'])->group(function () {
+    Route::get('/my-transactions', [MyTransactionController::class, 'index'])->name('my-transactions.index');
+});
+
+// Inventory - Read-only for all authenticated users
+Route::middleware(['auth'])->prefix('inventory')->group(function () {
     Route::get('/', [InventoryController::class, 'index'])->name('inventory.index');
+    Route::get('/barcode/{code}/download', [InventoryController::class, 'downloadBarcode'])
+        ->where('code', '[A-Za-z0-9._#-]{3,64}')
+        ->name('inventory.barcode.download');
+});
+
+// Inventory management pages - Admin only
+Route::middleware(['auth', 'role.admin'])->prefix('inventory')->group(function () {
     Route::get('/add', [InventoryController::class, 'create'])->name('inventory.create');
-    Route::post('/store', [InventoryController::class, 'store'])->name('inventory.store');
     Route::get('/edit/{id}', [InventoryController::class, 'edit'])->name('inventory.edit');
+});
+
+// Inventory writes - Admin only, with cashier attempts logged
+Route::middleware(['auth', 'inventory.write'])->prefix('inventory')->group(function () {
+    Route::post('/store', [InventoryController::class, 'store'])->name('inventory.store');
     Route::put('/update/{id}', [InventoryController::class, 'update'])->name('inventory.update');
     Route::delete('/delete/{id}', [InventoryController::class, 'destroy'])->name('inventory.destroy');
+});
+
+// Category management - Admin only, using the same write guard as inventory
+Route::middleware(['auth', 'inventory.write'])->prefix('inventory/categories')->group(function () {
+    Route::post('/', [CategoryController::class, 'store'])->name('categories.store');
+    Route::delete('/{category}', [CategoryController::class, 'destroy'])->name('categories.destroy');
+});
+
+// Low-stock notification endpoint - accessible to all authenticated users
+Route::middleware(['auth'])->prefix('inventory')->group(function () {
     Route::get('/low-stock', [InventoryController::class, 'lowStockNotifications'])->name('inventory.low-stock');
 });
 
@@ -41,14 +81,38 @@ Route::middleware(['auth', 'role.admin'])->prefix('members')->group(function () 
     Route::post('/store', [MemberController::class, 'store'])->name('members.store');
     Route::get('/edit/{id}', [MemberController::class, 'edit'])->name('members.edit');
     Route::put('/update/{id}', [MemberController::class, 'update'])->name('members.update');
+    Route::patch('/archive/{id}', [MemberController::class, 'archive'])->name('members.archive');
+    Route::patch('/{id}/restore', [MemberController::class, 'restore'])->name('members.restore');
     Route::delete('/delete/{id}', [MemberController::class, 'destroy'])->name('members.destroy');
     Route::get('/analytics/{id}', [MemberController::class, 'analytics'])->name('members.analytics');
     Route::get('/analytics', [MemberController::class, 'analyticsIndex'])->name('members.analytics.index');
     Route::get('/analytics/{id}', [MemberController::class, 'memberAnalytics'])->name('members.analytics');
+    Route::get('/card/{id}/download', [MemberController::class, 'downloadCard'])->name('members.card.download');
     Route::get('/card/{id}', [MemberController::class, 'card'])->name('members.card');
 });
 
-// Analytics - Admin only
-Route::middleware(['auth', 'role.admin'])->group(function () {
+// Accounts - Admin only
+Route::middleware(['auth', 'role.admin'])->prefix('accounts')->group(function () {
+    Route::get('/', [AccountController::class, 'index'])->name('accounts.index');
+    Route::get('/create', [AccountController::class, 'create'])->name('accounts.create');
+    Route::post('/', [AccountController::class, 'store'])->name('accounts.store');
+    Route::get('/me', [AccountController::class, 'me'])->name('accounts.me');
+    Route::put('/me', [AccountController::class, 'updateMe'])->name('accounts.me.update');
+    Route::get('/{user}/edit', [AccountController::class, 'edit'])->name('accounts.edit');
+    Route::put('/{user}', [AccountController::class, 'update'])->name('accounts.update');
+    Route::get('/{user}/password', [AccountController::class, 'password'])->name('accounts.password');
+    Route::put('/{user}/password', [AccountController::class, 'resetPassword'])->name('accounts.password.update');
+    Route::post('/{user}/status', [AccountController::class, 'toggleStatus'])->name('accounts.status');
+});
+
+// Analytics - Read-only for all authenticated users
+Route::middleware(['auth'])->group(function () {
     Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
+});
+
+// Transactions and activity log - Admin only
+Route::middleware(['auth', 'role.admin'])->prefix('transactions')->group(function () {
+    Route::get('/', [TransactionController::class, 'index'])->name('transactions.index');
+    Route::get('/export', [TransactionController::class, 'export'])->name('transactions.export');
+    Route::get('/activity', [TransactionController::class, 'activity'])->name('transactions.activity');
 });

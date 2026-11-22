@@ -22,6 +22,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 // Analytics API - no authentication required for dashboard
 Route::get('/analytics/sales', [AnalyticsController::class, 'getSalesData']);
+Route::get('/analytics/customer-type', [AnalyticsController::class, 'getCustomerTypeBreakdown']);
 
 // Test endpoint
 Route::get('/test', function() {

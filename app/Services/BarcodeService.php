@@ -2,112 +2,124 @@
 
 namespace App\Services;
 
+use Picqer\Barcode\Renderers\SvgRenderer;
+use Picqer\Barcode\Types\TypeCode128;
+
 class BarcodeService
 {
     /**
-     * Generate a simple barcode using Code 128 (basic implementation)
+     * Render a scannable Code 128 barcode as inline SVG.
+     *
+     * Code 128 encodes the full printable ASCII range, so it covers both the
+     * internal P###### codes and member numbers such as MEM00001 or #00001.
+     *
+     * @param  string  $code  Value to encode.
+     * @param  int  $width  Rendered width in pixels.
+     * @param  bool  $showText  Print the human-readable code under the bars.
+     * @return string SVG markup, ready to inline into a Blade template.
      */
-    public static function generateBarcode($code)
+    public static function generateBarcode($code, $width = 200, $showText = true)
     {
-        // Simple Code 128 barcode implementation
-        $width = 200;
-        $height = 80;
-        
-        // Create barcode pattern (simplified version)
-        $pattern = self::generateCode128Pattern($code);
-        
-        $barcode = '<svg width="' . $width . '" height="' . $height . '" xmlns="http://www.w3.org/2000/svg">';
-        $barcode .= '<rect width="100%" height="100%" fill="white"/>';
-        
-        $barWidth = $width / count($pattern);
-        $x = 0;
-        
-        foreach ($pattern as $bar) {
-            if ($bar == '1') {
-                $barcode .= '<rect x="' . $x . '" y="10" width="' . ($barWidth - 1) . '" height="' . ($height - 20) . '" fill="black"/>';
+        $code = (string) $code;
+
+        if (trim($code) === '') {
+            return '';
+        }
+
+        $barsHeight = $showText ? 60 : 40;
+        $totalHeight = $showText ? $barsHeight + 16 : $barsHeight;
+
+        $type = new TypeCode128;
+
+        $renderer = (new SvgRenderer)
+            ->setSvgType(SvgRenderer::TYPE_SVG_INLINE)
+            ->setBackgroundColor([255, 255, 255]);
+
+        $svg = $renderer->render($type->getBarcode($code), $width, $barsHeight);
+
+        if ($showText) {
+            // Room has to be made under the bars for the label; the renderer
+            // only draws the bars, so both the height and the viewBox that
+            // scales them have to grow together.
+            $svg = str_replace(
+                [
+                    'height="'.$barsHeight.'"',
+                    'viewBox="0 0 '.$width.' '.$barsHeight.'"',
+                    '</svg>',
+                ],
+                [
+                    'height="'.$totalHeight.'"',
+                    'viewBox="0 0 '.$width.' '.$totalHeight.'"',
+                    '<text x="'.($width / 2).'" y="'.($barsHeight + 11).'" text-anchor="middle" '
+                        .'font-family="monospace" font-size="10" fill="black">'
+                        .htmlspecialchars($code, ENT_QUOTES).'</text>'.PHP_EOL.'</svg>',
+                ],
+                $svg
+            );
+        }
+
+        return $svg;
+    }
+
+    /**
+     * Expand a scanned value into the codes worth trying against the database.
+     *
+     * Handheld scanners are inconsistent about what they send: some append a
+     * GS1 application identifier after the GTIN, some leave surrounding
+     * whitespace or control characters, and a product can legitimately be
+     * printed as either the 12 digit UPC-A or the 13 digit EAN-13 form. All of
+     * those have to resolve to the same item.
+     *
+     * @param  string|null  $code  Raw value coming off a scanner.
+     * @return string[] Candidate values, most specific first.
+     */
+    public static function lookupCandidates($code): array
+    {
+        if ($code === null) {
+            return [];
+        }
+
+        // Scanners sometimes terminate with CR/LF or embed GS (0x1D) separators.
+        $raw = trim((string) preg_replace('/[\x00-\x1F\x7F]/', '', (string) $code));
+
+        if ($raw === '') {
+            return [];
+        }
+
+        $candidates = [];
+        $push = function (?string $value) use (&$candidates): void {
+            if ($value !== null && $value !== '' && ! in_array($value, $candidates, true)) {
+                $candidates[] = $value;
             }
-            $x += $barWidth;
+        };
+
+        $push($raw);
+
+        // Only UPC/EAN style codes get synonym treatment; internal codes such
+        // as P123456 or member numbers are matched exactly as scanned.
+        $digits = preg_replace('/\D+/', '', $raw);
+        $length = strlen($digits);
+
+        if ($length < 8) {
+            return $candidates;
         }
-        
-        // Add the code text below the barcode
-        $barcode .= '<text x="' . ($width / 2) . '" y="' . ($height - 5) . '" text-anchor="middle" font-family="Arial" font-size="12" fill="black">' . htmlspecialchars($code) . '</text>';
-        
-        $barcode .= '</svg>';
-        
-        return $barcode;
-    }
-    
-    /**
-     * Generate a simple pattern for Code 128 (simplified version)
-     */
-    private static function generateCode128Pattern($code)
-    {
-        // This is a simplified pattern generator
-        // In production, you'd want to use a proper Code 128 library
-        $pattern = [];
-        
-        // Start character
-        $pattern = array_merge($pattern, [1,0,1,0,1,1,0,1,1,0]);
-        
-        // Generate pattern for each character (simplified)
-        for ($i = 0; $i < strlen($code); $i++) {
-            $char = $code[$i];
-            $charPattern = self::getCharacterPattern($char);
-            $pattern = array_merge($pattern, $charPattern);
+
+        // Anything longer than 13 digits is a GTIN with application-identifier
+        // data trailing it, so the GTIN itself is the leading 13 digits.
+        $gtin = $length > 13 ? substr($digits, 0, 13) : $digits;
+        $push($gtin);
+
+        if (strlen($gtin) === 12) {
+            $push('0'.$gtin);            // UPC-A rendered as EAN-13
+        } elseif (strlen($gtin) === 13 && $gtin[0] === '0') {
+            $push(substr($gtin, 1));       // EAN-13 rendered as UPC-A
         }
-        
-        // Stop character
-        $pattern = array_merge($pattern, [1,1,0,0,1,0,1,0,1,1,0]);
-        
-        return $pattern;
-    }
-    
-    /**
-     * Get pattern for a character (simplified)
-     */
-    private static function getCharacterPattern($char)
-    {
-        // Simplified pattern generation
-        // Each character gets a unique 7-bar pattern
-        $patterns = [
-            '0' => [1,0,0,1,0,0,1,1,0,1,1],
-            '1' => [1,1,0,0,1,0,0,1,0,1,1],
-            '2' => [1,0,1,1,0,0,1,0,0,1,1],
-            '3' => [1,1,1,0,0,1,0,0,0,1,1],
-            '4' => [1,0,0,1,1,0,1,0,0,1,1],
-            '5' => [1,1,0,1,1,0,0,1,0,0,1],
-            '6' => [1,0,1,1,1,0,0,1,0,0,1],
-            '7' => [1,0,0,1,0,1,1,0,0,1,1],
-            '8' => [1,1,0,0,1,1,0,1,0,0,1],
-            '9' => [1,0,1,1,0,1,0,1,0,0,1],
-            'A' => [1,1,0,0,1,0,1,1,0,0,1],
-            'B' => [1,0,1,1,0,0,1,1,0,0,1],
-            'C' => [1,1,1,0,0,1,0,1,0,0,1],
-            'D' => [1,0,0,1,0,1,0,1,1,0,0],
-            'E' => [1,1,0,0,1,0,1,0,1,1,0],
-            'F' => [1,0,1,1,0,0,1,0,1,1,0],
-            'G' => [1,1,1,0,0,1,0,0,1,1,0],
-            'H' => [1,0,0,1,1,0,1,0,1,1,0],
-            'I' => [1,1,0,1,1,0,0,1,1,0,0],
-            'J' => [1,0,1,1,1,0,0,1,1,0,0],
-            'K' => [1,0,0,1,0,1,1,0,1,0,0],
-            'L' => [1,1,0,0,1,0,1,1,0,1,0],
-            'M' => [1,0,1,1,0,0,1,1,0,1,0],
-            'N' => [1,1,1,0,0,1,0,1,0,1,0],
-            'O' => [1,0,0,1,0,1,0,1,1,1,0],
-            'P' => [1,1,0,0,1,0,1,0,1,1,1],
-            'Q' => [1,0,1,1,0,0,1,0,1,1,1],
-            'R' => [1,1,1,0,0,1,0,0,1,1,1],
-            'S' => [1,0,0,1,1,0,1,0,1,1,1],
-            'T' => [1,1,0,1,1,0,0,1,1,1,0],
-            'U' => [1,0,1,1,1,0,0,1,1,1,0],
-            'V' => [1,0,0,1,0,1,1,1,0,1,0],
-            'W' => [1,1,0,0,1,0,1,1,1,0,1],
-            'X' => [1,0,1,1,0,0,1,1,1,0,1],
-            'Y' => [1,1,1,0,0,1,0,1,1,0,1],
-            'Z' => [1,0,0,1,1,0,1,1,1,0,1],
-        ];
-        
-        return $patterns[strtoupper($char)] ?? [1,0,1,0,1,0,1,0,1,0,1];
+
+        if ($length > 13) {
+            // A GS1 scan whose GTIN is the 12 digit form still has to resolve.
+            $push(substr($digits, 0, 12));
+        }
+
+        return $candidates;
     }
 }

@@ -2,534 +2,142 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    @auth
+        <meta name="ccfmpc-authenticated" content="1">
+        <style>
+            #sessionGuard {
+                display: none;
+            }
+
+            html.session-pending #sessionGuard {
+                display: flex;
+            }
+
+            html.session-pending [data-session-content] {
+                visibility: hidden !important;
+            }
+        </style>
+    @endauth
     <title>CCFMPC - @yield('title')</title>
+    <link rel="icon" type="image/png" href="{{ asset('images/logotunay-round.png') }}">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="{{ asset('css/style.css') }}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-    <style>
-        /* Override styles for bordered navigation */
-        .sidebar-nav {
-            display: flex !important;
-            flex-direction: column !important;
-            align-items: center !important;
-        }
-        
-        .sidebar-nav a {
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            border: none !important;
-            border-left: 6px solid #d0ff00 !important;
-            background: linear-gradient(90deg, rgba(208, 255, 0, 0.1) 0%, rgba(208, 255, 0, 0.05) 50%, transparent 100%) !important;
-            border-radius: 0 16px 16px 0 !important;
-            margin: 8px 0 !important;
-            width: 100% !important;
-            text-align: left !important;
-            padding: 20px 25px !important;
-            position: relative !important;
-            transition: all 0.3s ease !important;
-            font-size: 16px !important;
-            font-weight: bold !important;
-            min-height: 60px !important;
-            color: #ffffff !important;
-        }
-        
-        .sidebar-nav a:hover {
-            border-left-color: #fff !important;
-            background: linear-gradient(90deg, rgba(208, 255, 0, 0.2) 0%, rgba(208, 255, 0, 0.1) 50%, transparent 100%) !important;
-            transform: translateX(8px) !important;
-            box-shadow: 0 4px 15px rgba(208, 255, 0, 0.4) !important;
-        }
-        
-        .sidebar-nav a.active {
-            border-left: 6px solid #fff !important;
-            background: linear-gradient(90deg, rgba(208, 255, 0, 0.3) 0%, rgba(208, 255, 0, 0.15) 50%, transparent 100%) !important;
-            box-shadow: 0 4px 20px rgba(208, 255, 0, 0.5) !important;
-        }
+    <link rel="stylesheet" href="{{ asset('css/notify.css') }}">
 
-        .sidebar-nav a::before {
-            content: '' !important;
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 2px !important;
-            height: 100% !important;
-            background: linear-gradient(180deg, transparent, #d0ff00, transparent) !important;
-            opacity: 0 !important;
-            transition: opacity 0.3s ease !important;
-        }
-
-        .sidebar-nav a:hover::before {
-            opacity: 1 !important;
-        }
-
-        /* Hide scrollbar and better center the sidebar content */
-        .sidebar {
-            overflow: hidden !important;
-            display: flex !important;
-            flex-direction: column !important;
-            align-items: center !important;
-            justify-content: center !important;
-        }
-
-        .sidebar-nav {
-            width: 100% !important;
-            display: flex !important;
-            flex-direction: column !important;
-            align-items: center !important;
-            justify-content: flex-start !important;
-            padding: 0 0 20px 0 !important;
-            margin-top: -220px !important;
-        }
-
-        /* Responsive Design for All Devices */
-
-        /* Large Desktop (1200px and up) */
-        @media (min-width: 1200px) {
-            .sidebar {
-                width: 220px !important;
-            }
-            
-            .content-area {
-                flex: 1;
-                margin-left: 220px;
-                min-height: 100vh;
-            }
-            
-            .sidebar-nav a {
-                font-size: 18px !important;
-                padding: 22px 30px !important;
-                min-height: 65px !important;
-            }
-        }
-
-        /* Desktop (992px to 1199px) */
-        @media (max-width: 1199px) and (min-width: 992px) {
-            .sidebar {
-                width: 260px !important;
-            }
-            
-            .content-area {
-                margin-left: 260px !important;
-            }
-            
-            .sidebar-nav a {
-                font-size: 17px !important;
-                padding: 21px 28px !important;
-                min-height: 62px !important;
-            }
-        }
-
-        /* Tablet Landscape (768px to 991px) */
-        @media (max-width: 991px) and (min-width: 768px) {
-            .sidebar {
-                width: 220px !important;
-            }
-            
-            .content-area {
-                margin-left: 220px !important;
-            }
-            
-            .sidebar-nav a {
-                font-size: 15px !important;
-                padding: 18px 22px !important;
-                min-height: 55px !important;
-                border-left: 5px solid #d0ff00 !important;
-                border-radius: 0 14px 14px 0 !important;
-            }
-            
-            header {
-                font-size: 28px !important;
-                height: 70px !important;
-            }
-            
-            .main-content {
-                min-height: calc(100vh - 70px) !important;
-            }
-        }
-
-        /* Tablet Portrait (600px to 767px) */
-        @media (max-width: 767px) and (min-width: 600px) {
-            .sidebar {
-                width: 200px !important;
-            }
-            
-            .content-area {
-                margin-left: 200px !important;
-            }
-            
-            .sidebar-nav a {
-                font-size: 14px !important;
-                padding: 16px 20px !important;
-                min-height: 50px !important;
-                border-left: 4px solid #d0ff00 !important;
-                border-radius: 0 12px 12px 0 !important;
-            }
-            
-            header {
-                font-size: 26px !important;
-                height: 65px !important;
-            }
-            
-            .main-content {
-                min-height: calc(100vh - 65px) !important;
-            }
-        }
-
-        /* Mobile Landscape (480px to 599px) */
-        @media (max-width: 599px) and (min-width: 480px) {
-            .sidebar {
-                width: 180px !important;
-            }
-            
-            .content-area {
-                margin-left: 180px !important;
-            }
-            
-            .sidebar-nav a {
-                font-size: 13px !important;
-                padding: 14px 18px !important;
-                min-height: 45px !important;
-                border-left: 3px solid #d0ff00 !important;
-                border-radius: 0 10px 10px 0 !important;
-            }
-            
-            header {
-                font-size: 24px !important;
-                height: 60px !important;
-            }
-            
-            .main-content {
-                min-height: calc(100vh - 60px) !important;
-            }
-        }
-
-        /* Mobile Portrait (320px to 479px) */
-        @media (max-width: 479px) {
-            .sidebar {
-                width: 160px !important;
-            }
-            
-            .content-area {
-                margin-left: 160px !important;
-            }
-            
-            .sidebar-nav a {
-                font-size: 12px !important;
-                padding: 12px 15px !important;
-                min-height: 40px !important;
-                border-left: 3px solid #d0ff00 !important;
-                border-radius: 0 8px 8px 0 !important;
-                margin: 6px 0 !important;
-            }
-            
-            .sidebar-nav a i {
-                font-size: 14px !important;
-            }
-            
-            header {
-                font-size: 20px !important;
-                height: 55px !important;
-            }
-            
-            .main-content {
-                min-height: calc(100vh - 55px) !important;
-                padding: 15px !important;
-            }
-        }
-
-        /* Ultra Small Mobile (up to 319px) */
-        @media (max-width: 319px) {
-            .sidebar {
-                width: 140px !important;
-            }
-            
-            .content-area {
-                margin-left: 140px !important;
-            }
-            
-            .sidebar-nav a {
-                font-size: 11px !important;
-                padding: 10px 12px !important;
-                min-height: 35px !important;
-                border-left: 2px solid #d0ff00 !important;
-                border-radius: 0 6px 6px 0 !important;
-                margin: 4px 0 !important;
-            }
-            
-            .sidebar-nav a i {
-                font-size: 12px !important;
-                display: none !important; /* Hide icons on very small screens */
-            }
-            
-            header {
-                font-size: 18px !important;
-                height: 50px !important;
-            }
-            
-            .main-content {
-                min-height: calc(100vh - 50px) !important;
-                padding: 10px !important;
-            }
-
-            /* Category buttons responsive styles */
-            .category {
-                font-size: 9px !important;
-                padding: 4px 6px !important;
-                margin: 0 2px !important;
-            }
-
-            .categories {
-                flex-wrap: wrap !important;
-                gap: 4px !important;
-            }
-        }
-
-        /* Enhanced Category Buttons Responsive Design */
-        
-        /* Large Desktop (1200px and up) */
-        @media (min-width: 1200px) {
-            .category {
-                font-size: 14px !important;
-                padding: 10px 16px !important;
-                margin: 0 4px !important;
-            }
-            
-            .categories {
-                flex-wrap: nowrap !important;
-                gap: 8px !important;
-                justify-content: flex-start !important;
-                overflow-x: auto !important;
-                padding: 5px 0 10px 0 !important;
-            }
-        }
-
-        /* Desktop (992px to 1199px) */
-        @media (max-width: 1199px) and (min-width: 992px) {
-            .category {
-                font-size: 13px !important;
-                padding: 9px 14px !important;
-                margin: 0 3px !important;
-            }
-            
-            .categories {
-                flex-wrap: nowrap !important;
-                gap: 6px !important;
-                justify-content: flex-start !important;
-                overflow-x: auto !important;
-                padding: 5px 0 10px 0 !important;
-            }
-        }
-
-        /* Tablet Landscape (768px to 991px) */
-        @media (max-width: 991px) and (min-width: 768px) {
-            .category {
-                font-size: 12px !important;
-                padding: 8px 12px !important;
-                margin: 0 2px !important;
-            }
-            
-            .categories {
-                flex-wrap: wrap !important;
-                gap: 5px !important;
-                justify-content: flex-start !important;
-            }
-        }
-
-        /* Tablet Portrait (600px to 767px) */
-        @media (max-width: 767px) and (min-width: 600px) {
-            .category {
-                font-size: 11px !important;
-                padding: 7px 10px !important;
-                margin: 0 2px !important;
-                min-width: auto !important;
-                flex: 0 0 auto !important;
-            }
-            
-            .categories {
-                flex-wrap: wrap !important;
-                gap: 4px !important;
-                justify-content: flex-start !important;
-            }
-        }
-
-        /* Mobile Landscape (480px to 599px) */
-        @media (max-width: 599px) and (min-width: 480px) {
-            .category {
-                font-size: 10px !important;
-                padding: 6px 8px !important;
-                margin: 0 1px !important;
-                min-width: auto !important;
-                flex: 0 0 auto !important;
-            }
-            
-            .categories {
-                flex-wrap: wrap !important;
-                gap: 3px !important;
-                justify-content: flex-start !important;
-            }
-        }
-
-        /* Mobile Portrait (320px to 479px) */
-        @media (max-width: 479px) {
-            .category {
-                font-size: 9px !important;
-                padding: 5px 6px !important;
-                margin: 0 1px !important;
-                min-width: auto !important;
-                flex: 0 0 auto !important;
-            }
-            
-            .categories {
-                flex-wrap: wrap !important;
-                gap: 2px !important;
-                justify-content: flex-start !important;
-            }
-        }
-
-        /* Ultra Small Mobile (up to 319px) */
-        @media (max-width: 319px) {
-            .category {
-                font-size: 8px !important;
-                padding: 4px 5px !important;
-                margin: 0 1px !important;
-                min-width: auto !important;
-                flex: 0 0 auto !important;
-            }
-            
-            .categories {
-                flex-wrap: wrap !important;
-                gap: 2px !important;
-                justify-content: flex-start !important;
-            }
-        }
-
-        @media (max-width: 599px) {
-            .product-grid {
-                grid-template-columns: repeat(2, 1fr) !important;
-                gap: 8px !important;
-            }
-        }
-
-        @media (max-width: 479px) {
-            .product-grid {
-                grid-template-columns: repeat(2, 1fr) !important;
-                gap: 6px !important;
-            }
-            
-            .product-card {
-                padding: 8px !important;
-            }
-            
-            .product-name {
-                font-size: 11px !important;
-            }
-            
-            .product-price {
-                font-size: 10px !important;
-            }
-        }
-
-        @media (max-width: 319px) {
-            .product-grid {
-                grid-template-columns: repeat(1, 1fr) !important;
-                gap: 4px !important;
-            }
-            
-            .product-card {
-                padding: 6px !important;
-                min-height: 80px !important;
-            }
-            
-            .product-name {
-                font-size: 10px !important;
-            }
-            
-            .product-price {
-                font-size: 9px !important;
-            }
-        }
-
-        /* Top Notification Styles */
-        .notification-top {
-            position: absolute;
-            top: 15px;
-            right: 20px;
-            z-index: 1000;
-        }
-
-        .notification-link-top {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 40px;
-            height: 40px;
-            background: rgba(208, 255, 0, 0.1);
-            border-radius: 50%;
-            color: #ffffff;
-            text-decoration: none;
-            position: relative;
-            transition: all 0.3s ease;
-        }
-
-        .notification-link-top:hover {
-            background: rgba(208, 255, 0, 0.2);
-            transform: scale(1.1);
-        }
-
-        .notification-top .notification-badge {
-            position: absolute;
-            top: -5px;
-            right: -5px;
-            background: #ff0000;
-            color: #fff;
-            border-radius: 50%;
-            width: 16px;
-            height: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 10px;
-            font-weight: bold;
-        }
-    </style>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <script src="{{ asset('js/notify.js') }}" defer></script>
 </head>
-<body>
-    <div class="layout-container">
-        <aside class="sidebar">
-            <nav class="sidebar-nav">
+<body class="min-h-screen w-full overflow-x-clip bg-brand-50 text-slate-900 antialiased">
+    <div id="sessionGuard" class="fixed inset-0 z-[100] items-center justify-center bg-brand-50 px-4" role="status" aria-live="polite">
+        <div class="flex items-center gap-3 rounded-xl border border-[#DCEFE3] bg-white px-5 py-4 text-sm font-medium text-slate-600 shadow-lg">
+            <span class="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-brand-600" aria-hidden="true"></span>
+            <span>Checking your session...</span>
+        </div>
+    </div>
+
+    @php
+        $role = Auth::user()->role ?? null;
+    @endphp
+
+    <div class="flex min-h-screen w-full max-w-full" data-session-content>
+        {{-- Off-canvas drawer backdrop (below lg). Sits under the header so the
+             hamburger stays clickable while the drawer is open. --}}
+        <div id="sidebarBackdrop" class="fixed inset-0 z-30 hidden bg-slate-900/50 lg:hidden" onclick="closeSidebar()" aria-hidden="true"></div>
+
+        {{-- Sidebar: off-canvas drawer < lg, static sticky sidebar >= lg --}}
+        <aside id="sidebar" class="sidebar fixed inset-y-0 left-0 z-50 flex w-[250px] max-w-[85vw] -translate-x-full flex-col border-r border-[#DCEFE3] bg-white shadow-xl transition-transform duration-200 lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:shrink-0 lg:translate-x-0 lg:border-b-0 lg:shadow-none" aria-label="Main navigation">
+            <div class="flex items-center justify-between gap-3 border-b border-[#DCEFE3] px-4 py-3 lg:h-16 lg:px-5">
+                <div class="flex items-center gap-3">
+                    <img src="{{ asset('images/logotunay.jpg') }}" alt="CCFMPC logo" class="h-9 w-9 shrink-0 rounded-full object-cover" />
+                    <div class="min-w-0 leading-tight">
+                        <p class="truncate text-sm font-semibold text-slate-900">CCFMPC</p>
+                        <p class="hidden truncate text-xs text-slate-500 lg:block">Cooperative Store</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeSidebar()" class="-mr-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 lg:hidden" aria-label="Close menu">
+                    <x-icon name="times" />
+                </button>
+            </div>
+
+            <nav class="flex flex-1 flex-col items-center gap-1 overflow-y-auto px-2 py-2 lg:items-stretch lg:overflow-visible lg:px-3 lg:py-0 lg:pt-4 lg:pb-6">
                 @auth
-                    @if(Auth::user()->role === 'cashier')
-                        <a href="{{ route('shop.index') }}" class="{{ request()->is('/pos') ? 'active' : '' }}"><i class="fa fa-shopping-cart" style="margin-right: 10px;"></i> POS</a>
+                    @if($role === 'admin')
+                        <div class="hidden px-3 pb-2 pt-4 text-[11px] font-semibold uppercase tracking-wider text-slate-400 lg:block">Point of Sale</div>
+                        <a href="{{ route('shop.index') }}" class="flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-colors {{ request()->routeIs('shop.index') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' }}">
+                            <x-icon name="shopping-cart" /> POS
+                        </a>
+
+                        <div class="hidden px-3 pb-2 pt-4 text-[11px] font-semibold uppercase tracking-wider text-slate-400 lg:block">Management</div>
+                        <a href="{{ route('inventory.index') }}" class="flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-colors {{ request()->routeIs('inventory.*') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' }}">
+                            <x-icon name="archive" /> Inventory
+                        </a>
+                        <a href="{{ route('members.index') }}" class="flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-colors {{ request()->routeIs('members.*') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' }}">
+                            <x-icon name="users" /> Members
+                        </a>
+                        <a href="{{ route('analytics.index') }}" class="flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-colors {{ request()->routeIs('analytics.*') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' }}">
+                            <x-icon name="bar-chart" /> Analytics
+                        </a>
+                        <a href="{{ route('credits.index') }}" class="flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-colors {{ request()->routeIs('credits.*') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' }}">
+                            <x-icon name="credit-card" /> Credits
+                        </a>
+                        <a href="{{ route('transactions.index') }}" class="flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-colors {{ request()->routeIs('transactions.*') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' }}">
+                            <x-icon name="money" /> Transactions
+                        </a>
+                        <a href="{{ route('accounts.index') }}" class="flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-colors {{ request()->routeIs('accounts.*') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' }}">
+                            <x-icon name="users" /> Accounts
+                        </a>
+                    @else
+                        <div class="hidden px-3 pb-2 pt-4 text-[11px] font-semibold uppercase tracking-wider text-slate-400 lg:block">Point of Sale</div>
+                        <a href="{{ route('shop.index') }}" class="flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-colors {{ request()->routeIs('shop.index') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' }}">
+                            <x-icon name="shopping-cart" /> POS
+                        </a>
+                        <a href="{{ route('inventory.index') }}" class="flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-colors {{ request()->routeIs('inventory.*') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' }}">
+                            <x-icon name="archive" /> Inventory
+                        </a>
+                        <a href="{{ route('analytics.index') }}" class="flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-colors {{ request()->routeIs('analytics.*') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' }}">
+                            <x-icon name="bar-chart" /> Analytics
+                        </a>
+                        <a href="{{ route('credits.index') }}" class="flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-colors {{ request()->routeIs('credits.*') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' }}">
+                            <x-icon name="credit-card" /> Credits
+                        </a>
                     @endif
-                    
-                    @if(Auth::user()->role === 'admin')
-                        <a href="{{ route('shop.index') }}" class="{{ request()->is('/pos') ? 'active' : '' }}"><i class="fa fa-shopping-cart" style="margin-right: 10px;"></i> POS</a>
-                        <a href="{{ route('inventory.index') }}" class="{{ request()->is('inventory') || request()->is('inventory/*') ? 'active' : '' }}"><i class="fa fa-archive" style="margin-right: 10px;"></i> Inventory</a>
-                        <a href="{{ route('members.index') }}" class="{{ request()->is('members') || request()->is('members/*') ? 'active' : '' }}"><i class="fa fa-users" style="margin-right: 10px;"></i> Members</a>
-                        <a href="{{ route('analytics.index') }}" class="{{ request()->is('analytics') ? 'active' : '' }}"><i class="fa fa-bar-chart" style="margin-right: 10px;"></i> Analytics</a>
-                    @endif
-                    
-                    <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" style="margin-top: auto; background: rgba(255,255,255,0.1);"><i class="fa fa-sign-out" style="margin-right: 10px;"></i> Logout</a>
+
+                    <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').requestSubmit();" class="flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 lg:mt-auto">
+                        <x-icon name="sign-out" /> Logout
+                    </a>
                 @endauth
             </nav>
         </aside>
-        <header>
-            <div class="topnav" id="myTopnav">
-                <div class="logo-placeholder">
-                    <i class="fa fa-image" style="font-size: 40px; color: #d0ff00;"></i>
+
+        {{-- Main column --}}
+        <div class="flex min-w-0 flex-1 flex-col">
+            <header class="sticky top-0 z-40 w-full border-b border-[#DCEFE3] bg-white/90 backdrop-blur">
+                <div class="flex h-16 w-full min-w-0 items-center justify-between gap-4 px-4 md:px-6">
+                    <div class="flex min-w-0 items-center gap-3">
+                        <button type="button" id="sidebarToggle" onclick="toggleSidebar()" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 lg:hidden" aria-label="Open menu" aria-controls="sidebar" aria-expanded="false">
+                            <x-icon name="bars" />
+                        </button>
+                        <div class="min-w-0">
+                            <p class="hidden truncate text-[13px] text-slate-500 sm:block">Cavite College of Fisheries Multi-Purpose Cooperative</p>
+                            <h1 class="truncate text-lg font-semibold text-slate-900">@hasSection('title') @yield('title') @else Overview @endif</h1>
+                        </div>
+                    </div>
+                    <div class="notification-top relative flex items-center">
+                        <a href="#" onclick="toggleNotifications()" class="notification-link-top relative flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700">
+                            <x-icon name="bell" class="h-5 w-5" />
+                            <span class="notification-badge absolute -right-0.5 -top-0.5 hidden h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white" id="notificationBadge" style="display: none;">0</span>
+                            <span id="redDotIndicator" style="display: none; position: absolute; top: 2px; right: 2px; width: 10px; height: 10px; background: #ef4444; border-radius: 50%; border: 2px solid #fff; animation: blink 1.5s infinite; z-index: 9999;"></span>
+                        </a>
+                    </div>
                 </div>
-                <div class="title">Cavite College of Fisheries Multi-Purpose Cooperative </div>
-                <div class="notification-top">
-                    <a href="#" onclick="toggleNotifications()" class="notification-link-top">
-                        <i class="fa fa-bell"></i>
-                        <span class="notification-badge" id="notificationBadge">0</span>
-                        <span id="redDotIndicator" style="display: none; position: absolute; top: -2px; right: -2px; width: 10px; height: 10px; background: #ff0000; border-radius: 50%; border: 1px solid #fff; animation: blink 1.5s infinite; z-index: 9999;"></span>
-                    </a>
-                </div>
-            </div>
-        </header>
-        <div class="content-area">
-            <main class="main-content">
+            </header>
+
+            <main class="min-w-0 w-full max-w-full flex-1 px-4 py-6 md:px-6 lg:px-6 lg:py-8">
                 @yield('content')
             </main>
         </div>
@@ -543,11 +151,11 @@
     @endauth
 
     <!-- Notification Modal -->
-    <div class="notif-overlay" id="notificationOverlay">
-        <div class="notif-box">
-            <span class="notif-close" onclick="toggleNotifications()">&times;</span>
-            <h2>Low Stock Notifications</h2>
-            <div class="notif-content" id="notificationContent">
+    <div class="notif-overlay fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 p-4" id="notificationOverlay">
+        <div class="notif-box relative flex h-[80vh] w-full max-w-lg flex-col rounded-xl bg-white p-6 shadow-xl">
+            <span class="notif-close absolute right-5 top-4 cursor-pointer text-2xl leading-none text-slate-400 transition-colors hover:text-slate-600" onclick="toggleNotifications()">&times;</span>
+            <h2 class="mb-4 text-lg font-semibold text-slate-900">Low Stock Notifications</h2>
+            <div class="notif-content flex-1 overflow-y-auto pr-1" id="notificationContent">
                 <div class="no-notifications">No low stock items</div>
             </div>
         </div>
@@ -556,6 +164,7 @@
     <script>
         // Notification System
         let lowStockItems = [];
+        let lowStockTimer = null;
         const LOW_STOCK_THRESHOLD = 10; // Items with stock <= 10 will trigger notification
 
         // Toggle notification modal
@@ -600,7 +209,7 @@
                             <div class="notif-item-name">${item.name}</div>
                             <div class="notif-item-details">Category: ${item.category}</div>
                         </div>
-                        <div class="notif-item-stock">${item.stock} units</div>
+                        <div class="notif-item-stock">${item.stock} qty</div>
                     </div>
                 `).join('');
             }
@@ -640,7 +249,16 @@
             checkLowStock();
             
             // Set up periodic checking (every 30 seconds)
-            setInterval(checkLowStock, 30000);
+            lowStockTimer = setInterval(checkLowStock, 30000);
+        });
+
+        ['ccfmpc:account-disabled', 'ccfmpc:logout', 'ccfmpc:session-ended'].forEach(function (eventName) {
+            window.addEventListener(eventName, function () {
+                if (lowStockTimer !== null) {
+                    clearInterval(lowStockTimer);
+                    lowStockTimer = null;
+                }
+            });
         });
 
         // Close modal when clicking outside
@@ -649,7 +267,83 @@
                 toggleNotifications();
             }
         });
+
+        // Mobile/tablet off-canvas sidebar
+        function setSidebarState(open) {
+            const sidebar = document.getElementById('sidebar');
+            const backdrop = document.getElementById('sidebarBackdrop');
+            const toggle = document.getElementById('sidebarToggle');
+
+            if (!sidebar || !backdrop) {
+                return;
+            }
+
+            sidebar.classList.toggle('open', open);
+            // Toggle the actual Tailwind translate utilities too, so the
+            // drawer works regardless of CSS layer/minifier behaviour.
+            sidebar.classList.toggle('-translate-x-full', !open);
+            sidebar.classList.toggle('translate-x-0', open);
+            backdrop.classList.toggle('hidden', !open);
+            document.body.classList.toggle('sidebar-open', open);
+
+            if (toggle) {
+                toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+                toggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+            }
+        }
+
+        function openSidebar() {
+            setSidebarState(true);
+        }
+
+        function closeSidebar() {
+            setSidebarState(false);
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            setSidebarState(!sidebar.classList.contains('open'));
+        }
+
+        // Keep the drawer state consistent with the responsive breakpoint:
+        // reset it when crossing into the persistent-sidebar layout.
+        (function () {
+            const desktopQuery = window.matchMedia('(min-width: 1024px)');
+
+            const syncBreakpoint = (event) => {
+                if (event.matches) {
+                    closeSidebar();
+                }
+            };
+
+            if (typeof desktopQuery.addEventListener === 'function') {
+                desktopQuery.addEventListener('change', syncBreakpoint);
+            } else if (typeof desktopQuery.addListener === 'function') {
+                desktopQuery.addListener(syncBreakpoint);
+            }
+
+            if (desktopQuery.matches) {
+                closeSidebar();
+            }
+
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape') {
+                    closeSidebar();
+                }
+            });
+        })();
     </script>
 
-</body>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            @if(session('success'))
+                showToast(@json(session('success')), 'success');
+            @endif
+            @if(session('error'))
+                showToast(@json(session('error')), 'error');
+            @endif
+        });
+    </script>
+
+    </body>
 </html>

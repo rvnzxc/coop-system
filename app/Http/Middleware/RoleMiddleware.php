@@ -11,36 +11,32 @@ class RoleMiddleware
     /**
      * Handle an incoming request.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \Closure  $next
-     * @param  string  $role
      * @return mixed
      */
     public function handle(Request $request, Closure $next, string $role)
     {
-        // Check if user is authenticated
-        if (!Auth::check()) {
-            // Redirect to login page with session
+        if (! Auth::check()) {
             session(['url.intended' => $request->fullUrl()]);
+
             return redirect('/login');
         }
 
-        // Check if user has required role
-        if (Auth::user()->role !== $role) {
-            // Admin can access everything
-            if (Auth::user()->role === 'admin') {
-                return $next($request);
+        $userRole = Auth::user()->role;
+
+        // Admin can access everything
+        if ($userRole === 'admin') {
+            return $next($request);
+        }
+
+        // Non-admin trying to access admin area
+        if ($role === 'admin') {
+            if ($request->isMethodSafe() && ! $request->expectsJson()) {
+                return redirect()
+                    ->route('shop.index')
+                    ->with('error', "You don't have permission to view that page.");
             }
-            
-            // Cashier trying to access admin area
-            if ($role === 'admin' && Auth::user()->role === 'cashier') {
-                abort(403, 'Access denied. Admin access required.');
-            }
-            
-            // Cashier trying to access cashier area - allow
-            if ($role === 'cashier' && Auth::user()->role === 'cashier') {
-                return $next($request);
-            }
+
+            abort(403, 'Access denied. Admin access required.');
         }
 
         return $next($request);
