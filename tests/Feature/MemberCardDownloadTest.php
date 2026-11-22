@@ -109,6 +109,23 @@ class MemberCardDownloadTest extends TestCase
         $response->assertSee('data-download-png', false);
     }
 
+    public function test_member_analytics_shows_member_photo_and_profile(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('members/photos/analytics.jpg', 'fake-image');
+
+        $admin = $this->createAdmin();
+        $member = $this->createMember();
+        $member->update(['photo' => 'members/photos/analytics.jpg']);
+
+        $response = $this->actingAs($admin)->get(route('members.analytics', $member->id));
+
+        $response->assertOk()
+            ->assertSee('Juan Dela Cruz')
+            ->assertSee('MEM00001')
+            ->assertSee(Storage::disk('public')->url('members/photos/analytics.jpg'), false);
+    }
+
     public function test_cashier_is_redirected_away_from_member_card_downloads(): void
     {
         $cashier = User::create([

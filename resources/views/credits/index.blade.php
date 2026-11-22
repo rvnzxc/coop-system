@@ -9,6 +9,7 @@
             <h2 class="text-xl font-bold text-slate-900">Credit Management</h2>
             <p class="mt-0.5 text-sm text-slate-500">Track member credit purchases</p>
         </div>
+        @include('credits._download-report')
     </div>
 
     <x-tab-bar

@@ -30,6 +30,8 @@ class AuditLog extends Model
 
     public const ACTION_CATEGORY_DELETED = 'category_deleted';
 
+    public const ACTION_REPORT_EXPORTED = 'report_exported';
+
     public const ACTIONS = [
         self::ACTION_LOGIN => 'Login',
         self::ACTION_LOGOUT => 'Logout',
@@ -43,6 +45,7 @@ class AuditLog extends Model
         self::ACTION_INACTIVE_MEMBER_BLOCKED => 'Inactive member blocked',
         self::ACTION_CATEGORY_CREATED => 'Category created',
         self::ACTION_CATEGORY_DELETED => 'Category deleted',
+        self::ACTION_REPORT_EXPORTED => 'Report exported',
     ];
 
     protected $fillable = [
@@ -87,6 +90,7 @@ class AuditLog extends Model
             self::ACTION_INACTIVE_MEMBER_BLOCKED => self::formatInactiveMemberBlocked($details),
             self::ACTION_CATEGORY_CREATED => self::formatCategoryCreated($details),
             self::ACTION_CATEGORY_DELETED => self::formatCategoryDeleted($details),
+            self::ACTION_REPORT_EXPORTED => self::formatReportExported($details),
             self::ACTION_SALE_COMPLETED => self::formatSaleCompleted($details),
             default => self::formatGeneric($details),
         };
@@ -209,6 +213,16 @@ class AuditLog extends Model
         $name = self::stringValue($details['name'] ?? null);
 
         return 'Deleted category'.($name !== '' ? " '{$name}'" : '').' for @'.self::username($details).'.';
+    }
+
+    private static function formatReportExported(array $details): string
+    {
+        $report = self::stringValue($details['report'] ?? null);
+        $format = strtoupper(self::stringValue($details['format'] ?? null));
+
+        $label = $report !== '' ? ucfirst(str_replace('-', ' ', $report)) : 'Report';
+
+        return 'Exported '.$label.($format !== '' ? ' ('.$format.')' : '').' for @'.self::username($details).'.';
     }
 
     private static function formatSaleCompleted(array $details): string

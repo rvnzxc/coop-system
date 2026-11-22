@@ -49,7 +49,8 @@ class CashierViewOnlyAccessTest extends TestCase
             ], false)
             ->assertDontSee('href="'.route('members.index').'"', false)
             ->assertDontSee('href="'.route('transactions.index').'"', false)
-            ->assertDontSee('href="'.route('accounts.index').'"', false);
+            ->assertDontSee('href="'.route('accounts.index').'"', false)
+            ->assertDontSee('href="'.route('analytics.index').'#reports"', false);
     }
 
     public function test_admin_sidebar_keeps_management_links(): void
@@ -61,7 +62,8 @@ class CashierViewOnlyAccessTest extends TestCase
             ->assertOk()
             ->assertSee('href="'.route('members.index').'"', false)
             ->assertSee('href="'.route('transactions.index').'"', false)
-            ->assertSee('href="'.route('accounts.index').'"', false);
+            ->assertSee('href="'.route('accounts.index').'"', false)
+            ->assertDontSee('href="'.route('analytics.index').'#reports"', false);
     }
 
     public function test_cashier_can_view_inventory_without_management_controls(): void

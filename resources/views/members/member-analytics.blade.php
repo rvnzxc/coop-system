@@ -3,17 +3,32 @@
 @section('title', 'Member Analytics')
 
 @section('content')
+@php
+    $profilePhotoUrl = $member->photo_url;
+    $profileName = trim($member->first_name.' '.$member->last_name);
+    $profileInitials = collect(preg_split('/\s+/', $profileName))
+        ->filter()
+        ->take(2)
+        ->map(fn ($part) => mb_strtoupper(mb_substr($part, 0, 1)))
+        ->implode('');
+@endphp
+
 <div class="mx-auto max-w-5xl">
     {{-- Header --}}
     <div class="mb-6 flex flex-col items-start gap-5 rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:flex-row sm:items-center">
-        <div class="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-brand-600 text-3xl text-white">
-            <x-icon name="user" class="h-8 w-8" />
+        <div class="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-600 text-2xl font-bold text-white ring-2 ring-brand-100">
+            @if($profilePhotoUrl)
+                <img src="{{ $profilePhotoUrl }}" alt="{{ $profileName }}" class="h-full w-full object-cover">
+            @else
+                <span>{{ $profileInitials ?: '?' }}</span>
+            @endif
         </div>
 
         <div class="min-w-0 flex-1">
             <h2 class="truncate text-2xl font-bold text-slate-900">
-                {{ $member->first_name }} {{ $member->last_name }}
+                {{ $profileName }}
             </h2>
+            <div class="mt-0.5 text-xs font-semibold uppercase tracking-wider text-brand-600">{{ $member->member_number }}</div>
             <div class="mt-1 text-sm text-slate-500">
                 @if($member->email)
                     <div class="mb-1"><x-icon name="envelope" class="mr-2 h-3.5 w-3.5" />{{ $member->email }}</div>

@@ -8,6 +8,7 @@ use App\Http\Controllers\CreditController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\MyTransactionController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ShopController;
 use App\Http\Controllers\TransactionController;
 
@@ -108,6 +109,15 @@ Route::middleware(['auth', 'role.admin'])->prefix('accounts')->group(function ()
 // Analytics - Read-only for all authenticated users
 Route::middleware(['auth'])->group(function () {
     Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
+});
+
+// Report exports - Admin sees all data, cashier sees only their own activity
+Route::middleware(['auth', 'report.access'])->prefix('reports')->group(function () {
+    Route::get('/credits', [ReportController::class, 'credits'])->name('reports.credits');
+    Route::get('/sales', [ReportController::class, 'sales'])->name('reports.sales');
+    Route::get('/inventory', [ReportController::class, 'inventory'])->name('reports.inventory');
+    Route::get('/member-purchases', [ReportController::class, 'memberPurchases'])->name('reports.member-purchases');
+    Route::get('/transactions', [ReportController::class, 'transactions'])->name('reports.transactions');
 });
 
 // Transactions and activity log - Admin only

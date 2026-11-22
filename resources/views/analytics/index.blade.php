@@ -12,6 +12,7 @@
             @endunless
         </div>
         <p class="mt-0.5 text-sm text-slate-500">Track revenue trends across your cooperative store</p>
+        @include('analytics._reports-dialog')
     </div>
 
     {{-- Time Range Toggles --}}

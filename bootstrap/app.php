@@ -29,6 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role.cashier' => \App\Http\Middleware\RoleMiddleware::class.':cashier',
             'role.admin' => \App\Http\Middleware\RoleMiddleware::class.':admin',
             'inventory.write' => \App\Http\Middleware\EnsureInventoryWriteAccess::class,
+            'report.access' => \App\Http\Middleware\EnsureReportAccess::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
