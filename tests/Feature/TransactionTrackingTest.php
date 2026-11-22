@@ -142,8 +142,8 @@ class TransactionTrackingTest extends TestCase
         $response->assertSee('#'.$saleB->id);
         $response->assertSee('Alice Cashier');
         $response->assertSee('Bob Cashier');
-        $response->assertSee('₱125.50');
-        $response->assertSee('₱75.25');
+        $response->assertSee('&#8369;125.50', false);
+        $response->assertSee('&#8369;75.25', false);
 
         $summary = $response->viewData('summary');
         $this->assertSame(2, $summary['transactions']);
@@ -224,13 +224,13 @@ class TransactionTrackingTest extends TestCase
         $this->assertSame(111.0, $perCashier->first()['total_sales']);
     }
 
-    public function test_cashier_cannot_access_admin_transaction_endpoints(): void
+    public function test_cashier_is_redirected_away_from_admin_transaction_endpoints(): void
     {
         $cashier = $this->createUser();
 
-        $this->actingAs($cashier)->get('/transactions')->assertForbidden();
-        $this->actingAs($cashier)->get('/transactions/export')->assertForbidden();
-        $this->actingAs($cashier)->get('/transactions/activity')->assertForbidden();
+        $this->actingAs($cashier)->get('/transactions')->assertRedirect(route('shop.index'));
+        $this->actingAs($cashier)->get('/transactions/export')->assertRedirect(route('shop.index'));
+        $this->actingAs($cashier)->get('/transactions/activity')->assertRedirect(route('shop.index'));
     }
 
     public function test_cashier_only_sees_own_transactions_and_defaults_to_today(): void
@@ -266,7 +266,7 @@ class TransactionTrackingTest extends TestCase
         $yesterdayResponse->assertDontSee('#'.$todayB->id);
     }
 
-    public function test_csv_export_contains_only_filtered_transactions(): void
+    public function test_excel_export_contains_only_filtered_transactions_with_formatted_cells(): void
     {
         $cashierA = $this->createUser();
         $cashierB = $this->createUser();
@@ -282,16 +282,71 @@ class TransactionTrackingTest extends TestCase
         $saleB = $this->createSale(['cashier_id' => $cashierB->id, 'total' => 99.00]);
 
         $admin = $this->createUser('admin');
-        $response = $this->actingAs($admin)->get('/transactions/export?cashier_id='.$cashierA->id);
+        $response = $this->actingAs($admin)->get('/transactions/export?cashier_id='.$cashierA->id, [
+            'Accept' => 'application/json',
+        ]);
 
         $response->assertOk();
-        $this->assertStringContainsString('text/csv', $response->headers->get('Content-Type'));
+        $this->assertSame(
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            $response->headers->get('Content-Type')
+        );
+        $this->assertStringContainsString('attachment; filename="CCFMPC_Transactions_', $response->headers->get('Content-Disposition'));
+        $this->assertStringEndsWith('.xlsx"', $response->headers->get('Content-Disposition'));
 
-        $csv = $response->streamedContent();
-        $this->assertStringContainsString('Transaction ID', $csv);
-        $this->assertMatchesRegularExpression('/(^|\n)'.$saleA->id.',/', $csv);
-        $this->assertDoesNotMatchRegularExpression('/(^|\n)'.$saleB->id.',/', $csv);
-        $this->assertStringContainsString('Rice x2 @ 22.25', $csv);
+        $contents = $response->getContent();
+        $this->assertStringStartsWith('PK', $contents);
+
+        $sheet = $this->xlsxEntry($contents, 'xl/worksheets/sheet1.xml');
+        $styles = $this->xlsxEntry($contents, 'xl/styles.xml');
+
+        $this->assertNotNull($sheet);
+        $this->assertNotNull($styles);
+
+        foreach (['Date / Time', 'Transaction ID', 'Cashier', 'Member', 'Payment', 'Total', 'Status', 'Items'] as $header) {
+            $this->assertStringContainsString('<t xml:space="preserve">'.$header.'</t>', $sheet);
+        }
+
+        $this->assertStringContainsString('<t xml:space="preserve">#'.$saleA->id.'</t>', $sheet);
+        $this->assertStringNotContainsString('<t xml:space="preserve">#'.$saleB->id.'</t>', $sheet);
+        $this->assertStringContainsString('<t xml:space="preserve">Rice x2</t>', $sheet);
+
+        $this->assertStringContainsString('&quot;₱&quot;#,##0.00', $styles);
+        $this->assertStringContainsString('mmm dd, yyyy h:mm AM/PM', $styles);
+        $this->assertStringContainsString('wrapText="1"', $styles);
+        $this->assertStringContainsString('<pane ySplit="1" topLeftCell="A2"', $sheet);
+        $this->assertStringContainsString('customHeight="1"', $sheet);
+        $this->assertStringContainsString('<col min="8" max="8" width="50" customWidth="1"/>', $sheet);
+        $this->assertMatchesRegularExpression('/<c r="A2" s="4"><v>\d+(\.\d+)?<\/v><\/c>/', $sheet);
+        $this->assertStringContainsString('<c r="A3" s="5" t="inlineStr"><is><t xml:space="preserve">TOTAL</t></is></c>', $sheet);
+        $this->assertStringContainsString('<c r="F3" s="6"><f>SUM(F2:F2)</f><v>44.5</v></c>', $sheet);
+    }
+
+    public function test_excel_export_rejects_empty_results_and_uses_date_range_filename(): void
+    {
+        $admin = $this->createUser('admin');
+
+        $this->actingAs($admin)
+            ->getJson('/transactions/export')
+            ->assertStatus(422)
+            ->assertJson(['message' => 'No transactions to export.']);
+
+        $this->actingAs($admin)
+            ->get('/transactions/export')
+            ->assertRedirect(route('transactions.index'))
+            ->assertSessionHas('error', 'No transactions to export.');
+
+        $sale = $this->createSale(['total' => 15.00]);
+        $sale->created_at = Carbon::parse('2026-01-15 10:30:00');
+        $sale->save();
+
+        $response = $this->actingAs($admin)->get('/transactions/export?date_from=2026-01-01&date_to=2026-01-31');
+
+        $response->assertOk();
+        $this->assertStringContainsString(
+            'filename="CCFMPC_Transactions_2026-01-01_to_2026-01-31.xlsx"',
+            $response->headers->get('Content-Disposition')
+        );
     }
 
     public function test_unknown_cashier_is_displayed_as_unknown(): void
@@ -436,6 +491,113 @@ class TransactionTrackingTest extends TestCase
         $this->assertSame(AuditLog::ACTION_LOGOUT, $logs->first()->action);
     }
 
+    public function test_activity_log_hides_legacy_void_rows(): void
+    {
+        $admin = $this->createUser('admin');
+
+        foreach (['void', 'sale_voided', AuditLog::ACTION_LOGIN] as $action) {
+            AuditLog::create([
+                'user_id' => $admin->id,
+                'action' => $action,
+                'target_type' => 'user',
+                'target_id' => $admin->id,
+                'details' => ['username' => $admin->username],
+            ]);
+        }
+
+        $response = $this->actingAs($admin)->get('/transactions/activity');
+
+        $response->assertOk()
+            ->assertDontSee('value="void"', false)
+            ->assertDontSee('value="sale_voided"', false)
+            ->assertDontSee('Sale voided', false);
+
+        $logs = $response->viewData('logs');
+        $this->assertSame(1, $logs->total());
+        $this->assertSame(AuditLog::ACTION_LOGIN, $logs->first()->action);
+    }
+
+    public function test_activity_details_are_rendered_in_plain_language(): void
+    {
+        $this->assertSame(
+            'Logged in as admin (Admin)',
+            AuditLog::formatActivityDetails(AuditLog::ACTION_LOGIN, ['username' => 'admin', 'role' => 'admin'])
+        );
+
+        $this->assertSame(
+            'Logged out',
+            AuditLog::formatActivityDetails(AuditLog::ACTION_LOGOUT, ['username' => 'jeyms'])
+        );
+
+        $this->assertSame(
+            'Deactivated account of @jeyms. Active sessions were signed out.',
+            AuditLog::formatActivityDetails(AuditLog::ACTION_ACCOUNT_STATUS_CHANGED, [
+                'username' => 'jeyms',
+                'is_active' => false,
+                'previous_is_active' => true,
+                'sessions_invalidated' => true,
+            ])
+        );
+
+        $this->assertSame(
+            'Reactivated account of @jeyms.',
+            AuditLog::formatActivityDetails(AuditLog::ACTION_ACCOUNT_STATUS_CHANGED, [
+                'username' => 'jeyms',
+                'is_active' => true,
+                'previous_is_active' => false,
+                'sessions_invalidated' => false,
+            ])
+        );
+
+        $updated = AuditLog::formatActivityDetails(AuditLog::ACTION_ACCOUNT_UPDATED, [
+            'username' => 'jeyms',
+            'is_active' => 'no',
+            'previous_is_active' => 'yes',
+            'sessions_invalidated' => 'yes',
+            'password_changed' => true,
+        ]);
+        $this->assertStringContainsString('Deactivated account of @jeyms.', $updated);
+        $this->assertStringContainsString('Password was changed.', $updated);
+        $this->assertStringContainsString('Active sessions were signed out.', $updated);
+
+        $sale = AuditLog::formatActivityDetails(AuditLog::ACTION_SALE_COMPLETED, [
+            'transaction_id' => 123,
+            'total' => 1250,
+            'payment_method' => 'cash',
+            'item_count' => 3,
+            'member_id' => 4,
+        ]);
+        $this->assertStringContainsString('Completed sale #123', $sale);
+        $this->assertStringContainsString('3 items', $sale);
+        $this->assertStringContainsString('₱1,250.00 via cash', $sale);
+        $this->assertStringNotContainsString('is_active', $sale);
+
+        $this->assertSame(
+            'Is active: yes, Note: hello.',
+            AuditLog::formatActivityDetails('custom_event', ['is_active' => true, 'note' => 'hello'])
+        );
+    }
+
+    public function test_activity_log_table_omits_target_and_uses_plain_details(): void
+    {
+        $admin = $this->createUser('admin', ['username' => 'adminaudit']);
+
+        AuditLog::create([
+            'user_id' => $admin->id,
+            'action' => AuditLog::ACTION_LOGIN,
+            'target_type' => 'user',
+            'target_id' => $admin->id,
+            'details' => ['username' => 'adminaudit', 'role' => 'admin'],
+        ]);
+
+        $response = $this->actingAs($admin)->get('/transactions/activity');
+
+        $response->assertOk();
+        $response->assertSee('Logged in as adminaudit (Admin)');
+        $response->assertSee('Details');
+        $response->assertDontSee('>Target<', false);
+    }
+
     public function test_sale_items_keep_the_unit_price_at_time_of_sale(): void
     {
         $cashier = $this->createUser();
@@ -457,5 +619,39 @@ class TransactionTrackingTest extends TestCase
             'unit_price' => 12.50,
             'subtotal' => 50.00,
         ]);
+    }
+
+    private function xlsxEntry(string $archive, string $entry): ?string
+    {
+        $offset = 0;
+
+        while ($offset + 30 <= strlen($archive)) {
+            $header = unpack(
+                'Vsignature/vversion/vflags/vmethod/vtime/vdate/Vcrc/VcompressedSize/VuncompressedSize/vnameLength/vextraLength',
+                substr($archive, $offset, 30)
+            );
+
+            if ($header['signature'] !== 0x04034B50) {
+                return null;
+            }
+
+            $name = substr($archive, $offset + 30, $header['nameLength']);
+            $dataStart = $offset + 30 + $header['nameLength'] + $header['extraLength'];
+            $data = substr($archive, $dataStart, $header['compressedSize']);
+
+            if ($name === $entry) {
+                if ($header['method'] === 8) {
+                    $inflated = gzinflate($data);
+
+                    return $inflated === false ? null : $inflated;
+                }
+
+                return $data;
+            }
+
+            $offset = $dataStart + $header['compressedSize'];
+        }
+
+        return null;
     }
 }

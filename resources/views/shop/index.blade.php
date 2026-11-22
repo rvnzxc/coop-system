@@ -4,6 +4,14 @@
 
 @section('content')
 <meta name="csrf-token" content="{{ csrf_token() }}">
+@php
+    $posCategoryColors = config('pos.colors', []);
+    $posCategoryColor = function (string $category) use ($posCategoryColors): string {
+        $key = strtolower(trim(str_replace(['-', '_'], ' ', $category)));
+
+        return $posCategoryColors[$key] ?? 'hsl(' . (abs(crc32($key)) % 360) . ', 45%, 32%)';
+    };
+@endphp
 <div class="pos-container flex min-w-0 flex-col gap-6 xl:h-[calc(100vh-8rem)] xl:flex-row">
     {{-- Products section --}}
     <section class="products-section flex min-h-0 min-w-0 flex-1 flex-col rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
@@ -21,28 +29,22 @@
         </div>
 
         <div class="categories mb-4 flex shrink-0 gap-2 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch] [scrollbar-width:thin]">
-            <div class="category flex-none cursor-pointer whitespace-nowrap rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 active" data-category="all">All</div>
-            <div class="category flex-none cursor-pointer whitespace-nowrap rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50" data-category="disposable">Disposable</div>
-            <div class="category flex-none cursor-pointer whitespace-nowrap rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50" data-category="condiments">Condiments</div>
-            <div class="category flex-none cursor-pointer whitespace-nowrap rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50" data-category="frozen">Frozen</div>
-            <div class="category flex-none cursor-pointer whitespace-nowrap rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50" data-category="canned">Canned</div>
-            <div class="category flex-none cursor-pointer whitespace-nowrap rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50" data-category="laundry">Laundry</div>
-            <div class="category flex-none cursor-pointer whitespace-nowrap rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50" data-category="personal-care">Personal Care</div>
-            <div class="category flex-none cursor-pointer whitespace-nowrap rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50" data-category="snacks">Snacks</div>
-            <div class="category flex-none cursor-pointer whitespace-nowrap rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50" data-category="ice-cream">Ice Cream</div>
-            <div class="category flex-none cursor-pointer whitespace-nowrap rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50" data-category="biscuits">Biscuits</div>
-            <div class="category flex-none cursor-pointer whitespace-nowrap rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50" data-category="beverages">Beverages</div>
-            <div class="category flex-none cursor-pointer whitespace-nowrap rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50" data-category="candy">Candy</div>
-            <div class="category flex-none cursor-pointer whitespace-nowrap rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50" data-category="essentials">Essentials</div>
+            <div class="category flex-none cursor-pointer whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition-colors active" style="--cat: {{ $posCategoryColor('all') }}" data-category="all">All</div>
+            @foreach($categories as $category)
+                <div class="category flex-none cursor-pointer whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition-colors" style="--cat: {{ $posCategoryColor($category->name) }}" data-category="{{ $category->name }}">{{ $category->display_name }}</div>
+            @endforeach
         </div>
 
         <div class="product-grid grid min-h-0 min-w-0 flex-1 auto-rows-[7rem] grid-cols-2 gap-3 overflow-y-auto p-1 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-3 2xl:grid-cols-4">
             @if($items->count() > 0)
                 @foreach($items as $item)
-                    @php $stockQty = (int) ($item->quantity ?? 0); @endphp
-                    <div class="product-card flex min-w-0 {{ $stockQty <= 0 ? 'cursor-not-allowed opacity-60' : 'cursor-pointer' }} flex-col items-center justify-center overflow-hidden rounded-xl border {{ $stockQty <= 0 ? 'border-slate-200 bg-slate-100' : 'border-slate-200 bg-slate-50 hover:-translate-y-0.5 hover:border-brand-300 hover:bg-brand-50 hover:shadow-md' }} p-3 text-center transition-all" data-category="{{ $item->category ?? 'other' }}" data-id="{{ $item->id }}" data-name="{{ $item->item_name }}" data-barcode="{{ $item->barcode }}" data-manufacturer-barcode="{{ $item->manufacturer_barcode }}" data-stock="{{ $stockQty }}" data-price="{{ $item->price }}">
+                    @php
+                        $stockQty = (int) ($item->quantity ?? 0);
+                        $itemCategoryName = $item->categoryInfo?->name ?? ($item->category ?? 'other');
+                    @endphp
+                    <div class="product-card flex min-w-0 {{ $stockQty <= 0 ? 'cursor-not-allowed opacity-60' : 'cursor-pointer' }} flex-col items-center justify-center overflow-hidden rounded-xl border {{ $stockQty <= 0 ? 'border-slate-200 bg-slate-100' : 'border-slate-200 bg-slate-50 hover:-translate-y-0.5 hover:shadow-md' }} p-3 text-center transition-all" style="--cat: {{ $posCategoryColor($itemCategoryName) }}" data-category="{{ $itemCategoryName }}" data-id="{{ $item->id }}" data-name="{{ $item->item_name }}" data-barcode="{{ $item->barcode }}" data-manufacturer-barcode="{{ $item->manufacturer_barcode }}" data-stock="{{ $stockQty }}" data-price="{{ $item->price }}">
                         <div class="product-name mb-1 line-clamp-2 text-sm font-semibold text-slate-700">{{ ucwords($item->item_name) }}</div>
-                        <div class="product-price text-base font-bold text-brand-700">{{ number_format($item->price, 2) }}</div>
+                        <div class="product-price text-base font-bold text-brand-700">&#8369;{{ number_format($item->price, 2) }}</div>
                         @if($stockQty <= 0)
                             <div class="mt-1 text-[10px] font-semibold uppercase tracking-wide text-red-600">Out of stock</div>
                         @elseif($stockQty <= 5)
@@ -73,17 +75,6 @@
               </div>
             </div>
             <button onclick="clearMember()" class="cursor-pointer border-0 bg-transparent text-lg leading-none text-red-500 hover:text-red-700">&#x2715;</button>
-          </div>
-
-          <!-- Credit balance display (hidden by default) -->
-          <div id="creditBalanceSection" style="display: none;" class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <x-icon name="credit-card" class="h-3.5 w-3.5 text-amber-600" />
-                <span class="text-xs font-medium text-amber-700">Outstanding Credit: <span id="creditBalanceAmount" class="font-bold">P0.00</span></span>
-              </div>
-              <button onclick="openPayCreditModal()" class="cursor-pointer rounded bg-amber-600 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-amber-700">Pay</button>
-            </div>
           </div>
 
           <!-- Scanner input -->
@@ -138,8 +129,8 @@
 
         <div class="total mt-4 -mx-5 shrink-0 border-t border-slate-100 px-5 py-3 text-right text-lg font-bold text-slate-900">TOTAL P0.00</div>
         <div class="checkout-actions mt-1 flex shrink-0 gap-3">
-            <button class="btn-cancel flex-1 cursor-pointer rounded-lg border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50" onclick="cancelCheckout()">CANCEL</button>
-            <button class="btn-pay flex-1 cursor-pointer rounded-lg bg-brand-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300" onclick="openCashPayment()">PAY (P0.00)</button>
+            <button class="btn-cancel flex-1 cursor-pointer rounded-lg border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50" onclick="cancelCheckout()">CANCEL [Backspace]</button>
+            <button class="btn-pay flex-1 cursor-pointer rounded-lg bg-brand-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300" onclick="handleCheckout()">PAY (P0.00) [Enter]</button>
         </div>
         <div class="mt-1 text-center text-[10px] text-slate-400">Scan items - Enter = Pay - F11 Cash - F12 Credit (members)</div>
 
@@ -214,14 +205,6 @@
             <div id="creditDueAmount" class="mt-1 text-3xl font-bold text-slate-900">P0.00</div>
         </div>
 
-        <div class="mb-4 rounded-lg border border-slate-200 px-4 py-3">
-            <div class="flex items-center justify-between text-sm">
-                <span class="text-slate-600">Credit/Balance</span>
-                <span id="creditAvailable" class="font-semibold text-slate-900">P0.00</span>
-            </div>
-            <div id="creditModalError" class="mt-2 hidden text-sm font-semibold text-red-600"></div>
-        </div>
-
         <div class="mb-4 text-center text-xs text-slate-500">Press Enter to confirm - Esc to cancel</div>
 
         <div class="flex gap-3">
@@ -240,7 +223,6 @@ let total = 0;
 let currentMember = null;
 let isNonMember = false;
 let selectedPaymentMethod = 'cash';
-let currentOutstandingBalance = 0;
 
 // Barcode scanners type much faster than a person. Keystrokes closer together
 // than this are treated as a scan burst and kept away from the product filter.
@@ -450,7 +432,7 @@ function triggerCreditPaymentShortcut() {
     }
 
     if (!currentMember || isNonMember) {
-        showToast('Credit is for members only. Scan a member card first.', 'error');
+        showToast(isNonMember ? 'Credit is for members only.' : 'Select a member to use credit.', 'error');
         return;
     }
 
@@ -462,6 +444,60 @@ function triggerCreditPaymentShortcut() {
     }
     posShortcutIgnoreUntil = Date.now() + 350;
 }
+
+let checkoutBackspaceShortcutController = null;
+
+function isTypingTarget(target) {
+    if (!(target instanceof Element)) {
+        return false;
+    }
+
+    const tagName = target.tagName;
+    const editable = target.closest('[contenteditable]');
+
+    return tagName === 'INPUT'
+        || tagName === 'TEXTAREA'
+        || tagName === 'SELECT'
+        || target.isContentEditable
+        || (editable !== null && editable.getAttribute('contenteditable') !== 'false');
+}
+
+function handleCheckoutBackspaceShortcut(event) {
+    if (event.key !== 'Backspace') {
+        return;
+    }
+
+    if (isTypingTarget(event.target)) {
+        return;
+    }
+
+    event.preventDefault();
+    cancelCheckout();
+}
+
+function mountCheckoutBackspaceShortcut() {
+    if (checkoutBackspaceShortcutController) {
+        return;
+    }
+
+    checkoutBackspaceShortcutController = new AbortController();
+    document.addEventListener('keydown', handleCheckoutBackspaceShortcut, {
+        signal: checkoutBackspaceShortcutController.signal,
+    });
+}
+
+function unmountCheckoutBackspaceShortcut() {
+    if (!checkoutBackspaceShortcutController) {
+        return;
+    }
+
+    checkoutBackspaceShortcutController.abort();
+    checkoutBackspaceShortcutController = null;
+}
+
+document.addEventListener('DOMContentLoaded', mountCheckoutBackspaceShortcut);
+window.addEventListener('pageshow', mountCheckoutBackspaceShortcut);
+window.addEventListener('pagehide', unmountCheckoutBackspaceShortcut);
 
 document.addEventListener('keydown', function (event) {
     if (event.key === 'F11') {
@@ -512,39 +548,10 @@ document.addEventListener('keydown', function (event) {
         if (Date.now() < posEnterIgnoreUntil) {
             return;
         }
-        if (cart.length === 0) {
-            showToast('Cart is empty', 'warning');
-            return;
-        }
-        if (isCheckoutProcessing()) {
-            showToast('Checkout is processing', 'warning');
-            return;
-        }
-        const paymentMethod = document.getElementById('paymentMethodInput').value === 'credit' ? 'credit' : 'cash';
-        if (paymentMethod === 'cash') {
-            event.preventDefault();
-            event.stopPropagation();
-            setPaymentMethod('cash');
-            document.getElementById('paymentMethodInput').value = 'cash';
-            selectedPaymentMethod = 'cash';
-            openCashPayment();
-            posEnterIgnoreUntil = Date.now() + 300;
-            return;
-        }
-        if (paymentMethod === 'credit') {
-            event.preventDefault();
-            event.stopPropagation();
-            if (!currentMember || isNonMember) {
-                showToast('Credit is for members only. Scan a member card first.', 'error');
-                return;
-            }
-            setPaymentMethod('credit');
-            document.getElementById('paymentMethodInput').value = 'credit';
-            selectedPaymentMethod = 'credit';
-            openCreditPayment();
-            posEnterIgnoreUntil = Date.now() + 300;
-            return;
-        }
+        event.preventDefault();
+        event.stopPropagation();
+        handleCheckout();
+        posEnterIgnoreUntil = Date.now() + 300;
     }
 }, true);
 
@@ -584,6 +591,11 @@ function focusSearch() {
     if (input) input.focus();
 }
 
+function focusMemberInput() {
+    const input = document.getElementById('memberScanInput');
+    if (input) input.focus();
+}
+
 // Cart lines are keyed by item id, so two products that share a name never
 // collide. `name` is kept purely for display.
 function getItemStock(id) {
@@ -599,7 +611,7 @@ function updateProductCardStock(id, stock) {
     if (!card) return;
     card.dataset.stock = stock;
     if (parseInt(stock, 10) <= 0) {
-        card.classList.remove('cursor-pointer', 'hover:-translate-y-0.5', 'hover:border-brand-300', 'hover:bg-brand-50', 'hover:shadow-md');
+        card.classList.remove('cursor-pointer', 'hover:-translate-y-0.5', 'hover:shadow-md');
         card.classList.add('cursor-not-allowed', 'opacity-60');
         card.classList.remove('bg-slate-50');
         card.classList.add('bg-slate-100');
@@ -611,7 +623,7 @@ function updateProductCardStock(id, stock) {
         card.appendChild(badge);
     } else {
         card.classList.remove('cursor-not-allowed', 'opacity-60');
-        card.classList.add('cursor-pointer', 'hover:-translate-y-0.5', 'hover:border-brand-300', 'hover:bg-brand-50', 'hover:shadow-md');
+        card.classList.add('cursor-pointer', 'hover:-translate-y-0.5', 'hover:shadow-md');
         card.classList.remove('bg-slate-100');
         card.classList.add('bg-slate-50');
         const existingBadge = card.querySelector('.stock-badge');
@@ -752,7 +764,16 @@ async function routeScan(code, fromScanner = false, fromMemberInput = false) {
     // a. Member card / ID wins so a member number never enters the product grid.
     // Scans from the product search must be exact: the dedicated member box
     // still allows the old name/partial lookup.
-    if (await lookupMember(value, !cameFromMemberInput)) {
+    const memberResult = await lookupMember(value, !cameFromMemberInput);
+
+    if (memberResult === 'inactive') {
+        resetScans();
+        resetProductFilter();
+        focusMemberInput();
+        return false;
+    }
+
+    if (memberResult) {
         resetScans();
         resetProductFilter();
         focusSearch();
@@ -786,32 +807,197 @@ async function routeScan(code, fromScanner = false, fromMemberInput = false) {
     return false;
 }
 
+function refreshCartTotals() {
+    total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+    const totalEl = document.querySelector('.total');
+    if (totalEl) {
+        totalEl.textContent = `TOTAL ${moneyP(total)}`;
+    }
+
+    const payButton = document.querySelector('.btn-pay');
+    if (payButton && !isCheckoutProcessing()) {
+        const method = document.getElementById('paymentMethodInput').value === 'credit' ? 'credit' : 'cash';
+        payButton.textContent = method === 'credit'
+            ? `CHARGE TO CREDIT (${moneyP(total)}) [Enter]`
+            : `PAY (${moneyP(total)}) [Enter]`;
+    }
+}
+
+function updateCartLineTotal(input) {
+    const index = Number(input.dataset.index);
+    const item = cart[index];
+    if (!item) return;
+
+    const row = input.closest('.checkout-item');
+    const lineTotal = row ? row.querySelector('.line-total') : null;
+    if (lineTotal) {
+        lineTotal.textContent = moneyP(item.price * item.quantity);
+    }
+}
+
+function syncQuantityControls(input) {
+    const index = Number(input.dataset.index);
+    const item = cart[index];
+    if (!item) return;
+
+    const stock = getItemStock(item.id);
+    const row = input.closest('.checkout-item');
+    const plusButton = row ? row.querySelector('.qty-plus') : null;
+    if (plusButton) {
+        const canIncrease = stock === null ? true : item.quantity < stock;
+        plusButton.disabled = !canIncrease;
+        plusButton.title = canIncrease ? '' : 'No more stock';
+    }
+}
+
+function showQuantityWarning(input, message) {
+    const row = input.closest('.checkout-item');
+    if (!row) return;
+
+    const warning = row.querySelector('.qty-warning');
+    if (!warning) return;
+
+    warning.textContent = message;
+    warning.classList.remove('hidden');
+
+    clearTimeout(row._qtyWarningTimer);
+    row._qtyWarningTimer = setTimeout(function () {
+        warning.classList.add('hidden');
+    }, 1800);
+}
+
+function selectQuantity(input) {
+    input.dataset.previous = input.value;
+    input.select();
+}
+
+function handleQuantityInput(input) {
+    const index = Number(input.dataset.index);
+    const item = cart[index];
+    if (!item) return;
+
+    const cleaned = input.value.replace(/[^0-9]/g, '');
+    if (cleaned !== input.value) {
+        input.value = cleaned;
+    }
+
+    // Empty or 0 is allowed while typing; the blur handler resets it to 1.
+    if (cleaned === '') return;
+
+    let quantity = parseInt(cleaned, 10);
+    if (isNaN(quantity) || quantity < 1) return;
+
+    const stock = getItemStock(item.id);
+    if (stock !== null && stock >= 1 && quantity > stock) {
+        quantity = stock;
+        input.value = String(stock);
+        showQuantityWarning(input, 'Only ' + stock + ' in stock');
+    }
+
+    item.quantity = quantity;
+    updateCartLineTotal(input);
+    syncQuantityControls(input);
+    refreshCartTotals();
+}
+
+function commitQuantity(input, refocus) {
+    const index = Number(input.dataset.index);
+    const item = cart[index];
+    if (!item) return;
+
+    const stock = getItemStock(item.id);
+    const cleaned = String(input.value).replace(/[^0-9]/g, '');
+    let quantity = parseInt(cleaned, 10);
+
+    if (isNaN(quantity) || quantity < 1) {
+        quantity = 1;
+    } else if (stock !== null && stock >= 1 && quantity > stock) {
+        quantity = stock;
+        showQuantityWarning(input, 'Only ' + stock + ' in stock');
+    }
+
+    item.quantity = quantity;
+    input.value = String(quantity);
+    updateCartLineTotal(input);
+    syncQuantityControls(input);
+    refreshCartTotals();
+
+    if (refocus) {
+        focusSearch();
+    }
+}
+
+function handleQuantityKeydown(event, input) {
+    if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const index = Number(input.dataset.index);
+        const item = cart[index];
+        const previous = parseInt(input.dataset.previous, 10);
+        if (item && !isNaN(previous) && previous >= 1) {
+            item.quantity = previous;
+            input.value = String(previous);
+            updateCartLineTotal(input);
+            syncQuantityControls(input);
+            refreshCartTotals();
+        }
+
+        input.blur();
+        return;
+    }
+
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        event.stopPropagation();
+        commitQuantity(input, true);
+        return;
+    }
+
+    // Let Backspace edit the field instead of reaching the cancel shortcut.
+    if (event.key === 'Backspace') {
+        event.stopPropagation();
+    }
+}
+
 function updateCart() {
     const cartContainer = document.querySelector('.checkout-items');
     if(cart.length === 0) {
         cartContainer.innerHTML = '<div class="empty-cart py-8 text-center text-sm text-slate-400">No items in cart</div>';
-        total = 0;
     } else {
         cartContainer.innerHTML = cart.map((item, index) => {
             const stock = getItemStock(item.id);
             const canIncrease = stock === null ? true : item.quantity < stock;
             return `
-            <div class="checkout-item flex items-center justify-between gap-2 border-b border-slate-100 py-2.5 last:border-0">
+            <div class="checkout-item flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 py-2.5 last:border-0">
                 <span class="min-w-0 flex-1 truncate text-sm font-medium text-slate-700">${item.name}</span>
                 <div class="qty-control flex shrink-0 items-center gap-2">
                     <button onclick="updateQuantity(${index}, -1)" class="flex h-7 w-7 items-center justify-center rounded-md border border-slate-300 bg-white text-sm font-bold text-slate-600 transition-colors hover:bg-slate-50">-</button>
-                    <span class="min-w-5 text-center text-sm font-semibold text-slate-900">${item.quantity}</span>
-                    <button onclick="updateQuantity(${index}, 1)" ${!canIncrease ? 'disabled' : ''} title="${!canIncrease ? 'No more stock' : ''}" class="flex h-7 w-7 items-center justify-center rounded-md border border-slate-300 bg-white text-sm font-bold text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40">+</button>
+                    <input
+                        type="text"
+                        inputmode="numeric"
+                        pattern="[0-9]*"
+                        value="${item.quantity}"
+                        data-index="${index}"
+                        aria-label="Quantity"
+                        class="qty-input h-7 w-12 rounded-md border border-slate-300 bg-white px-1 text-center text-sm font-semibold text-slate-900 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+                        onfocus="selectQuantity(this)"
+                        onclick="this.select()"
+                        oninput="handleQuantityInput(this)"
+                        onblur="commitQuantity(this, false)"
+                        onkeydown="handleQuantityKeydown(event, this)"
+                    >
+                    <button onclick="updateQuantity(${index}, 1)" ${!canIncrease ? 'disabled' : ''} title="${!canIncrease ? 'No more stock' : ''}" class="qty-plus flex h-7 w-7 items-center justify-center rounded-md border border-slate-300 bg-white text-sm font-bold text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40">+</button>
                 </div>
-                <span class="shrink-0 text-sm font-semibold text-slate-900">P${(item.price * item.quantity).toFixed(2)}</span>
+                <span class="line-total shrink-0 text-sm font-semibold text-slate-900" data-index="${index}">${moneyP(item.price * item.quantity)}</span>
+                <span class="qty-warning hidden w-full text-right text-[10px] font-medium text-amber-600"></span>
             </div>
         `;
         }).join('');
-        total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     }
-    
-    document.querySelector('.total').textContent = `TOTAL P${total.toFixed(2)}`;
-    document.querySelector('.btn-pay').textContent = `PAY (P${total.toFixed(2)})`;
+
+    refreshCartTotals();
 }
 
 function updateQuantity(index, change) {
@@ -820,12 +1006,13 @@ function updateQuantity(index, change) {
     if (change > 0) {
         const stock = getItemStock(item.id);
         if (stock !== null && item.quantity + 1 > stock) {
-            showToast('Only ' + stock + ' ' + item.name + ' left in stock', 'warning');
             updateCart();
+            const input = document.querySelector('.qty-input[data-index="' + index + '"]');
+            if (input) showQuantityWarning(input, 'Only ' + stock + ' in stock');
             return;
         }
     }
-    item.quantity += change;
+    item.quantity = Number(item.quantity) + change;
     if (item.quantity <= 0) {
         cart.splice(index, 1);
     }
@@ -850,12 +1037,42 @@ function setPaymentMethod(method) {
     if (method === 'cash') {
         btnCash.className = 'flex-1 cursor-pointer rounded-lg border-2 border-brand-600 bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-700 transition-colors';
         btnCredit.className = 'flex-1 cursor-pointer rounded-lg border-2 border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition-colors hover:border-brand-300 hover:text-brand-600';
-        document.querySelector('.btn-pay').textContent = `PAY (P${total.toFixed(2)})`;
+        document.querySelector('.btn-pay').textContent = `PAY (${moneyP(total)}) [Enter]`;
     } else {
         btnCredit.className = 'flex-1 cursor-pointer rounded-lg border-2 border-brand-600 bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-700 transition-colors';
         btnCash.className = 'flex-1 cursor-pointer rounded-lg border-2 border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition-colors hover:border-brand-300 hover:text-brand-600';
-        document.querySelector('.btn-pay').textContent = `CHARGE TO CREDIT (P${total.toFixed(2)})`;
+        document.querySelector('.btn-pay').textContent = `CHARGE TO CREDIT (${moneyP(total)}) [Enter]`;
     }
+}
+
+function selectedCheckoutMethod() {
+    const input = document.getElementById('paymentMethodInput');
+    return input && input.value === 'credit' ? 'credit' : 'cash';
+}
+
+function handleCheckout() {
+    if (cart.length === 0) {
+        showToast('Cart is empty', 'warning');
+        return;
+    }
+    if (isCheckoutProcessing()) {
+        showToast('Checkout is processing', 'warning');
+        return;
+    }
+    if (isAnyModalOpen()) {
+        return;
+    }
+
+    // Read the payment method at checkout time, not when the button was wired.
+    const paymentMethod = selectedCheckoutMethod();
+    setPaymentMethod(paymentMethod);
+
+    if (paymentMethod === 'credit') {
+        openCreditPayment();
+        return;
+    }
+
+    openCashPayment();
 }
 
 let cashModalLastFocus = null;
@@ -874,10 +1091,17 @@ function fromCents(cents) {
     return c / 100;
 }
 
+const pesoFormatter = new Intl.NumberFormat('en-PH', {
+    style: 'currency',
+    currency: 'PHP',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+});
+
 function moneyPFromCents(cents) {
     const c = Math.round(Number(cents) || 0);
     const pesos = c / 100;
-    return 'P' + pesos.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return pesoFormatter.format(pesos);
 }
 
 function moneyP(value) {
@@ -886,12 +1110,12 @@ function moneyP(value) {
         if (s.indexOf('.') === -1 && /^-?\d+$/.test(s) && s.length > 4) {
             const c = parseInt(s, 10);
             const pesos = Math.round(c) / 100;
-            return 'P' + pesos.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            return pesoFormatter.format(pesos);
         }
     }
     const cents = toCents(value);
     const pesos = Math.round(cents) / 100;
-    return 'P' + pesos.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return pesoFormatter.format(pesos);
 }
 
 function pesosToString(value) {
@@ -966,7 +1190,7 @@ function openCreditPayment() {
     }
 
     if (!currentMember || isNonMember) {
-        showToast('Credit is for members only. Scan a member card first.', 'error');
+        showToast(isNonMember ? 'Credit is for members only.' : 'Select a member to use credit.', 'error');
         return;
     }
 
@@ -975,18 +1199,9 @@ function openCreditPayment() {
     document.getElementById('creditMemberName').textContent = currentMember.first_name + ' ' + currentMember.last_name;
     document.getElementById('creditMemberId').textContent = 'ID: ' + (currentMember.member_number || currentMember.id || '-');
     document.getElementById('creditDueAmount').textContent = moneyP(total);
-    const available = parseFloat(currentOutstandingBalance) || 0;
-    document.getElementById('creditAvailable').textContent = moneyP(available);
-    const errEl = document.getElementById('creditModalError');
-    errEl.classList.add('hidden');
-    errEl.textContent = '';
     const btn = document.getElementById('creditConfirmBtn');
-    btn.disabled = available < total - 0.00001 ? true : false;
+    btn.disabled = false;
     btn.textContent = 'Confirm Payment';
-    if (available < total - 0.00001) {
-        errEl.textContent = 'Insufficient credit. Please select another payment method.';
-        errEl.classList.remove('hidden');
-    }
 
     const modal = document.getElementById('creditPaymentModal');
     modal.classList.remove('hidden');
@@ -1017,16 +1232,8 @@ async function confirmCreditPayment() {
         return;
     }
     if (!currentMember || isNonMember) {
-        showToast('Credit is for members only. Scan a member card first.', 'error');
+        showToast(isNonMember ? 'Credit is for members only.' : 'Select a member to use credit.', 'error');
         closeCreditPayment();
-        return;
-    }
-    const available = parseFloat(currentOutstandingBalance) || 0;
-    if (available < total - 0.00001) {
-        const errEl = document.getElementById('creditModalError');
-        errEl.textContent = 'Insufficient credit. Please select another payment method.';
-        errEl.classList.remove('hidden');
-        document.getElementById('creditConfirmBtn').disabled = true;
         return;
     }
 
@@ -1038,7 +1245,13 @@ async function confirmCreditPayment() {
     document.getElementById('paymentMethodInput').value = 'credit';
     selectedPaymentMethod = 'credit';
 
-    await processPayment({ closeDialog: false });
+    const outcome = await processPayment({ closeDialog: false });
+
+    if (outcome === 'inactive') {
+        focusMemberInput();
+        return;
+    }
+
     closeCreditPayment();
 }
 
@@ -1114,6 +1327,31 @@ async function confirmCashPayment() {
     await processPayment({ amountReceived: (receivedC / 100), closeDialog: true });
 }
 
+function isInactiveMemberResponse(response, result) {
+    return response && !response.ok && (
+        result.message === 'This member is inactive'
+        || result.is_active === false
+        || result.member?.is_active === false
+    );
+}
+
+function clearInactiveMemberCheckout() {
+    const cashModal = document.getElementById('cashPaymentModal');
+    const creditModal = document.getElementById('creditPaymentModal');
+
+    if (cashModal && !cashModal.classList.contains('hidden')) {
+        closeCashPayment();
+    }
+
+    if (creditModal && !creditModal.classList.contains('hidden')) {
+        closeCreditPayment();
+    }
+
+    clearMember(false);
+    focusMemberInput();
+    showToast('This member is inactive', 'error');
+}
+
 async function processPayment(options) {
     options = options || {};
     if (cart.length === 0) {
@@ -1138,12 +1376,13 @@ async function processPayment(options) {
     payButton.disabled = true;
     payButton.textContent = 'Processing...';
     let paymentSucceeded = false;
+    let paymentOutcome = 'failed';
 
     const paymentMethod = document.getElementById('paymentMethodInput').value === 'credit' ? 'credit' : 'cash';
 
     try {
     const body = {
-        items: cart.map(item => ({ id: item.id, name: item.name, quantity: item.quantity })),
+        items: cart.map(item => ({ id: item.id, name: item.name, quantity: Number(item.quantity) })),
         member_id: document.getElementById('selectedMemberIdInput').value,
         is_non_member: document.getElementById('isNonMemberInput').value,
         payment_method: paymentMethod
@@ -1162,10 +1401,17 @@ async function processPayment(options) {
             body: JSON.stringify(body)
         });
 
-        const result = await response.json();
+        const result = await response.json().catch(() => ({}));
+
+        if (isInactiveMemberResponse(response, result)) {
+            clearInactiveMemberCheckout();
+            paymentOutcome = 'inactive';
+            return paymentOutcome;
+        }
 
         if (result.success) {
             paymentSucceeded = true;
+            paymentOutcome = 'success';
 
             if (options.closeDialog) {
                 closeCashPayment();
@@ -1227,15 +1473,15 @@ async function processPayment(options) {
         if (paymentSucceeded) {
             payButton.disabled = false;
             if (document.getElementById('paymentMethodInput').value === 'credit') {
-                payButton.textContent = `CHARGE TO CREDIT (P${total.toFixed(2)})`;
+                payButton.textContent = `CHARGE TO CREDIT (${moneyP(total)}) [Enter]`;
             } else {
-                payButton.textContent = `PAY (P${total.toFixed(2)})`;
+                payButton.textContent = `PAY (${moneyP(total)}) [Enter]`;
             }
         } else {
             if (document.getElementById('paymentMethodInput').value === 'credit') {
-                payButton.textContent = `CHARGE TO CREDIT (P${total.toFixed(2)})`;
+                payButton.textContent = `CHARGE TO CREDIT (${moneyP(total)}) [Enter]`;
             } else {
-                payButton.textContent = `PAY (P${total.toFixed(2)})`;
+                payButton.textContent = `PAY (${moneyP(total)}) [Enter]`;
             }
             payButton.disabled = false;
             const si = document.getElementById('search-input');
@@ -1243,7 +1489,7 @@ async function processPayment(options) {
                 si.value = '';
                 si.blur();
             }
-            if (document.activeElement && document.activeElement.tagName === 'INPUT') {
+            if (paymentOutcome !== 'inactive' && document.activeElement && document.activeElement.tagName === 'INPUT') {
                 try { document.activeElement.blur(); } catch (e) {}
             }
         }
@@ -1262,23 +1508,31 @@ async function processPayment(options) {
 
         const creditBtn = document.getElementById('creditConfirmBtn');
         if (creditBtn) {
-        if (paymentSucceeded) {
             creditBtn.disabled = false;
             creditBtn.textContent = 'Confirm Payment';
-        } else {
-            creditBtn.disabled = false;
-            creditBtn.textContent = 'Confirm Payment';
-            const errEl = document.getElementById('creditModalError');
-            if (errEl) {
-                errEl.classList.add('hidden');
-                errEl.textContent = '';
-            }
-        }
         }
     }
 }
 
 // Member lookup functions
+function blockInactiveMemberLookup() {
+  const memberInput = document.getElementById('memberScanInput');
+  const memberError = document.getElementById('memberScanError');
+
+  showToast('This member is inactive', 'error');
+
+  if (memberInput) {
+    memberInput.value = '';
+    memberInput.focus();
+  }
+
+  if (memberError) {
+    memberError.style.display = 'none';
+  }
+
+  return 'inactive';
+}
+
 async function lookupMember(queryOverride, exact = false) {
   const memberInput = document.getElementById('memberScanInput');
   const query = (queryOverride !== undefined ? queryOverride : (memberInput ? memberInput.value : '')).trim();
@@ -1289,9 +1543,21 @@ async function lookupMember(queryOverride, exact = false) {
     if (exact) params.set('exact', '1');
 
     const response = await fetch(`/members/lookup?${params.toString()}`);
-    const data = await response.json();
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok && (data.message === 'This member is inactive' || data.is_active === false || data.member?.is_active === false)) {
+      return blockInactiveMemberLookup();
+    }
+
+    if (!response.ok) {
+      return false;
+    }
 
     if (data.found) {
+      if (data.member?.is_active === false || data.is_active === false) {
+        return blockInactiveMemberLookup();
+      }
+
       currentMember = data.member;
       isNonMember = false;
 
@@ -1308,16 +1574,6 @@ async function lookupMember(queryOverride, exact = false) {
       // Show payment method section
       document.getElementById('paymentMethodSection').style.display = 'block';
       setPaymentMethod('cash');
-
-      // Show credit balance if any
-      const balance = parseFloat(data.outstanding_credit_balance) || 0;
-      currentOutstandingBalance = balance;
-      if (balance > 0) {
-        document.getElementById('creditBalanceAmount').textContent = 'P' + balance.toFixed(2);
-        document.getElementById('creditBalanceSection').style.display = 'block';
-      } else {
-        document.getElementById('creditBalanceSection').style.display = 'none';
-      }
 
       focusSearch();
       return true;
@@ -1341,7 +1597,6 @@ function setNonMember() {
   document.getElementById('selectedMemberIdInput').value = '';
   document.getElementById('isNonMemberInput').value = '1';
   document.getElementById('paymentMethodSection').style.display = 'none';
-  document.getElementById('creditBalanceSection').style.display = 'none';
   document.getElementById('paymentMethodInput').value = 'cash';
   selectedPaymentMethod = 'cash';
   focusSearch();
@@ -1350,7 +1605,6 @@ function setNonMember() {
 function clearMember(focus = true) {
   currentMember = null;
   isNonMember = false;
-  currentOutstandingBalance = 0;
 
   document.getElementById('selectedMemberDisplay').style.display = 'none';
   document.getElementById('nonMemberBadge').style.display = 'none';
@@ -1360,7 +1614,6 @@ function clearMember(focus = true) {
   document.getElementById('selectedMemberIdInput').value = '';
   document.getElementById('isNonMemberInput').value = '0';
   document.getElementById('paymentMethodSection').style.display = 'none';
-  document.getElementById('creditBalanceSection').style.display = 'none';
   document.getElementById('paymentMethodInput').value = 'cash';
   selectedPaymentMethod = 'cash';
   if (focus) {
@@ -1368,87 +1621,5 @@ function clearMember(focus = true) {
   }
 }
 
-// Pay credit modal
-function openPayCreditModal() {
-  if (!currentMember || currentOutstandingBalance <= 0) return;
-
-  const remaining = currentOutstandingBalance;
-  const modal = document.createElement('div');
-  modal.id = 'payCreditModal';
-  modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50';
-  modal.innerHTML = `
-    <div class="mx-4 w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
-      <h3 class="mb-1 text-base font-bold text-slate-900">Pay Credit</h3>
-      <p class="mb-4 text-sm text-slate-500">${currentMember.first_name} ${currentMember.last_name} — Outstanding: P${remaining.toFixed(2)}</p>
-      <div class="mb-4">
-        <label class="mb-1 block text-xs font-semibold text-slate-600">Payment Amount</label>
-        <input type="number" id="payCreditAmount" step="0.01" min="0.01" max="${remaining}" value="${remaining.toFixed(2)}" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30">
-      </div>
-      <div class="flex gap-3">
-        <button onclick="closePayCreditModal()" class="flex-1 cursor-pointer rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50">Cancel</button>
-        <button onclick="submitCreditPayment()" class="flex-1 cursor-pointer rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700">Record Payment</button>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(modal);
-}
-
-function closePayCreditModal() {
-  const modal = document.getElementById('payCreditModal');
-  if (modal) modal.remove();
-  focusSearch();
-}
-
-async function submitCreditPayment() {
-  const amount = parseFloat(document.getElementById('payCreditAmount').value);
-  if (!amount || amount <= 0) {
-    showToast('Please enter a valid amount.', 'warning');
-    return;
-  }
-
-  if (!currentMember) return;
-
-  try {
-    const response = await fetch(`/members/lookup?q=${currentMember.member_number}`);
-    const data = await response.json();
-
-    if (data.found && data.outstanding_credit_balance > 0) {
-      // We need the credit_id — fetch it from the credits page
-      const creditsResponse = await fetch(`/credits?status=unpaid`);
-      const html = await creditsResponse.text();
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(html, 'text/html');
-      const creditRows = doc.querySelectorAll('tr[data-member-id="' + currentMember.id + '"]');
-
-      if (creditRows.length > 0) {
-        const creditId = creditRows[0].dataset.creditId;
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = `/credits/${creditId}/pay?redirect=pos`;
-
-        const csrfToken = document.createElement('input');
-        csrfToken.type = 'hidden';
-        csrfToken.name = '_token';
-        csrfToken.value = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-        form.appendChild(csrfToken);
-
-        const amountInput = document.createElement('input');
-        amountInput.type = 'hidden';
-        amountInput.name = 'amount_paid';
-        amountInput.value = amount;
-        form.appendChild(amountInput);
-
-        document.body.appendChild(form);
-        form.submit();
-      } else {
-        // Fallback: pay against the first outstanding credit via API
-        showToast('Could not find the credit record. Please use the Credits page to record this payment.', 'error');
-      }
-    }
-  } catch (e) {
-    console.error('Pay credit error:', e);
-    showToast('Error recording payment. Please try again.', 'error');
-  }
-}
 </script>
 @endsection

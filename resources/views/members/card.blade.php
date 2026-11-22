@@ -4,50 +4,27 @@
 
 @section('content')
 <style>
-    @media print {
-        body * {
-            visibility: hidden;
-        }
-        .member-card-container, .member-card-container * {
-            visibility: visible;
-        }
-        .member-card-container {
-            position: absolute;
-            left: 0;
-            top: 0;
-            background: white;
-        }
-        .print-button {
-            display: none;
-        }
-        .member-card {
-            box-shadow: none;
-        }
+    .member-card-preview svg {
+        display: block;
+        width: 100%;
+        height: auto;
     }
 </style>
 
-<div class="member-card-container flex min-h-[calc(100vh-8rem)] flex-col items-center justify-center gap-6 p-6">
-    <x-button href="{{ route('members.card.download', $member->id) }}" color="primary" class="print-button" data-download-png>
-        <x-download-icon class="h-3.5 w-3.5" /> Download Card
-    </x-button>
+<div class="member-card-container flex min-h-[calc(100vh-8rem)] flex-col p-6">
+    <div class="mb-4 flex justify-start">
+        <x-button href="{{ route('members.index') }}" color="secondary" size="sm" aria-label="Back to Members">
+            <x-icon name="arrow-left" class="h-3 w-3" /> Back
+        </x-button>
+    </div>
 
-    <div class="member-card flex w-full max-w-[350px] flex-col justify-between rounded-2xl bg-gradient-to-br from-brand-800 to-brand-600 p-5 text-white shadow-xl">
-        <div class="card-header border-b-2 border-white/30 pb-2.5 text-center">
-            <h2 class="text-lg font-bold text-white">MEMBERSHIP CARD</h2>
-        </div>
+    <div class="flex flex-1 flex-col items-center justify-center gap-5">
+        <x-button href="{{ route('members.card.download', $member->id) }}" color="primary" class="print-button" data-download-png>
+            <x-download-icon class="h-3.5 w-3.5" /> Download Card
+        </x-button>
 
-        <div class="card-body flex flex-1 items-center">
-            <div class="member-info flex-1">
-                <div class="member-name text-base font-bold">{{ $member->first_name }} {{ $member->last_name }}</div>
-                <div class="member-id text-sm font-bold text-brand-100">{{ $member->member_number }}</div>
-            </div>
-        </div>
-
-        <div class="barcode-container mt-3 text-center">
-            <div class="barcode inline-block rounded-md bg-white p-2.5">
-                {!! \App\Services\BarcodeService::generateBarcode($member->member_number) !!}
-            </div>
-            <div class="card-footer mt-2 text-xs opacity-80">Cavite College of Fisheries Multi-Purpose Cooperative</div>
+        <div class="member-card-preview mx-auto w-full max-w-[350px] overflow-hidden rounded-[16px] shadow-xl" style="line-height: 0; aspect-ratio: 700 / 450;">
+            @include('members.partials.member-card', ['member' => $member])
         </div>
     </div>
 </div>

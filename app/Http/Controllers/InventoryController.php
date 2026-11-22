@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Services\BarcodeService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use App\Models\Category;
 use App\Models\Item; // Using Item model instead of Product
 
 class InventoryController extends Controller
@@ -12,12 +13,23 @@ class InventoryController extends Controller
     public function index(Request $request)
     {
         $search = $request->input('search');
-        $items = Item::when($search, function ($query, $search) {
-            return $query->where('item_name', 'like', "%{$search}%")
-                         ->orWhere('id', $search);
-        })->orderBy('id', 'asc')->get();
+        $sort = in_array($request->input('sort'), ['high', 'low'], true) ? $request->input('sort') : null;
 
-        return view('inventory.index', compact('items', 'search'));
+        $items = Item::with('categoryInfo')
+            ->when($search, function ($query, $search) {
+                $query->where(function ($query) use ($search) {
+                    $query->where('item_name', 'like', "%{$search}%")
+                          ->orWhere('id', $search);
+                });
+            })
+            ->when($sort === 'high', fn ($query) => $query->orderByDesc('quantity'))
+            ->when($sort === 'low', fn ($query) => $query->orderBy('quantity'))
+            ->orderBy('id', 'asc')
+            ->get();
+
+        $categories = Category::withCount('items')->orderBy('name')->get();
+
+        return view('inventory.index', compact('items', 'search', 'sort', 'categories'));
     }
 
     public function create()
@@ -25,7 +37,9 @@ class InventoryController extends Controller
         $previewBarcode = Item::generateBarcode();
         session(['inventory.preview_barcode' => $previewBarcode]);
 
-        return view('inventory.create', compact('previewBarcode'));
+        $categories = Category::orderBy('name')->get();
+
+        return view('inventory.create', compact('previewBarcode', 'categories'));
     }
 
     public function store(Request $request)
@@ -34,7 +48,7 @@ class InventoryController extends Controller
             'item_name' => 'required|string|max:255',
             'quantity' => 'required|integer|min:0',
             'price' => 'required|numeric|min:0',
-            'category' => 'required|string|max:50',
+            'category' => $this->categoryRules(),
             'manufacturer_barcode' => $this->manufacturerBarcodeRules(),
         ]);
 
@@ -44,11 +58,14 @@ class InventoryController extends Controller
             $barcode = Item::generateBarcode();
         }
 
+        $category = $this->resolveCategory($validated['category']);
+
         Item::create([
             'item_name' => $validated['item_name'],
             'quantity' => $validated['quantity'],
             'price' => $validated['price'],
-            'category' => $validated['category'],
+            'category' => $category->name,
+            'category_id' => $category->id,
             'barcode' => $barcode,
             'manufacturer_barcode' => $validated['manufacturer_barcode'] ?? null,
         ]);
@@ -59,7 +76,9 @@ class InventoryController extends Controller
     public function edit($id)
     {
         $item = Item::findOrFail($id);
-        return view('inventory.edit', compact('item'));
+        $categories = Category::orderBy('name')->get();
+
+        return view('inventory.edit', compact('item', 'categories'));
     }
 
     public function update(Request $request, $id)
@@ -70,19 +89,43 @@ class InventoryController extends Controller
             'item_name' => 'required|string|max:255',
             'quantity' => 'required|integer|min:0',
             'price' => 'required|numeric|min:0',
-            'category' => 'required|string|max:50',
+            'category' => $this->categoryRules(),
             'manufacturer_barcode' => $this->manufacturerBarcodeRules($item->id),
         ]);
+
+        $category = $this->resolveCategory($validated['category']);
 
         $item->update([
             'item_name' => $validated['item_name'],
             'quantity' => $validated['quantity'],
             'price' => $validated['price'],
-            'category' => $validated['category'],
+            'category' => $category->name,
+            'category_id' => $category->id,
             'manufacturer_barcode' => $validated['manufacturer_barcode'] ?? null,
         ]);
 
         return redirect()->route('inventory.index')->with('success', 'Item updated successfully!');
+    }
+
+    private function categoryRules(): array
+    {
+        return [
+            'required',
+            'string',
+            'max:50',
+            function ($attribute, $value, $fail) {
+                $name = trim((string) $value);
+
+                if (! Category::whereRaw('LOWER(TRIM(name)) = ?', [mb_strtolower($name)])->exists()) {
+                    $fail('Please choose a valid category.');
+                }
+            },
+        ];
+    }
+
+    private function resolveCategory(string $name): Category
+    {
+        return Category::whereRaw('LOWER(TRIM(name)) = ?', [mb_strtolower(trim($name))])->firstOrFail();
     }
 
     private function manufacturerBarcodeRules(?int $ignoreId = null): array

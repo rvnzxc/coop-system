@@ -53,13 +53,18 @@
             <p class="mt-0.5 text-xs text-slate-500">{{ number_format($logs->total()) }} entr{{ $logs->total() === 1 ? 'y' : 'ies' }}. Read-only audit trail of account and sales activity.</p>
         </div>
         <div class="overflow-x-auto">
-            <table class="w-full min-w-[860px] text-left text-sm">
+            <table class="w-full text-left text-sm" style="table-layout: fixed; min-width: 720px;">
+                <colgroup>
+                    <col style="width: 18%;">
+                    <col style="width: 20%;">
+                    <col style="width: 16%;">
+                    <col style="width: 46%;">
+                </colgroup>
                 <thead class="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
                     <tr>
                         <th class="px-5 py-3.5 font-semibold">Date / Time</th>
                         <th class="px-5 py-3.5 font-semibold">User</th>
                         <th class="px-5 py-3.5 font-semibold">Action</th>
-                        <th class="px-5 py-3.5 font-semibold">Target</th>
                         <th class="px-5 py-3.5 font-semibold">Details</th>
                     </tr>
                 </thead>
@@ -77,23 +82,18 @@
                                 @php
                                     $badgeColor = match (true) {
                                         $log->action === \App\Models\AuditLog::ACTION_SALE_COMPLETED => 'green',
-                                        $log->action === \App\Models\AuditLog::ACTION_SALE_VOIDED => 'red',
+                                        $log->action === \App\Models\AuditLog::ACTION_PERMISSION_DENIED => 'red',
+                                        $log->action === \App\Models\AuditLog::ACTION_INACTIVE_MEMBER_BLOCKED => 'red',
                                         str_starts_with($log->action, 'account_') => 'blue',
                                         default => 'gray',
                                     };
                                 @endphp
                                 <x-badge :color="$badgeColor">{{ $log->action_label }}</x-badge>
                             </td>
-                            <td class="whitespace-nowrap px-5 py-3.5 text-slate-600">
-                                @if($log->target_type)
-                                    {{ $log->target_type }}@if($log->target_id) #{{ $log->target_id }}@endif
-                                @else
-                                    &mdash;
-                                @endif
-                            </td>
                             <td class="px-5 py-3.5 text-xs text-slate-500">
-                                @if($log->details)
-                                    {{ collect($log->details)->map(fn ($value, $key) => $key.': '.(is_array($value) ? json_encode($value) : (is_bool($value) ? ($value ? 'yes' : 'no') : $value)))->implode(' · ') }}
+                                @php($detailText = \App\Models\AuditLog::formatActivityDetails($log->action, $log->details))
+                                @if($detailText !== '')
+                                    {{ $detailText }}
                                 @else
                                     &mdash;
                                 @endif
@@ -101,7 +101,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-5 py-16 text-center">
+                            <td colspan="4" class="px-5 py-16 text-center">
                                 <div class="flex flex-col items-center">
                                     <div class="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-slate-400">
                                         <x-icon name="clock-o" class="h-6 w-6" />

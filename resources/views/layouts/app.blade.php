@@ -3,6 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    @auth
+        <meta name="ccfmpc-authenticated" content="1">
+        <style>
+            #sessionGuard {
+                display: none;
+            }
+
+            html.session-pending #sessionGuard {
+                display: flex;
+            }
+
+            html.session-pending [data-session-content] {
+                visibility: hidden !important;
+            }
+        </style>
+    @endauth
     <title>CCFMPC - @yield('title')</title>
     <link rel="icon" type="image/png" href="{{ asset('images/logotunay-round.png') }}">
 
@@ -16,17 +32,25 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script src="{{ asset('js/notify.js') }}" defer></script>
 </head>
-<body class="min-h-screen bg-brand-50 text-slate-900 antialiased">
+<body class="min-h-screen w-full overflow-x-clip bg-brand-50 text-slate-900 antialiased">
+    <div id="sessionGuard" class="fixed inset-0 z-[100] items-center justify-center bg-brand-50 px-4" role="status" aria-live="polite">
+        <div class="flex items-center gap-3 rounded-xl border border-[#DCEFE3] bg-white px-5 py-4 text-sm font-medium text-slate-600 shadow-lg">
+            <span class="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-brand-600" aria-hidden="true"></span>
+            <span>Checking your session...</span>
+        </div>
+    </div>
+
     @php
         $role = Auth::user()->role ?? null;
     @endphp
 
-    <div class="flex min-h-screen">
-        {{-- Off-canvas drawer backdrop (below lg) --}}
-        <div id="sidebarBackdrop" class="fixed inset-0 z-40 hidden bg-slate-900/50 lg:hidden" onclick="closeSidebar()"></div>
+    <div class="flex min-h-screen w-full max-w-full" data-session-content>
+        {{-- Off-canvas drawer backdrop (below lg). Sits under the header so the
+             hamburger stays clickable while the drawer is open. --}}
+        <div id="sidebarBackdrop" class="fixed inset-0 z-30 hidden bg-slate-900/50 lg:hidden" onclick="closeSidebar()" aria-hidden="true"></div>
 
         {{-- Sidebar: off-canvas drawer < lg, static sticky sidebar >= lg --}}
-        <aside id="sidebar" class="sidebar fixed inset-y-0 left-0 z-50 flex w-[250px] -translate-x-full flex-col border-r border-[#DCEFE3] bg-white shadow-xl transition-transform duration-200 lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:shrink-0 lg:translate-x-0 lg:border-b-0 lg:shadow-none">
+        <aside id="sidebar" class="sidebar fixed inset-y-0 left-0 z-50 flex w-[250px] max-w-[85vw] -translate-x-full flex-col border-r border-[#DCEFE3] bg-white shadow-xl transition-transform duration-200 lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:shrink-0 lg:translate-x-0 lg:border-b-0 lg:shadow-none" aria-label="Main navigation">
             <div class="flex items-center justify-between gap-3 border-b border-[#DCEFE3] px-4 py-3 lg:h-16 lg:px-5">
                 <div class="flex items-center gap-3">
                     <img src="{{ asset('images/logotunay.jpg') }}" alt="CCFMPC logo" class="h-9 w-9 shrink-0 rounded-full object-cover" />
@@ -35,7 +59,7 @@
                         <p class="hidden truncate text-xs text-slate-500 lg:block">Cooperative Store</p>
                     </div>
                 </div>
-                <button type="button" onclick="closeSidebar()" class="-mr-2 flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 lg:hidden" aria-label="Close menu">
+                <button type="button" onclick="closeSidebar()" class="-mr-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 lg:hidden" aria-label="Close menu">
                     <x-icon name="times" />
                 </button>
             </div>
@@ -72,12 +96,18 @@
                         <a href="{{ route('shop.index') }}" class="flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-colors {{ request()->routeIs('shop.index') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' }}">
                             <x-icon name="shopping-cart" /> POS
                         </a>
+                        <a href="{{ route('inventory.index') }}" class="flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-colors {{ request()->routeIs('inventory.*') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' }}">
+                            <x-icon name="archive" /> Inventory
+                        </a>
+                        <a href="{{ route('analytics.index') }}" class="flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-colors {{ request()->routeIs('analytics.*') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' }}">
+                            <x-icon name="bar-chart" /> Analytics
+                        </a>
                         <a href="{{ route('credits.index') }}" class="flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-colors {{ request()->routeIs('credits.*') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' }}">
                             <x-icon name="credit-card" /> Credits
                         </a>
                     @endif
 
-                    <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" class="flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 lg:mt-auto">
+                    <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').requestSubmit();" class="flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 lg:mt-auto">
                         <x-icon name="sign-out" /> Logout
                     </a>
                 @endauth
@@ -86,10 +116,10 @@
 
         {{-- Main column --}}
         <div class="flex min-w-0 flex-1 flex-col">
-            <header class="sticky top-0 z-30 border-b border-[#DCEFE3] bg-white/90 backdrop-blur">
-                <div class="flex h-16 items-center justify-between gap-4 px-4 md:px-6">
+            <header class="sticky top-0 z-40 w-full border-b border-[#DCEFE3] bg-white/90 backdrop-blur">
+                <div class="flex h-16 w-full min-w-0 items-center justify-between gap-4 px-4 md:px-6">
                     <div class="flex min-w-0 items-center gap-3">
-                        <button type="button" onclick="openSidebar()" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 lg:hidden" aria-label="Open menu">
+                        <button type="button" id="sidebarToggle" onclick="toggleSidebar()" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 lg:hidden" aria-label="Open menu" aria-controls="sidebar" aria-expanded="false">
                             <x-icon name="bars" />
                         </button>
                         <div class="min-w-0">
@@ -107,7 +137,7 @@
                 </div>
             </header>
 
-            <main class="min-w-0 flex-1 px-4 py-6 md:px-6 lg:px-6 lg:py-8">
+            <main class="min-w-0 w-full max-w-full flex-1 px-4 py-6 md:px-6 lg:px-6 lg:py-8">
                 @yield('content')
             </main>
         </div>
@@ -134,6 +164,7 @@
     <script>
         // Notification System
         let lowStockItems = [];
+        let lowStockTimer = null;
         const LOW_STOCK_THRESHOLD = 10; // Items with stock <= 10 will trigger notification
 
         // Toggle notification modal
@@ -178,7 +209,7 @@
                             <div class="notif-item-name">${item.name}</div>
                             <div class="notif-item-details">Category: ${item.category}</div>
                         </div>
-                        <div class="notif-item-stock">${item.stock} units</div>
+                        <div class="notif-item-stock">${item.stock} qty</div>
                     </div>
                 `).join('');
             }
@@ -218,7 +249,16 @@
             checkLowStock();
             
             // Set up periodic checking (every 30 seconds)
-            setInterval(checkLowStock, 30000);
+            lowStockTimer = setInterval(checkLowStock, 30000);
+        });
+
+        ['ccfmpc:account-disabled', 'ccfmpc:logout', 'ccfmpc:session-ended'].forEach(function (eventName) {
+            window.addEventListener(eventName, function () {
+                if (lowStockTimer !== null) {
+                    clearInterval(lowStockTimer);
+                    lowStockTimer = null;
+                }
+            });
         });
 
         // Close modal when clicking outside
@@ -229,15 +269,69 @@
         });
 
         // Mobile/tablet off-canvas sidebar
+        function setSidebarState(open) {
+            const sidebar = document.getElementById('sidebar');
+            const backdrop = document.getElementById('sidebarBackdrop');
+            const toggle = document.getElementById('sidebarToggle');
+
+            if (!sidebar || !backdrop) {
+                return;
+            }
+
+            sidebar.classList.toggle('open', open);
+            // Toggle the actual Tailwind translate utilities too, so the
+            // drawer works regardless of CSS layer/minifier behaviour.
+            sidebar.classList.toggle('-translate-x-full', !open);
+            sidebar.classList.toggle('translate-x-0', open);
+            backdrop.classList.toggle('hidden', !open);
+            document.body.classList.toggle('sidebar-open', open);
+
+            if (toggle) {
+                toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+                toggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+            }
+        }
+
         function openSidebar() {
-            document.getElementById('sidebar').classList.add('open');
-            document.getElementById('sidebarBackdrop').classList.remove('hidden');
+            setSidebarState(true);
         }
 
         function closeSidebar() {
-            document.getElementById('sidebar').classList.remove('open');
-            document.getElementById('sidebarBackdrop').classList.add('hidden');
+            setSidebarState(false);
         }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            setSidebarState(!sidebar.classList.contains('open'));
+        }
+
+        // Keep the drawer state consistent with the responsive breakpoint:
+        // reset it when crossing into the persistent-sidebar layout.
+        (function () {
+            const desktopQuery = window.matchMedia('(min-width: 1024px)');
+
+            const syncBreakpoint = (event) => {
+                if (event.matches) {
+                    closeSidebar();
+                }
+            };
+
+            if (typeof desktopQuery.addEventListener === 'function') {
+                desktopQuery.addEventListener('change', syncBreakpoint);
+            } else if (typeof desktopQuery.addListener === 'function') {
+                desktopQuery.addListener(syncBreakpoint);
+            }
+
+            if (desktopQuery.matches) {
+                closeSidebar();
+            }
+
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape') {
+                    closeSidebar();
+                }
+            });
+        })();
     </script>
 
     <script>

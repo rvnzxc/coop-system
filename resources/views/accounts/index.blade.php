@@ -107,30 +107,31 @@
                         <h3 class="text-sm font-semibold text-slate-900">Cashier Accounts</h3>
                         <p class="mt-0.5 text-xs text-slate-500">{{ $totalCashiers }} account{{ $totalCashiers === 1 ? '' : 's' }}</p>
                     </div>
-                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
-                        <form onsubmit="event.preventDefault(); filterCashiers();" class="flex gap-2">
-                            <div class="relative">
+                    <div class="table-toolbar flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <form onsubmit="event.preventDefault(); filterCashiers();" class="flex min-w-0 gap-2">
+                            <div class="relative min-w-0 flex-1">
                                 <x-icon name="search" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                                 <input type="text" id="cashierSearch" placeholder="Search cashiers..." autocomplete="off"
-                                    class="h-[38px] w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-[3px] focus:ring-brand-500/20 sm:w-56">
+                                    class="table-search-input h-[38px] w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-[3px] focus:ring-brand-500/20 sm:w-56">
                             </div>
-                            <x-button type="submit" color="secondary" class="!h-[38px] !px-3.5 !text-[13px]">Search</x-button>
+                            <x-button type="submit" color="secondary" class="table-toolbar-btn !h-[38px] !px-3.5 !text-[13px]">Search</x-button>
                         </form>
-                        <x-button id="addCashierButton" type="button" color="primary" class="!h-9 !px-4 !text-sm focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-brand-700" onclick="openModal('addCashierModal')">
+                        <x-button id="addCashierButton" type="button" color="primary" class="table-toolbar-btn !h-9 !px-4 !text-sm focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-brand-700" onclick="openModal('addCashierModal')">
                             <x-icon name="user-plus" class="h-4 w-4" /> Add Cashier
                         </x-button>
                     </div>
                 </div>
 
-                <div class="overflow-x-auto">
-                    <table class="w-full min-w-[760px] text-left text-sm">
+                <div class="app-table-frame min-w-0 max-w-full" data-table-frame>
+                    <div class="app-table-wrap" data-table-scroll>
+                    <table class="app-table app-table--accounts">
                         <thead class="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
                             <tr>
-                                <th class="px-5 py-3.5 font-semibold">Name</th>
+                                <th class="col-sticky-left px-5 py-3.5 font-semibold">Name</th>
                                 <th class="px-5 py-3.5 font-semibold">Username</th>
                                 <th class="px-5 py-3.5 font-semibold">Status</th>
-                                <th class="px-5 py-3.5 font-semibold">Date Created</th>
-                                <th class="px-5 py-3.5 text-right font-semibold">Actions</th>
+                                <th class="tablet-hide px-5 py-3.5 font-semibold">Date Created</th>
+                                <th class="col-sticky-right px-5 py-3.5 text-right font-semibold">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100">
@@ -141,7 +142,7 @@
                                     data-cashier-id="{{ $cashier->id }}"
                                     data-cashier-name="{{ $cashier->name }}"
                                     data-cashier-username="{{ $cashier->username }}">
-                                    <td class="px-5 py-4">
+                                    <td class="col-sticky-left cell-wrap px-5 py-4">
                                         <div class="flex items-center gap-3">
                                             <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#EEF2F1] text-[11px] font-bold text-slate-700">
                                                 {{ mb_strtoupper(mb_substr($cashier->name, 0, 2)) }}
@@ -166,26 +167,27 @@
                                             </span>
                                         </div>
                                     </td>
-                                    <td class="whitespace-nowrap px-5 py-4 text-slate-600">{{ $cashier->created_at ? $cashier->created_at->format('M d, Y') : '—' }}</td>
-                                    <td class="whitespace-nowrap px-5 py-4">
-                                        <div class="flex items-center justify-end gap-2">
-                                            <x-button type="button" color="secondary" size="sm" class="!h-[34px] !px-3 !text-[13px]" onclick="openEditCashier(this)">
-                                                <x-icon name="edit" class="h-3 w-3" /> Edit
+                                    <td class="tablet-hide whitespace-nowrap px-5 py-4 text-slate-600">{{ $cashier->created_at ? $cashier->created_at->format('M d, Y') : '—' }}</td>
+                                    <td class="col-sticky-right whitespace-nowrap px-5 py-4">
+                                        <div class="table-actions">
+                                            <x-button type="button" color="secondary" size="sm" class="!h-8 !w-8 !px-0" title="Edit Cashier" aria-label="Edit {{ $cashier->name }}" onclick="openEditCashier(this)">
+                                                <x-icon name="edit" class="h-3 w-3" />
                                             </x-button>
-                                            <x-button type="button" color="dangerGhost" size="sm" class="!h-[34px] !px-3 !text-[13px]" onclick="openResetPassword(this)">
-                                                <x-icon name="id-card" class="h-3 w-3" /> Reset Password
+                                            <x-button type="button" color="dangerGhost" size="sm" class="!h-8 !w-8 !px-0" title="Reset Password" aria-label="Reset password for {{ $cashier->name }}" onclick="openResetPassword(this)">
+                                                <x-icon name="key" class="h-3 w-3" />
                                             </x-button>
                                         </div>
                                     </td>
                                 </tr>
                             @endforeach
                             <tr id="cashierEmptyRow" class="{{ $cashiers->isEmpty() ? '' : 'hidden' }}">
-                                <td colspan="5" class="px-5 py-16 text-center text-sm text-slate-500">
+                                <td colspan="5" class="cell-empty px-5 py-16 text-center text-sm text-slate-500">
                                     No cashiers found
                                 </td>
                             </tr>
                         </tbody>
                     </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -639,17 +641,20 @@
             body: body.toString(),
             credentials: 'same-origin',
         }).then(function (response) {
-            if (!response.ok) {
-                throw new Error('Request failed');
-            }
+            return response.json().catch(function () {
+                return {};
+            }).then(function (data) {
+                if (!response.ok) {
+                    throw new Error(data.message || 'Unable to update the account status. Please try again.');
+                }
 
-            const username = row.dataset.cashierUsername || 'Account';
-            showToast(username + (toggle.checked ? ' has been activated.' : ' has been disabled.'), 'success');
-        }).catch(function () {
+                showToast(data.message || (toggle.checked ? 'Account re-enabled.' : 'Account disabled. Active sessions were ended.'), 'success');
+            });
+        }).catch(function (error) {
             toggle.checked = previous;
             renderStatusPill(pill, previous);
             updateStats();
-            showToast('Unable to update the account status. Please try again.', 'error');
+            showToast(error.message || 'Unable to update the account status. Please try again.', 'error');
         }).finally(function () {
             toggle.disabled = false;
         });

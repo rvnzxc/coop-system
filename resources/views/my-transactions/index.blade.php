@@ -29,7 +29,7 @@
                 <x-icon name="money" class="h-4 w-4" />
             </div>
             <div class="min-w-0">
-                <div class="truncate text-xl font-bold text-slate-900">₱{{ number_format($summary['total_sales'], 2) }}</div>
+                <div class="truncate text-xl font-bold text-slate-900">&#8369;{{ number_format($summary['total_sales'], 2) }}</div>
                 <div class="text-xs text-slate-500">Total sales</div>
             </div>
         </div>
@@ -106,7 +106,7 @@
                                     <x-badge color="blue">Cash</x-badge>
                                 @endif
                             </td>
-                            <td class="whitespace-nowrap px-5 py-3.5 text-right font-semibold text-slate-900">₱{{ number_format((float) $sale->total, 2) }}</td>
+                            <td class="whitespace-nowrap px-5 py-3.5 text-right font-semibold text-slate-900">&#8369;{{ number_format((float) $sale->total, 2) }}</td>
                             <td class="whitespace-nowrap px-5 py-3.5">
                                 @if($sale->status === 'voided')
                                     <x-badge color="red">Voided</x-badge>
@@ -225,11 +225,15 @@
         return year + '-' + month + '-' + day;
     }
 
+    const myMoneyFormatter = new Intl.NumberFormat('en-PH', {
+        style: 'currency',
+        currency: 'PHP',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+
     function myMoney(value) {
-        return '₱' + Number(value || 0).toLocaleString('en-PH', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        });
+        return myMoneyFormatter.format(Number(value || 0));
     }
 
     function openMySaleDetail(row) {

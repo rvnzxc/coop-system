@@ -5,17 +5,23 @@
 @section('content')
 <div class="mx-auto max-w-6xl">
     <div class="mb-6">
-        <h2 class="text-xl font-bold text-slate-900">Sales Performance Analytics</h2>
+        <div class="flex items-center gap-2">
+            <h2 class="text-xl font-bold text-slate-900">Sales Performance Analytics</h2>
+            @unless(auth()->user()->isAdmin())
+                <x-badge color="blue">View only</x-badge>
+            @endunless
+        </div>
         <p class="mt-0.5 text-sm text-slate-500">Track revenue trends across your cooperative store</p>
     </div>
 
     {{-- Time Range Toggles --}}
     <div class="mb-6 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-        <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <button onclick="setTimeRange('daily')" id="dailyBtn" style="background: #16a34a; color: white;" class="cursor-pointer rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors">Daily</button>
-            <button onclick="setTimeRange('weekly')" id="weeklyBtn" style="background: #ffffff; color: #64748b;" class="cursor-pointer rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-slate-500 transition-colors">Weekly</button>
-            <button onclick="setTimeRange('monthly')" id="monthlyBtn" style="background: #ffffff; color: #64748b;" class="cursor-pointer rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-slate-500 transition-colors">Monthly</button>
-            <button onclick="setTimeRange('yearly')" id="yearlyBtn" style="background: #ffffff; color: #64748b;" class="cursor-pointer rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-slate-500 transition-colors">Yearly</button>
+        <div class="flex gap-2 overflow-x-auto whitespace-nowrap pb-1">
+            <button type="button" onclick="setTimeRange('daily')" id="dailyBtn" aria-pressed="true" class="inline-flex min-w-[6.5rem] flex-1 shrink-0 cursor-pointer items-center justify-center rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:ring-offset-1">Daily</button>
+            <button type="button" onclick="setTimeRange('weekly')" id="weeklyBtn" aria-pressed="false" class="inline-flex min-w-[6.5rem] flex-1 shrink-0 cursor-pointer items-center justify-center rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:ring-offset-1">Weekly</button>
+            <button type="button" onclick="setTimeRange('monthly')" id="monthlyBtn" aria-pressed="false" class="inline-flex min-w-[6.5rem] flex-1 shrink-0 cursor-pointer items-center justify-center rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:ring-offset-1">Monthly</button>
+            <button type="button" onclick="setTimeRange('quarterly')" id="quarterlyBtn" aria-pressed="false" class="inline-flex min-w-[6.5rem] flex-1 shrink-0 cursor-pointer items-center justify-center rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:ring-offset-1">Quarterly</button>
+            <button type="button" onclick="setTimeRange('yearly')" id="yearlyBtn" aria-pressed="false" class="inline-flex min-w-[6.5rem] flex-1 shrink-0 cursor-pointer items-center justify-center rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:ring-offset-1">Yearly</button>
         </div>
     </div>
 
@@ -23,14 +29,18 @@
     <div class="mb-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h3 class="text-base font-semibold text-slate-900">
-                <span id="chartTitle">Daily Sales (This Week)</span>
+                <span id="chartTitle">Hourly Sales ({{ now('Asia/Manila')->format('D, M j, Y') }})</span>
             </h3>
             <div class="flex flex-wrap items-center gap-2">
-                <!-- Week Selector for Daily (days within the selected week) -->
-                <div id="weekSelectorContainer" style="display: none;">
-                    <select id="weekSelector" onchange="handleWeekChange()" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30">
-                        <!-- Week options will be populated by JavaScript -->
-                    </select>
+                <!-- Date Selector for Daily (hourly breakdown for one day) -->
+                <div id="dateSelectorContainer" class="flex items-center gap-2">
+                    <button type="button" id="prevDayBtn" onclick="changeDay(-1)" aria-label="Previous day" class="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 transition-colors hover:bg-slate-50">
+                        <x-icon name="arrow-left" class="h-3 w-3" />
+                    </button>
+                    <input type="date" id="dateSelector" value="{{ now('Asia/Manila')->format('Y-m-d') }}" max="{{ now('Asia/Manila')->format('Y-m-d') }}" onchange="handleDateChange()" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30">
+                    <button type="button" id="nextDayBtn" onclick="changeDay(1)" aria-label="Next day" class="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40">
+                        <x-icon name="chevron-right" class="h-3 w-3" />
+                    </button>
                 </div>
                 
                 <!-- Month Selector for Weekly (weeks within the selected month) -->
@@ -46,13 +56,22 @@
                         <!-- Year options will be populated by JavaScript -->
                     </select>
                 </div>
+
+                <!-- Year Selector for Quarterly (quarters within the selected year) -->
+                <div id="quarterYearSelectorContainer" style="display: none;">
+                    <select id="quarterYearSelector" onchange="handleQuarterYearChange()" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30">
+                        @foreach($quarterYears as $year)
+                            <option value="{{ $year }}" @selected($year === now('Asia/Manila')->year)>{{ $year }}</option>
+                        @endforeach
+                    </select>
+                </div>
             </div>
         </div>
         <div class="relative h-[400px]">
-            <canvas id="salesChart" style="width: 100%; height: 100%;"></canvas>
+            <canvas id="salesChart" class="block h-full w-full"></canvas>
             <div id="loadingIndicator" style="display: none;" class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-sm text-slate-400">Loading...</div>
             <div id="emptyState" style="display: none;" class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center text-sm text-slate-400">
-                No sales data yet —<br/>complete a sale in POS to begin
+                <span id="emptyStateText">No sales data yet —<br/>complete a sale in POS to begin</span>
             </div>
         </div>
     </div>
@@ -64,17 +83,18 @@
                 <x-icon name="money" class="h-4.5 w-4.5" />
             </div>
             <div class="min-w-0">
-                <div id="totalSalesAmount" class="truncate text-2xl font-bold text-slate-900">₱0.00</div>
+                <div id="totalSalesAmount" class="truncate text-2xl font-bold text-slate-900">&#8369;0.00</div>
                 <div class="mt-0.5 text-sm text-slate-500">Total Revenue</div>
             </div>
         </div>
         <div class="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-sky-50 text-lg text-sky-600">
-                <x-icon name="line-chart" class="h-4.5 w-4.5" />
+            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-violet-50 text-lg text-violet-600">
+                <x-icon name="credit-card" class="h-4.5 w-4.5" />
             </div>
             <div class="min-w-0">
-                <div id="avgSalesAmount" class="truncate text-2xl font-bold text-slate-900">₱0.00</div>
-                <div class="mt-0.5 text-sm text-slate-500">Average Sales</div>
+                <div id="creditSalesAmount" class="truncate text-2xl font-bold text-slate-900">&#8369;0.00</div>
+                <div class="mt-0.5 text-sm text-slate-500">Credit Sales</div>
+                <div id="creditSalesCount" class="mt-0.5 text-xs text-slate-400">0 transactions</div>
             </div>
         </div>
         <div class="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -82,8 +102,8 @@
                 <x-icon name="trophy" class="h-4.5 w-4.5" />
             </div>
             <div class="min-w-0">
-                <div id="peakSalesAmount" class="truncate text-2xl font-bold text-slate-900">₱0.00</div>
-                <div class="mt-0.5 text-sm text-slate-500">Peak Sales</div>
+                <div id="peakSalesAmount" class="truncate text-2xl font-bold text-slate-900">&#8369;0.00</div>
+                <div id="peakSalesLabel" class="mt-0.5 text-sm text-slate-500">Peak Sales</div>
             </div>
         </div>
     </div>
@@ -97,7 +117,7 @@
                     <x-icon name="users" class="h-4.5 w-4.5" />
                 </div>
                 <div class="min-w-0 flex-1">
-                    <div id="memberSalesTotal" class="truncate text-xl font-bold text-brand-900">₱0.00</div>
+                    <div id="memberSalesTotal" class="truncate text-xl font-bold text-brand-900">&#8369;0.00</div>
                     <div class="text-xs text-brand-600">Member Sales</div>
                 </div>
                 <div class="text-right">
@@ -110,7 +130,7 @@
                     <x-icon name="user-o" class="h-4.5 w-4.5" />
                 </div>
                 <div class="min-w-0 flex-1">
-                    <div id="nonMemberSalesTotal" class="truncate text-xl font-bold text-amber-900">₱0.00</div>
+                    <div id="nonMemberSalesTotal" class="truncate text-xl font-bold text-amber-900">&#8369;0.00</div>
                     <div class="text-xs text-amber-600">Non-Member Sales</div>
                 </div>
                 <div class="text-right">
@@ -123,36 +143,53 @@
 </div>
 
 <script>
+const APP_TODAY = '{{ now('Asia/Manila')->format('Y-m-d') }}';
+const DAILY_OPENING_HOUR = 6;
+const DAILY_CLOSING_HOUR = 20; // inclusive
+
+const DEFAULT_EMPTY_HTML = document.getElementById('emptyStateText').innerHTML;
+
 let currentPeriod = 'daily';
 let salesChart = null;
 
-// Helper function to get week number
-Date.prototype.getWeek = function() {
-    const d = new Date(Date.UTC(this.getFullYear(), this.getMonth(), this.getDate()));
-    const dayNum = d.getUTCDay() || 7;
-    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
-    return Math.ceil((((d - yearStart) / 86400000) + 1)/7);
-};
-
 // Format currency
-const formatPeso = (n) => '₱' + Number(n).toLocaleString('en-PH', {
+const pesoFormatter = new Intl.NumberFormat('en-PH', {
+    style: 'currency',
+    currency: 'PHP',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
 });
+const formatPeso = (n) => pesoFormatter.format(Number(n || 0));
+
+const formatHour = (hour) => {
+    const suffix = hour < 12 ? 'AM' : 'PM';
+    const display = hour % 12 === 0 ? 12 : hour % 12;
+    return `${display}:00 ${suffix}`;
+};
+
+const formatHourRange = (hour) => `${formatHour(hour)} – ${formatHour(hour).replace(':00', ':59')}`;
+
+const formatDisplayDate = (dateStr) => {
+    const d = new Date(`${dateStr}T00:00:00`);
+    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+};
 
 // Update button states
 function updateButtonStates(activeRange) {
-    const buttons = ['dailyBtn', 'weeklyBtn', 'monthlyBtn', 'yearlyBtn'];
+    const buttons = ['dailyBtn', 'weeklyBtn', 'monthlyBtn', 'quarterlyBtn', 'yearlyBtn'];
     buttons.forEach(btnId => {
         const btn = document.getElementById(btnId);
-        if (btnId === activeRange + 'Btn') {
-            btn.style.background = '#16a34a';
-            btn.style.color = 'white';
-        } else {
-            btn.style.background = '#ffffff';
-            btn.style.color = '#64748b';
-        }
+        if (!btn) return;
+
+        const isActive = btnId === activeRange + 'Btn';
+        btn.classList.toggle('bg-brand-600', isActive);
+        btn.classList.toggle('text-white', isActive);
+        btn.classList.toggle('hover:bg-brand-700', isActive);
+        btn.classList.toggle('bg-white', !isActive);
+        btn.classList.toggle('text-slate-500', !isActive);
+        btn.classList.toggle('hover:bg-slate-50', !isActive);
+        btn.classList.toggle('hover:text-slate-700', !isActive);
+        btn.setAttribute('aria-pressed', String(isActive));
     });
 }
 
@@ -162,22 +199,19 @@ async function fetchSalesData(period, params = {}) {
         let url = `/api/analytics/sales?period=${period}`;
         
         // Add parameters based on period
-        if (period === 'daily' && params.week) {
-            url += `&week=${params.week}`;
+        if (period === 'daily' && params.date) {
+            url += `&date=${params.date}`;
         } else if (period === 'weekly' && params.month) {
             url += `&month=${params.month}`;
-        } else if (period === 'monthly' && params.year) {
+        } else if ((period === 'monthly' || period === 'quarterly') && params.year) {
             url += `&year=${params.year}`;
         }
-        
-        console.log(`Fetching data for period: ${period}, params:`, params);
+
         const response = await fetch(url);
-        const data = await response.json();
-        console.log('API Response:', data);
-        return data;
+        return await response.json();
     } catch (error) {
         console.error('Error fetching sales data:', error);
-        return { data: [], total_revenue: 0, average_sales: 0, peak_sales: 0 };
+        return { data: [], total_revenue: 0, credit_sales: 0, credit_count: 0, peak_sales: 0 };
     }
 }
 
@@ -191,6 +225,7 @@ function updateChart(chartData, type = 'line') {
 
     const labels = chartData.map(d => d.label);
     const values = chartData.map(d => d.value);
+    const isDaily = currentPeriod === 'daily';
 
     salesChart = new Chart(ctx, {
         type: type,
@@ -205,6 +240,7 @@ function updateChart(chartData, type = 'line') {
                 maxBarThickness: 48,
                 fill: type === 'line',
                 tension: 0.4,
+                cubicInterpolationMode: 'monotone',
                 pointBackgroundColor: '#16a34a',
                 pointBorderColor: '#16a34a',
                 pointRadius: 4,
@@ -214,6 +250,14 @@ function updateChart(chartData, type = 'line') {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            layout: {
+                padding: {
+                    left: 12,
+                    right: 12,
+                    top: 8,
+                    bottom: 4
+                }
+            },
             plugins: {
                 legend: {
                     display: false
@@ -226,7 +270,15 @@ function updateChart(chartData, type = 'line') {
                     bodyColor: '#14532d',
                     padding: 12,
                     displayColors: false,
-                    callbacks: {
+                    callbacks: isDaily ? {
+                        title: () => '',
+                        label: function(context) {
+                            const row = chartData[context.dataIndex];
+                            return row && row.hour !== undefined
+                                ? `${formatHourRange(row.hour)}: ${formatPeso(context.parsed.y)}`
+                                : formatPeso(context.parsed.y);
+                        }
+                    } : {
                         label: function(context) {
                             return formatPeso(context.parsed.y);
                         }
@@ -235,6 +287,7 @@ function updateChart(chartData, type = 'line') {
             },
             scales: {
                 x: {
+                    offset: true,
                     grid: {
                         display: false
                     },
@@ -246,6 +299,8 @@ function updateChart(chartData, type = 'line') {
                     }
                 },
                 y: {
+                    beginAtZero: true,
+                    min: 0,
                     grid: {
                         color: '#e2e8f0',
                         borderDash: [3, 3]
@@ -256,7 +311,7 @@ function updateChart(chartData, type = 'line') {
                             size: 12
                         },
                         callback: function(value) {
-                            return '₱' + value.toLocaleString();
+                            return formatPeso(value);
                         }
                     }
                 }
@@ -268,17 +323,28 @@ function updateChart(chartData, type = 'line') {
 // Update KPI cards
 function updateKpis(kpis) {
     document.getElementById('totalSalesAmount').textContent = formatPeso(kpis.total);
-    document.getElementById('avgSalesAmount').textContent = formatPeso(kpis.average);
+    document.getElementById('creditSalesAmount').textContent = formatPeso(kpis.creditSales);
+
+    const creditCount = Number(kpis.creditCount || 0);
+    document.getElementById('creditSalesCount').textContent =
+        `${creditCount.toLocaleString('en-PH')} transaction${creditCount === 1 ? '' : 's'}`;
+
     document.getElementById('peakSalesAmount').textContent = formatPeso(kpis.peak);
+
+    const isDaily = currentPeriod === 'daily';
+    const isWeekly = currentPeriod === 'weekly';
+    const peakHasLabel = (isDaily || isWeekly || currentPeriod === 'quarterly') && kpis.peakLabel;
+    document.getElementById('peakSalesLabel').textContent =
+        peakHasLabel ? `Peak Sales · ${kpis.peakLabel}` : 'Peak Sales';
 }
 
 // Fetch and update member vs non-member breakdown
 async function fetchCustomerTypeBreakdown(period, params = {}) {
     try {
         let url = `/api/analytics/customer-type?period=${period}`;
-        if (period === 'daily' && params.week) url += `&week=${params.week}`;
+        if (period === 'daily' && params.date) url += `&date=${params.date}`;
         else if (period === 'weekly' && params.month) url += `&month=${params.month}`;
-        else if (period === 'monthly' && params.year) url += `&year=${params.year}`;
+        else if ((period === 'monthly' || period === 'quarterly') && params.year) url += `&year=${params.year}`;
 
         const response = await fetch(url);
         const data = await response.json();
@@ -292,37 +358,46 @@ async function fetchCustomerTypeBreakdown(period, params = {}) {
     }
 }
 
-// Initialize week selector
-function initializeWeekSelector() {
-    const selector = document.getElementById('weekSelector');
-    const now = new Date();
-    const currentWeek = now.getFullYear() + '-' + String(now.getWeek()).padStart(2, '0');
-    
-    // Generate week options for the last 12 weeks
-    for (let i = 11; i >= 0; i--) {
-        const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (i * 7));
-        const weekNum = date.getWeek();
-        const year = date.getFullYear();
-        const value = year + '-' + String(weekNum).padStart(2, '0');
-        const label = `Week ${weekNum} (${year})`;
-        
-        const option = document.createElement('option');
-        option.value = value;
-        option.textContent = label;
-        if (value === currentWeek) {
-            option.selected = true;
-        }
-        selector.appendChild(option);
-    }
+// Keep the day navigation in sync with today
+function updateDayNav() {
+    const input = document.getElementById('dateSelector');
+    document.getElementById('nextDayBtn').disabled = (input.value || APP_TODAY) >= APP_TODAY;
 }
 
-// Handle week change (Daily tab: days within the selected week)
-async function handleWeekChange() {
-    const selectedWeek = document.getElementById('weekSelector').value;
-    const [year, week] = selectedWeek.split('-');
-    document.getElementById('chartTitle').textContent = `Daily Sales (Week ${week}, ${year})`;
-    
-    await loadDataWithParams('daily', { week: selectedWeek });
+// Handle date change (Daily tab: hourly breakdown for one day)
+async function handleDateChange() {
+    const input = document.getElementById('dateSelector');
+    let value = input.value || APP_TODAY;
+
+    if (value > APP_TODAY) {
+        value = APP_TODAY;
+    }
+
+    input.value = value;
+    updateDayNav();
+    document.getElementById('chartTitle').textContent = `Hourly Sales (${formatDisplayDate(value)})`;
+
+    await loadDataWithParams('daily', { date: value });
+}
+
+// Move the selected day backwards or forwards
+function changeDay(delta) {
+    const input = document.getElementById('dateSelector');
+    const base = new Date(`${input.value || APP_TODAY}T00:00:00`);
+    base.setDate(base.getDate() + delta);
+
+    const next = [
+        base.getFullYear(),
+        String(base.getMonth() + 1).padStart(2, '0'),
+        String(base.getDate()).padStart(2, '0')
+    ].join('-');
+
+    if (next > APP_TODAY) {
+        return;
+    }
+
+    input.value = next;
+    handleDateChange();
 }
 
 // Initialize month selector
@@ -382,6 +457,14 @@ async function handleYearChange() {
     await loadDataWithParams('monthly', { year: selectedYear });
 }
 
+// Handle year change (Quarterly tab: quarters within the selected year)
+async function handleQuarterYearChange() {
+    const selectedYear = document.getElementById('quarterYearSelector').value;
+    document.getElementById('chartTitle').textContent = `Quarterly Sales (${selectedYear})`;
+
+    await loadDataWithParams('quarterly', { year: selectedYear });
+}
+
 // Load yearly data (Yearly tab: annual totals for all years)
 async function loadYearlyData() {
     document.getElementById('chartTitle').textContent = 'Yearly Sales (All Years)';
@@ -394,62 +477,92 @@ async function loadDataWithParams(period, params) {
     // Show loading
     document.getElementById('loadingIndicator').style.display = 'block';
     document.getElementById('emptyState').style.display = 'none';
-    
+
     // Fetch data
     const data = await fetchSalesData(period, params);
-    
+
     // Hide loading
     document.getElementById('loadingIndicator').style.display = 'none';
-    
+
+    const isDaily = period === 'daily';
+    const rawData = data.data || [];
+    const isEmpty = rawData.length === 0 || rawData.every(d => Number(d.value) === 0);
+    const chartData = isDaily
+        ? rawData.filter(d => d.hour >= DAILY_OPENING_HOUR && d.hour <= DAILY_CLOSING_HOUR)
+        : rawData;
+
     // Check if empty
-    const isEmpty = data.data && data.data.every(d => d.value === 0);
     if (isEmpty) {
+        const emptyText = document.getElementById('emptyStateText');
+        if (isDaily) {
+            emptyText.textContent = 'No sales recorded on this day';
+        } else {
+            emptyText.innerHTML = DEFAULT_EMPTY_HTML;
+        }
         document.getElementById('emptyState').style.display = 'block';
         if (salesChart) {
             salesChart.destroy();
             salesChart = null;
         }
     } else {
+        document.getElementById('emptyStateText').innerHTML = DEFAULT_EMPTY_HTML;
         document.getElementById('emptyState').style.display = 'none';
         try {
-            updateChart(data.data || [], 'line');
+            updateChart(chartData, 'line');
         } catch (error) {
             console.error('Error rendering chart:', error);
         }
     }
-    
+
+    const total = Number(data.total_revenue || 0);
+    const peak = Number(data.peak_sales || 0);
+    let peakLabel = data.peak_label || null;
+
+    if (isDaily && peak > 0) {
+        const peakRow = rawData.find(d => Number(d.value) === peak);
+        peakLabel = peakRow ? peakRow.label : null;
+    }
+
     // Update KPIs
     updateKpis({
-        total: data.total_revenue || 0,
-        average: data.average_sales || 0,
-        peak: data.peak_sales || 0
+        total: total,
+        creditSales: Number(data.credit_sales || 0),
+        creditCount: Number(data.credit_count || 0),
+        peak: peak,
+        peakLabel: peakLabel
     });
 
     // Update member vs non-member breakdown
-    const breakdownParams = { ...params };
-    await fetchCustomerTypeBreakdown(period, breakdownParams);
+    await fetchCustomerTypeBreakdown(period, { ...params });
 }
 
 // Main function to set time range and update everything
 async function setTimeRange(range) {
     currentPeriod = range;
-    
+
+    if (salesChart) {
+        salesChart.destroy();
+        salesChart = null;
+    }
+
     // Update UI
     updateButtonStates(range);
     
     // Hide all selectors first
-    document.getElementById('weekSelectorContainer').style.display = 'none';
+    document.getElementById('dateSelectorContainer').style.display = 'none';
     document.getElementById('monthSelectorContainer').style.display = 'none';
     document.getElementById('yearSelectorContainer').style.display = 'none';
-    
+    document.getElementById('quarterYearSelectorContainer').style.display = 'none';
+
     // Show appropriate selector and initialize if needed
     if (range === 'daily') {
-        // Daily: days within the selected week -> week selector
-        document.getElementById('weekSelectorContainer').style.display = 'block';
-        if (!document.getElementById('weekSelector').options.length) {
-            initializeWeekSelector();
+        // Daily: hourly breakdown for one day -> date selector
+        document.getElementById('dateSelectorContainer').style.display = 'flex';
+        const dateInput = document.getElementById('dateSelector');
+        if (!dateInput.value) {
+            dateInput.value = APP_TODAY;
         }
-        await handleWeekChange();
+        await handleDateChange();
         return;
     } else if (range === 'weekly') {
         // Weekly: weeks within the selected month -> month selector
@@ -467,6 +580,11 @@ async function setTimeRange(range) {
         }
         await handleYearChange();
         return;
+    } else if (range === 'quarterly') {
+        // Quarterly: quarters within the selected year -> quarter year selector
+        document.getElementById('quarterYearSelectorContainer').style.display = 'block';
+        await handleQuarterYearChange();
+        return;
     } else if (range === 'yearly') {
         // Yearly: annual totals for all years -> no selector
         await loadYearlyData();
@@ -476,7 +594,6 @@ async function setTimeRange(range) {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Analytics page loaded, initializing...');
     setTimeRange('daily');
 });
 </script>

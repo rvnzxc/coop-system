@@ -8,6 +8,7 @@ use App\Services\AuditLogger;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class AccountController extends Controller
 {
@@ -75,6 +76,16 @@ class AccountController extends Controller
 
         abort_if(! $isSelf && $user->role !== 'cashier', 403, 'Administrator accounts can only be managed by their owner.');
 
+        if ($isSelf && $request->has('is_active') && ! $request->boolean('is_active')) {
+            $message = 'You cannot disable your own account.';
+
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => $message], 422);
+            }
+
+            return back()->with('error', $message);
+        }
+
         $rules = $this->accountRules($user, false);
         $rules['current_password'] = ['nullable', 'required_with:password', 'current_password'];
         $rules['password'] = ['nullable', 'string', 'min:8', 'confirmed'];
@@ -84,6 +95,7 @@ class AccountController extends Controller
         }
 
         $validated = $request->validate($rules);
+        $wasActive = $user->is_active;
 
         $user->name = $validated['name'];
         $user->username = trim($validated['username']);
@@ -94,6 +106,10 @@ class AccountController extends Controller
 
         if (! $isSelf && $request->has('is_active')) {
             $user->is_active = $request->boolean('is_active');
+
+            if (! $user->is_active) {
+                $user->remember_token = null;
+            }
         }
 
         if (filled($validated['password'] ?? null)) {
@@ -102,10 +118,18 @@ class AccountController extends Controller
 
         $user->save();
 
+        $sessionsInvalidated = ! $user->is_active;
+
+        if ($sessionsInvalidated) {
+            $this->invalidateUserSessions($user);
+        }
+
         AuditLogger::log(AuditLog::ACTION_ACCOUNT_UPDATED, 'user', $user->id, [
             'username' => $user->username,
             'role' => $user->role,
             'is_active' => (bool) $user->is_active,
+            'previous_is_active' => $wasActive,
+            'sessions_invalidated' => $sessionsInvalidated,
             'password_changed' => filled($validated['password'] ?? null),
         ]);
 
@@ -155,29 +179,67 @@ class AccountController extends Controller
             ->with('success', 'Password for "'.$user->username.'" has been reset.');
     }
 
-    public function toggleStatus(User $user)
+    public function toggleStatus(Request $request, User $user)
     {
         if ($user->is(Auth::user())) {
-            return back()->with('error', 'You cannot change the status of your own account.');
+            $message = 'You cannot disable your own account.';
+
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => $message], 422);
+            }
+
+            return back()->with('error', $message);
         }
 
         if ($user->role !== 'cashier') {
-            return back()->with('error', 'Administrator accounts cannot be deactivated from this page.');
+            $message = 'Administrator accounts cannot be deactivated from this page.';
+
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => $message], 422);
+            }
+
+            return back()->with('error', $message);
         }
 
-        $user->is_active = ! $user->is_active;
+        $wasActive = $user->is_active;
+        $user->is_active = $request->has('is_active')
+            ? $request->boolean('is_active')
+            : ! $wasActive;
+
+        if (! $user->is_active) {
+            $user->remember_token = null;
+        }
+
         $user->save();
+
+        $sessionsInvalidated = ! $user->is_active;
+
+        if ($sessionsInvalidated) {
+            $this->invalidateUserSessions($user);
+        }
 
         AuditLogger::log(AuditLog::ACTION_ACCOUNT_STATUS_CHANGED, 'user', $user->id, [
             'username' => $user->username,
             'is_active' => (bool) $user->is_active,
+            'previous_is_active' => $wasActive,
+            'sessions_invalidated' => $sessionsInvalidated,
         ]);
 
-        $status = $user->is_active ? 'activated' : 'deactivated';
+        $message = $user->is_active
+            ? 'Account re-enabled. The cashier can log in again.'
+            : 'Account disabled. Active sessions were ended.';
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'is_active' => (bool) $user->is_active,
+                'message' => $message,
+            ]);
+        }
 
         return redirect()
             ->route('accounts.index')
-            ->with('success', 'Account "'.$user->username.'" has been '.$status.'.');
+            ->with('success', $message);
     }
 
     public function me()
@@ -219,6 +281,17 @@ class AccountController extends Controller
             : redirect()->route('accounts.me');
 
         return $redirect->with('success', 'Your account has been updated.');
+    }
+
+    private function invalidateUserSessions(User $user): void
+    {
+        if (config('session.driver') !== 'database') {
+            return;
+        }
+
+        DB::table(config('session.table', 'sessions'))
+            ->where('user_id', $user->id)
+            ->delete();
     }
 
     private function accountRules(?User $user = null, bool $passwordRequired = true): array

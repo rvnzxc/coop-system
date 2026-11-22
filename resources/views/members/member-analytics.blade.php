@@ -46,7 +46,7 @@
             @endphp
             <div class="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div class="rounded-lg bg-slate-50 p-4 text-center">
-                    <div class="summary-total-purchases text-xl font-bold text-slate-900">₱{{ number_format($member->total_purchases, 2) }}</div>
+                    <div class="summary-total-purchases text-xl font-bold text-slate-900">&#8369;{{ number_format($member->total_purchases, 2) }}</div>
                     <div class="mt-1 text-xs text-slate-500">Total Purchases</div>
                 </div>
                 <div class="rounded-lg bg-slate-50 p-4 text-center">
@@ -54,7 +54,7 @@
                     <div class="mt-1 text-xs text-slate-500">Transactions</div>
                 </div>
                 <div class="rounded-lg bg-slate-50 p-4 text-center">
-                    <div class="summary-average-purchase text-xl font-bold text-slate-900">₱{{ number_format($transactionCount > 0 ? $member->total_purchases / $transactionCount : 0, 2) }}</div>
+                    <div class="summary-average-purchase text-xl font-bold text-slate-900">&#8369;{{ number_format($transactionCount > 0 ? $member->total_purchases / $transactionCount : 0, 2) }}</div>
                     <div class="mt-1 text-xs text-slate-500">Average Purchase</div>
                 </div>
             </div>
@@ -129,7 +129,12 @@ function formatDateTime(datetime) {
 }
 
 function formatPeso(value) {
-    return '₱' + Number(value || 0).toFixed(2);
+    return new Intl.NumberFormat('en-PH', {
+        style: 'currency',
+        currency: 'PHP',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    }).format(Number(value || 0));
 }
 
 function buildDetailTable(transaction) {

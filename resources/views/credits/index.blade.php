@@ -7,37 +7,39 @@
     <div class="mb-6 flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
         <div class="min-w-0">
             <h2 class="text-xl font-bold text-slate-900">Credit Management</h2>
-            <p class="mt-0.5 text-sm text-slate-500">Track and collect member credit payments</p>
+            <p class="mt-0.5 text-sm text-slate-500">Track member credit purchases</p>
         </div>
     </div>
 
+    <x-tab-bar
+        data-credit-tabs
+        :tabs="[
+            ['key' => 'credits', 'label' => 'Credits', 'href' => route('credits.index')],
+            ['key' => 'analytics', 'label' => 'Analytics', 'href' => route('credits.index', ['tab' => 'analytics'])],
+        ]"
+        :active="$tab"
+    />
+
+    <div data-credit-panel="credits" class="{{ $tab === 'credits' ? '' : 'hidden' }}">
+
     {{-- Summary cards --}}
-    <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-4">
+    <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div class="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-base text-amber-600">
                 <x-icon name="credit-card" class="h-4 w-4" />
             </div>
             <div class="min-w-0">
-                <div class="truncate text-xl font-bold text-slate-900">₱{{ number_format($totalOutstanding, 2) }}</div>
-                <div class="text-xs text-slate-500">Total Outstanding</div>
+                <div class="truncate text-xl font-bold text-slate-900">&#8369;{{ number_format($totalCredit, 2) }}</div>
+                <div class="text-xs text-slate-500">Total Credit</div>
             </div>
         </div>
         <div class="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-50 text-base text-red-600">
-                <x-icon name="exclamation-circle" class="h-4 w-4" />
+            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-base text-slate-600">
+                <x-icon name="money" class="h-4 w-4" />
             </div>
             <div class="min-w-0">
-                <div class="truncate text-xl font-bold text-slate-900">{{ $unpaidCount }}</div>
-                <div class="text-xs text-slate-500">Unpaid Credits</div>
-            </div>
-        </div>
-        <div class="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-yellow-50 text-base text-yellow-600">
-                <x-icon name="clock-o" class="h-4 w-4" />
-            </div>
-            <div class="min-w-0">
-                <div class="truncate text-xl font-bold text-slate-900">{{ $partialCount }}</div>
-                <div class="text-xs text-slate-500">Partial Payments</div>
+                <div class="truncate text-xl font-bold text-slate-900">{{ $creditCount }}</div>
+                <div class="text-xs text-slate-500">Credit Records</div>
             </div>
         </div>
         <div class="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -45,38 +47,47 @@
                 <x-icon name="users" class="h-4 w-4" />
             </div>
             <div class="min-w-0">
-                <div class="truncate text-xl font-bold text-slate-900">{{ $membersWithDebt }}</div>
-                <div class="text-xs text-slate-500">Members with Debt</div>
+                <div class="truncate text-xl font-bold text-slate-900">{{ $membersWithCredit }}</div>
+                <div class="text-xs text-slate-500">Members with Credit</div>
             </div>
         </div>
     </div>
 
-    {{-- Filter tabs --}}
-    <div class="mb-4 flex gap-2">
-        <a href="{{ route('credits.index') }}" class="rounded-full px-4 py-1.5 text-sm font-medium transition-colors {{ !$status ? 'bg-brand-600 text-white' : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50' }}">All</a>
-        <a href="{{ route('credits.index', ['status' => 'unpaid']) }}" class="rounded-full px-4 py-1.5 text-sm font-medium transition-colors {{ $status === 'unpaid' ? 'bg-brand-600 text-white' : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50' }}">Unpaid</a>
-        <a href="{{ route('credits.index', ['status' => 'partial']) }}" class="rounded-full px-4 py-1.5 text-sm font-medium transition-colors {{ $status === 'partial' ? 'bg-brand-600 text-white' : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50' }}">Partial</a>
-        <a href="{{ route('credits.index', ['status' => 'paid']) }}" class="rounded-full px-4 py-1.5 text-sm font-medium transition-colors {{ $status === 'paid' ? 'bg-brand-600 text-white' : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50' }}">Paid</a>
+    {{-- Members with highest credit --}}
+    <div class="mb-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div class="mb-4">
+            <h3 class="text-base font-semibold text-slate-900">Members with highest credit</h3>
+            <p class="mt-0.5 text-xs text-slate-500">Ranked by total credit</p>
+        </div>
+
+        <div id="creditRankingEmpty" class="{{ empty($creditRankings['all']) ? 'flex' : 'hidden' }} h-[180px] flex-col items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50 px-6 text-center">
+            <div class="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm">
+                <x-icon name="credit-card" class="h-5 w-5" />
+            </div>
+            <p class="text-sm font-semibold text-slate-700">No credit data to display</p>
+            <p class="mt-1 text-xs text-slate-500">Credit records will appear here.</p>
+        </div>
+
+        <div id="creditRankingWrap" class="{{ empty($creditRankings['all']) ? 'hidden' : '' }} relative h-[300px]">
+            <canvas id="creditRankingChart"></canvas>
+        </div>
     </div>
 
     {{-- Credits grouped by member --}}
-    <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+    <div data-credit-table class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <div class="max-h-[calc(100vh-24rem)] overflow-auto">
             <table class="w-full text-left text-sm">
                 <thead class="sticky top-0 z-10 bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
                     <tr>
                         <th class="px-5 py-3.5 font-semibold">Member</th>
                         <th class="px-5 py-3.5 text-right font-semibold">Total Credit</th>
-                        <th class="px-5 py-3.5 text-right font-semibold">Total Paid</th>
-                        <th class="px-5 py-3.5 text-right font-semibold">Balance</th>
                         <th class="px-5 py-3.5 text-center font-semibold">Credits</th>
-                        <th class="px-5 py-3.5 text-right font-semibold">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
                     @forelse($groupedCredits as $memberId => $group)
                     {{-- Member row --}}
-                    <tr class="cursor-pointer transition-colors hover:bg-slate-50 {{ $group['has_unpaid'] ? 'bg-amber-50/30' : '' }}" onclick="toggleMember({{ $memberId }})">
+                    <tr class="cursor-pointer transition-colors hover:bg-slate-50" onclick="toggleMember({{ $memberId }})">
                         <td class="px-5 py-3.5">
                             <div class="flex items-center gap-2">
                                 <x-icon id="chevron-{{ $memberId }}" name="chevron-right" class="h-3 w-3 text-slate-400 transition-transform" />
@@ -86,34 +97,21 @@
                                 </div>
                             </div>
                         </td>
-                        <td class="whitespace-nowrap px-5 py-3.5 text-right font-semibold text-slate-700">₱{{ number_format($group['total'], 2) }}</td>
-                        <td class="whitespace-nowrap px-5 py-3.5 text-right text-slate-600">₱{{ number_format($group['total_paid'], 2) }}</td>
-                        <td class="whitespace-nowrap px-5 py-3.5 text-right font-bold {{ $group['balance'] > 0 ? 'text-red-600' : 'text-emerald-600' }}">₱{{ number_format($group['balance'], 2) }}</td>
+                        <td class="whitespace-nowrap px-5 py-3.5 text-right font-semibold text-slate-700">&#8369;{{ number_format($group['total'], 2) }}</td>
                         <td class="px-5 py-3.5 text-center">
                             <span class="inline-flex items-center justify-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">{{ $group['credits']->count() }}</span>
-                        </td>
-                        <td class="whitespace-nowrap px-5 py-3.5 text-right">
-                            @if($group['has_unpaid'])
-                            <button onclick="event.stopPropagation(); openPayMemberModal({{ $memberId }}, '{{ $group['member']->first_name }} {{ $group['member']->last_name }}', {{ $group['balance'] }})" class="cursor-pointer rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-brand-700">
-                                <x-icon name="money" class="h-3 w-3" /> Pay
-                            </button>
-                            @endif
                         </td>
                     </tr>
 
                     {{-- Expandable credit details --}}
                     <tr id="member-credits-{{ $memberId }}" style="display: none;">
-                        <td colspan="6" class="bg-slate-50 px-5 py-0">
+                        <td colspan="3" class="bg-slate-50 px-5 py-0">
                             <table class="w-full text-xs">
                                 <thead>
                                     <tr class="text-slate-400">
                                         <th class="py-2.5 text-left font-medium">Date</th>
                                         <th class="py-2.5 text-left font-medium">Items</th>
                                         <th class="py-2.5 text-right font-medium">Amount</th>
-                                        <th class="py-2.5 text-right font-medium">Paid</th>
-                                        <th class="py-2.5 text-right font-medium">Balance</th>
-                                        <th class="py-2.5 text-center font-medium">Status</th>
-                                        <th class="py-2.5 text-right font-medium">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-200">
@@ -129,26 +127,7 @@
                                                 <span class="text-slate-400">—</span>
                                             @endif
                                         </td>
-                                        <td class="whitespace-nowrap py-2 text-right font-medium text-slate-700">₱{{ number_format($credit->amount, 2) }}</td>
-                                        <td class="whitespace-nowrap py-2 text-right text-slate-600">₱{{ number_format($credit->amount_paid, 2) }}</td>
-                                        <td class="whitespace-nowrap py-2 text-right font-semibold {{ $credit->balance > 0 ? 'text-red-600' : 'text-emerald-600' }}">₱{{ number_format($credit->balance, 2) }}</td>
-                                        <td class="py-2 text-center">
-                                            @if($credit->status === 'paid')
-                                                <span class="inline-flex items-center gap-0.5 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">Paid</span>
-                                            @elseif($credit->status === 'partial')
-                                                <span class="inline-flex items-center gap-0.5 rounded-full bg-yellow-50 px-2 py-0.5 text-[10px] font-medium text-yellow-700">Partial</span>
-                                            @else
-                                                <span class="inline-flex items-center gap-0.5 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-medium text-red-700">Unpaid</span>
-                                            @endif
-                                        </td>
-                                        <td class="py-2 text-right">
-                                            <div class="flex items-center justify-end gap-1">
-                                                @if($credit->status !== 'paid')
-                                                <button onclick="event.stopPropagation(); openPayModal({{ $credit->id }}, '{{ $group['member']->first_name }} {{ $group['member']->last_name }}', {{ $credit->balance }})" class="cursor-pointer rounded bg-brand-600 px-2 py-1 text-[10px] font-semibold text-white hover:bg-brand-700">Pay</button>
-                                                @endif
-                                                <a href="{{ route('credits.show', $credit->id) }}" onclick="event.stopPropagation()" class="cursor-pointer rounded border border-slate-200 bg-white px-2 py-1 text-[10px] font-semibold text-slate-600 hover:bg-slate-50">View</a>
-                                            </div>
-                                        </td>
+                                        <td class="whitespace-nowrap py-2 text-right font-medium text-slate-700">&#8369;{{ number_format($credit->amount, 2) }}</td>
                                     </tr>
                                     @endforeach
                                 </tbody>
@@ -157,7 +136,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="6" class="px-5 py-16 text-center">
+                        <td colspan="3" class="px-5 py-16 text-center">
                             <div class="flex flex-col items-center">
                                 <div class="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-2xl text-slate-400">
                                     <x-icon name="credit-card" class="h-6 w-6" />
@@ -172,74 +151,321 @@
             </table>
         </div>
     </div>
-</div>
-
-{{-- Pay Modal --}}
-<div id="payModal" style="display: none;" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50">
-    <div class="mx-4 w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
-        <h3 class="mb-1 text-base font-bold text-slate-900">Record Credit Payment</h3>
-        <p id="payModalMember" class="mb-4 text-sm text-slate-500"></p>
-        <form id="payModalForm" method="POST">
-            @csrf
-            <div class="mb-4">
-                <label class="mb-1 block text-xs font-semibold text-slate-600">Payment Amount</label>
-                <input type="number" name="amount_paid" id="payModalAmount" step="0.01" min="0.01" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30" required>
-            </div>
-            <div class="flex gap-3">
-                <button type="button" onclick="closePayModal()" class="flex-1 cursor-pointer rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50">Cancel</button>
-                <button type="submit" class="flex-1 cursor-pointer rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700">Record Payment</button>
-            </div>
-        </form>
     </div>
+
+    @include('credits._analytics')
 </div>
 
 <script>
+const openMemberRows = new Set();
+
+function rememberOpenMemberRows() {
+    try {
+        sessionStorage.setItem('creditsOpenMembers', JSON.stringify([...openMemberRows]));
+    } catch (error) {
+        // Storage can be unavailable in private browsing; expansion still works for this page.
+    }
+}
+
+function restoreOpenMemberRows() {
+    try {
+        const stored = JSON.parse(sessionStorage.getItem('creditsOpenMembers') || '[]');
+
+        if (Array.isArray(stored)) {
+            stored.forEach(function (memberId) {
+                openMemberRows.add(String(memberId));
+            });
+        }
+    } catch (error) {
+        // Ignore malformed or unavailable storage.
+    }
+
+    openMemberRows.forEach(function (memberId) {
+        const row = document.getElementById('member-credits-' + memberId);
+        const chevron = document.getElementById('chevron-' + memberId);
+
+        if (row) {
+            row.style.display = '';
+            if (chevron) {
+                chevron.style.transform = 'rotate(90deg)';
+            }
+        }
+    });
+}
+
 function toggleMember(memberId) {
     const row = document.getElementById('member-credits-' + memberId);
     const chevron = document.getElementById('chevron-' + memberId);
-    if (row) {
-        const isVisible = row.style.display !== 'none';
-        row.style.display = isVisible ? 'none' : '';
-        if (chevron) {
-            chevron.style.transform = isVisible ? '' : 'rotate(90deg)';
+
+    if (!row) {
+        return;
+    }
+
+    const isVisible = row.style.display !== 'none';
+    row.style.display = isVisible ? 'none' : '';
+
+    if (chevron) {
+        chevron.style.transform = isVisible ? '' : 'rotate(90deg)';
+    }
+
+    if (isVisible) {
+        openMemberRows.delete(String(memberId));
+    } else {
+        openMemberRows.add(String(memberId));
+    }
+
+    rememberOpenMemberRows();
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    restoreOpenMemberRows();
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+    const tabsRoot = document.querySelector('[data-credit-tabs]');
+    const panels = document.querySelectorAll('[data-credit-panel]');
+
+    if (!tabsRoot || panels.length === 0) {
+        return;
+    }
+
+    function activateCreditTab(key, updateUrl) {
+        panels.forEach(function (panel) {
+            panel.classList.toggle('hidden', panel.dataset.creditPanel !== key);
+        });
+
+        tabsRoot.querySelectorAll('[data-tab]').forEach(function (link) {
+            const isActive = link.dataset.tab === key;
+            link.classList.toggle('border-brand-600', isActive);
+            link.classList.toggle('text-brand-700', isActive);
+            link.classList.toggle('border-transparent', !isActive);
+            link.classList.toggle('text-slate-500', !isActive);
+            link.classList.toggle('hover:text-slate-800', !isActive);
+            link.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
+
+        if (updateUrl) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('tab', key);
+            window.history.replaceState({}, '', url);
+        }
+
+        if (key === 'analytics' && typeof window.renderCreditAnalytics === 'function') {
+            window.renderCreditAnalytics();
+        }
+
+        if (key === 'credits' && typeof window.renderCreditRanking === 'function') {
+            window.renderCreditRanking();
         }
     }
-}
 
-function openPayModal(creditId, memberName, balance) {
-    document.getElementById('payModalMember').textContent = memberName + ' — Balance: ₱' + balance.toFixed(2);
-    document.getElementById('payModalAmount').value = balance.toFixed(2);
-    document.getElementById('payModalAmount').max = balance;
-    document.getElementById('payModalForm').action = '/credits/' + creditId + '/pay';
-    document.getElementById('payModal').style.display = 'flex';
-}
+    tabsRoot.querySelectorAll('[data-tab]').forEach(function (link) {
+        link.addEventListener('click', function (event) {
+            event.preventDefault();
+            activateCreditTab(link.dataset.tab, true);
+        });
+    });
 
-function openPayMemberModal(memberId, memberName, balance) {
-    // For paying against the first unpaid credit of this member
-    // Find the first unpaid credit row in the expanded section
-    const memberRow = document.getElementById('member-credits-' + memberId);
-    if (memberRow) {
-        memberRow.style.display = '';
-        const chevron = document.getElementById('chevron-' + memberId);
-        if (chevron) chevron.style.transform = 'rotate(90deg)';
+    if (document.querySelector('[data-credit-panel="analytics"]:not(.hidden)')) {
+        activateCreditTab('analytics', false);
+    }
+});
+</script>
+
+<script>
+    const creditRankingData = @json($creditRankings);
+
+    let creditRankingChart = null;
+
+    function formatCreditRankingPeso(value, decimals) {
+        return new Intl.NumberFormat('en-PH', {
+            style: 'currency',
+            currency: 'PHP',
+            minimumFractionDigits: decimals,
+            maximumFractionDigits: decimals
+        }).format(Number(value || 0));
     }
 
-    // Collect unpaid credits from this member's section
-    const payBtns = memberRow ? memberRow.querySelectorAll('button') : [];
-    for (const btn of payBtns) {
-        if (btn.textContent.trim() === 'Pay') {
-            btn.click();
+    function setCreditRankingEmptyState(isEmpty) {
+        const empty = document.getElementById('creditRankingEmpty');
+        const wrap = document.getElementById('creditRankingWrap');
+
+        if (!empty || !wrap) {
             return;
         }
+
+        if (isEmpty) {
+            empty.classList.remove('hidden');
+            empty.classList.add('flex');
+            wrap.classList.add('hidden');
+        } else {
+            empty.classList.add('hidden');
+            empty.classList.remove('flex');
+            wrap.classList.remove('hidden');
+        }
     }
-}
 
-function closePayModal() {
-    document.getElementById('payModal').style.display = 'none';
-}
+    function renderCreditRanking() {
+        if (typeof Chart === 'undefined') {
+            return;
+        }
 
-document.getElementById('payModal').addEventListener('click', function(e) {
-    if (e.target === this) closePayModal();
-});
+        const wrap = document.getElementById('creditRankingWrap');
+        const canvas = document.getElementById('creditRankingChart');
+
+        if (!wrap || !canvas) {
+            return;
+        }
+
+        const entries = Array.isArray(creditRankingData.all) ? creditRankingData.all : [];
+        const values = entries.map(function (entry) {
+            return Number(entry.total);
+        });
+        const maxValue = values.length ? Math.max.apply(null, values) : 0;
+
+        if (!entries.length || maxValue <= 0) {
+            setCreditRankingEmptyState(true);
+
+            if (creditRankingChart) {
+                creditRankingChart.destroy();
+                creditRankingChart = null;
+            }
+
+            return;
+        }
+
+        setCreditRankingEmptyState(false);
+
+        const labels = entries.map(function (entry) {
+            return entry.name;
+        });
+        const colors = entries.map(function (_, index) {
+            return index === 0 ? '#16a34a' : '#86efac';
+        });
+
+        wrap.style.height = Math.max(180, entries.length * 48 + 60) + 'px';
+
+        if (creditRankingChart) {
+            creditRankingChart.destroy();
+        }
+
+        creditRankingChart = new Chart(canvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: colors,
+                    borderRadius: 4,
+                    borderSkipped: false,
+                    barThickness: 22
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: {
+                    padding: {
+                        right: 80
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        max: maxValue,
+                        grid: {
+                            color: '#f1f5f9'
+                        },
+                        border: {
+                            display: false
+                        },
+                        ticks: {
+                            color: '#94a3b8',
+                            font: {
+                                size: 11
+                            },
+                            callback: function (value) {
+                                return formatCreditRankingPeso(value, 0);
+                            }
+                        }
+                    },
+                    y: {
+                        grid: {
+                            display: false
+                        },
+                        border: {
+                            display: false
+                        },
+                        ticks: {
+                            color: '#334155',
+                            autoSkip: false,
+                            font: {
+                                size: 12,
+                                weight: '600'
+                            },
+                            callback: function (value) {
+                                const label = this.getLabelForValue(value);
+
+                                return label.length > 22 ? label.slice(0, 21) + '…' : label;
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'white',
+                        borderColor: '#16a34a',
+                        borderWidth: 1.5,
+                        titleColor: '#334155',
+                        bodyColor: '#14532d',
+                        padding: 12,
+                        callbacks: {
+                            title: function (items) {
+                                return items.length ? entries[items[0].dataIndex].name : '';
+                            },
+                            label: function (context) {
+                                const entry = entries[context.dataIndex];
+
+                                return [
+                                    'Member ID: ' + entry.member_id,
+                                    'Total Credit: ' + formatCreditRankingPeso(entry.total, 2)
+                                ];
+                            }
+                        }
+                    }
+                }
+            },
+            plugins: [{
+                id: 'creditRankingValueLabels',
+                afterDatasetsDraw: function (chart) {
+                    const ctx = chart.ctx;
+
+                    ctx.save();
+                    ctx.font = '600 11px ui-sans-serif, system-ui, sans-serif';
+                    ctx.fillStyle = '#14532d';
+                    ctx.textAlign = 'left';
+                    ctx.textBaseline = 'middle';
+
+                    chart.getDatasetMeta(0).data.forEach(function (bar, index) {
+                        ctx.fillText(formatCreditRankingPeso(entries[index].total, 0), bar.x + 8, bar.y);
+                    });
+
+                    ctx.restore();
+                }
+            }]
+        });
+    }
+
+    window.renderCreditRanking = renderCreditRanking;
+
+    document.addEventListener('DOMContentLoaded', function () {
+        if (document.querySelector('[data-credit-panel="credits"]:not(.hidden)')) {
+            renderCreditRanking();
+        }
+    });
 </script>
 @endsection

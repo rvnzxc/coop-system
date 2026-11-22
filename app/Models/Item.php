@@ -6,6 +6,7 @@ use App\Services\BarcodeService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Item extends Model
 {
@@ -23,7 +24,13 @@ class Item extends Model
         'quantity',
         'price',
         'category',
+        'category_id',
     ];
+
+    public function categoryInfo(): BelongsTo
+    {
+        return $this->belongsTo(Category::class, 'category_id');
+    }
 
     /**
      * Guarantee every item ends up with a scannable barcode, even when the

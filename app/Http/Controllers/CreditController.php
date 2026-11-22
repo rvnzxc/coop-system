@@ -3,102 +3,160 @@
 namespace App\Http\Controllers;
 
 use App\Models\Credit;
-use App\Models\CreditPayment;
-use App\Models\Member;
+use App\Models\Sale;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class CreditController extends Controller
 {
     public function index(Request $request)
     {
-        $status = $request->query('status');
+        $tab = $request->query('tab') === 'analytics' ? 'analytics' : 'credits';
+        $from = $this->parseDate($request->query('from'));
+        $to = $this->parseDate($request->query('to'));
 
-        $query = Credit::with('member')->orderBy('created_at', 'desc');
-
-        if ($status && in_array($status, ['unpaid', 'partial', 'paid'])) {
-            $query->where('status', $status);
+        if ($from && $to && $from > $to) {
+            [$from, $to] = [$to, $from];
         }
 
-        $credits = $query->get();
+        $credits = Credit::with('member')->orderBy('created_at', 'desc')->get();
+
+        $creditRankings = [
+            'all' => $this->rankCreditMembers(Credit::with('member')->get()),
+        ];
 
         $groupedCredits = $credits->groupBy('member_id')->map(function ($group) {
             $member = $group->first()->member;
+
             return [
-                'member'     => $member,
-                'credits'    => $group->values(),
-                'total'      => round($group->sum('amount'), 2),
-                'total_paid' => round($group->sum('amount_paid'), 2),
-                'balance'    => round($group->sum('amount') - $group->sum('amount_paid'), 2),
-                'has_unpaid' => $group->contains('status', 'unpaid') || $group->contains('status', 'partial'),
+                'member'  => $member,
+                'credits' => $group->values(),
+                'total'   => round($group->sum('amount'), 2),
             ];
         });
 
-        $totalOutstanding = Credit::outstanding()->sum(DB::raw('amount - amount_paid'));
-        $unpaidCount = Credit::unpaid()->count();
-        $partialCount = Credit::partial()->count();
-        $membersWithDebt = Credit::outstanding()->distinct('member_id')->count('member_id');
+        $totalCredit = round((float) Credit::sum('amount'), 2);
+        $creditCount = Credit::count();
+        $membersWithCredit = Credit::distinct('member_id')->count('member_id');
+
+        $creditAnalytics = $this->creditAnalytics($from, $to);
 
         return view('credits.index', compact(
             'groupedCredits',
-            'totalOutstanding',
-            'unpaidCount',
-            'partialCount',
-            'membersWithDebt',
-            'status'
+            'totalCredit',
+            'creditCount',
+            'membersWithCredit',
+            'tab',
+            'from',
+            'to',
+            'creditAnalytics',
+            'creditRankings'
         ));
+    }
+
+    private function rankCreditMembers($credits): array
+    {
+        return $credits
+            ->groupBy('member_id')
+            ->map(function ($group) {
+                $member = $group->first()->member;
+
+                return [
+                    'member_id' => $member->member_number,
+                    'name'      => trim($member->first_name . ' ' . $member->last_name),
+                    'total'     => round($group->sum('amount'), 2),
+                ];
+            })
+            ->sortByDesc('total')
+            ->take(5)
+            ->values()
+            ->all();
+    }
+
+    private function parseDate($value): ?string
+    {
+        if (blank($value)) {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($value)->toDateString();
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    private function creditAnalytics(?string $from, ?string $to): array
+    {
+        $salesQuery = Sale::query()
+            ->where('payment_method', 'credit')
+            ->where('status', Sale::STATUS_COMPLETED)
+            ->when($from, fn ($query) => $query->whereDate('created_at', '>=', $from))
+            ->when($to, fn ($query) => $query->whereDate('created_at', '<=', $to));
+
+        $totalSales = round((float) (clone $salesQuery)->sum('total'), 2);
+        $transactionCount = (clone $salesQuery)->count();
+
+        $rows = DB::table('sale_items')
+            ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
+            ->leftJoin('items', 'sale_items.item_id', '=', 'items.id')
+            ->where('sales.payment_method', 'credit')
+            ->where('sales.status', Sale::STATUS_COMPLETED)
+            ->when($from, fn ($query) => $query->whereDate('sales.created_at', '>=', $from))
+            ->when($to, fn ($query) => $query->whereDate('sales.created_at', '<=', $to))
+            ->selectRaw("COALESCE(NULLIF(items.category, ''), 'Uncategorized') as category")
+            ->addSelect('sale_items.product_name as name')
+            ->selectRaw('SUM(sale_items.quantity) as quantity')
+            ->groupBy('category', 'sale_items.product_name')
+            ->get();
+
+        $totalQuantity = (int) $rows->sum('quantity');
+
+        $categories = $rows
+            ->groupBy('category')
+            ->map(function ($group, $category) use ($totalQuantity) {
+                $items = $group
+                    ->map(fn ($row) => [
+                        'name' => $row->name,
+                        'quantity' => (int) $row->quantity,
+                    ])
+                    ->sortByDesc('quantity')
+                    ->values();
+
+                $categoryQuantity = (int) $items->sum('quantity');
+
+                return [
+                    'name' => $category,
+                    'quantity' => $categoryQuantity,
+                    'percentage' => $totalQuantity > 0
+                        ? round($categoryQuantity / $totalQuantity * 100, 1)
+                        : 0.0,
+                    'items' => $items->map(fn ($item) => [
+                        'name' => $item['name'],
+                        'quantity' => $item['quantity'],
+                        'percentage' => $categoryQuantity > 0
+                            ? round($item['quantity'] / $categoryQuantity * 100, 1)
+                            : 0.0,
+                    ])->all(),
+                ];
+            })
+            ->sortByDesc('quantity')
+            ->values();
+
+        return [
+            'total_sales' => $totalSales,
+            'transactions' => $transactionCount,
+            'total_quantity' => $totalQuantity,
+            'top_category' => $categories->first(),
+            'categories' => $categories->all(),
+        ];
     }
 
     public function show(Credit $credit)
     {
-        $credit->load('member', 'payments.receiver');
+        $credit->load('member');
 
         return view('credits.show', compact('credit'));
-    }
-
-    public function pay(Request $request, Credit $credit)
-    {
-        $request->validate([
-            'amount_paid' => 'required|numeric|min:0.01|max:' . $credit->balance,
-        ]);
-
-        DB::beginTransaction();
-
-        try {
-            $payment = CreditPayment::create([
-                'credit_id'   => $credit->id,
-                'amount_paid' => $request->amount_paid,
-                'paid_at'     => now(),
-                'received_by' => Auth::id(),
-            ]);
-
-            $credit->amount_paid = round($credit->amount_paid + $request->amount_paid, 2);
-            $credit->markPaidIfFull();
-
-            DB::commit();
-
-            $redirect = $request->query('redirect');
-            if ($redirect === 'pos') {
-                return redirect()->route('shop.index')
-                    ->with('success', 'Credit payment of ₱' . number_format($request->amount_paid, 2) . ' recorded.');
-            }
-
-            return redirect()->route('credits.show', $credit->id)
-                ->with('success', 'Payment of ₱' . number_format($request->amount_paid, 2) . ' recorded.');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->withErrors(['amount_paid' => 'Failed to record payment: ' . $e->getMessage()]);
-        }
-    }
-
-    public function balance($memberId)
-    {
-        $member = Member::findOrFail($memberId);
-
-        return response()->json([
-            'outstanding_balance' => $member->outstanding_credit_balance,
-            'has_unpaid_credit'   => $member->has_unpaid_credit,
-        ]);
     }
 }

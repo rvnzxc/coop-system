@@ -36,21 +36,7 @@
             </x-field>
 
             <x-field label="Category" name="category" required>
-                <select id="category" name="category" required class="{{ $inputClass }}">
-                    <option value="">Select Category</option>
-                    <option value="disposable" {{ $item->category == 'disposable' ? 'selected' : '' }}>Disposable</option>
-                    <option value="condiments" {{ $item->category == 'condiments' ? 'selected' : '' }}>Condiments</option>
-                    <option value="frozen" {{ $item->category == 'frozen' ? 'selected' : '' }}>Frozen</option>
-                    <option value="canned" {{ $item->category == 'canned' ? 'selected' : '' }}>Canned</option>
-                    <option value="laundry" {{ $item->category == 'laundry' ? 'selected' : '' }}>Laundry</option>
-                    <option value="personal-care" {{ $item->category == 'personal-care' ? 'selected' : '' }}>Personal Care</option>
-                    <option value="snacks" {{ $item->category == 'snacks' ? 'selected' : '' }}>Snacks</option>
-                    <option value="ice-cream" {{ $item->category == 'ice-cream' ? 'selected' : '' }}>Ice Cream</option>
-                    <option value="biscuits" {{ $item->category == 'biscuits' ? 'selected' : '' }}>Biscuits</option>
-                    <option value="beverages" {{ $item->category == 'beverages' ? 'selected' : '' }}>Beverages</option>
-                    <option value="candy" {{ $item->category == 'candy' ? 'selected' : '' }}>Candy</option>
-                    <option value="essentials" {{ $item->category == 'essentials' ? 'selected' : '' }}>Essentials</option>
-                </select>
+                @include('inventory._category-select', ['categories' => $categories, 'selected' => $item->category])
             </x-field>
 
             <hr class="border-slate-100">

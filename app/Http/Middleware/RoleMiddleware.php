@@ -11,15 +11,13 @@ class RoleMiddleware
     /**
      * Handle an incoming request.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \Closure  $next
-     * @param  string  $role
      * @return mixed
      */
     public function handle(Request $request, Closure $next, string $role)
     {
-        if (!Auth::check()) {
+        if (! Auth::check()) {
             session(['url.intended' => $request->fullUrl()]);
+
             return redirect('/login');
         }
 
@@ -32,6 +30,12 @@ class RoleMiddleware
 
         // Non-admin trying to access admin area
         if ($role === 'admin') {
+            if ($request->isMethodSafe() && ! $request->expectsJson()) {
+                return redirect()
+                    ->route('shop.index')
+                    ->with('error', "You don't have permission to view that page.");
+            }
+
             abort(403, 'Access denied. Admin access required.');
         }
 

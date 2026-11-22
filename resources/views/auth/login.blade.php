@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="ccfmpc-login" content="1">
     <title>Login - CCF Multi-Purpose Cooperative</title>
     <link rel="icon" type="image/png" href="{{ asset('images/logotunay-round.png') }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -17,6 +18,23 @@
         </div>
 
         <div class="rounded-2xl border border-slate-200 bg-white p-8 shadow-xl">
+            @if (request()->boolean('account_disabled'))
+                <div class="mb-6 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                    <x-icon name="exclamation-circle" class="mt-0.5 h-3.5 w-3.5" />
+                    <div>Your account has been disabled by an administrator. Contact an administrator.</div>
+                </div>
+            @elseif (request()->boolean('session_expired'))
+                <div class="mb-6 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
+                    <x-icon name="exclamation-circle" class="mt-0.5 h-3.5 w-3.5" />
+                    <div>Your session has ended. Please sign in again.</div>
+                </div>
+            @elseif (request()->boolean('logged_out'))
+                <div class="mb-6 flex items-start gap-3 rounded-lg border border-brand-200 bg-brand-50 p-4 text-sm text-brand-700">
+                    <x-icon name="sign-out" class="mt-0.5 h-3.5 w-3.5" />
+                    <div>You have been logged out.</div>
+                </div>
+            @endif
+
             @if ($errors->has('username'))
                 <div class="mb-6 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
                     <x-icon name="exclamation-circle" class="mt-0.5 h-3.5 w-3.5" />

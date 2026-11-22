@@ -69,7 +69,7 @@
                 </div>
                 <div class="flex items-center justify-between py-3 last:pb-0">
                     <dt class="text-sm text-slate-500">Total Purchases</dt>
-                    <dd class="text-sm font-semibold text-slate-900">₱{{ number_format($member->total_purchases, 2) }}</dd>
+                    <dd class="text-sm font-semibold text-slate-900">&#8369;{{ number_format($member->total_purchases, 2) }}</dd>
                 </div>
             </dl>
         </x-card>
@@ -77,7 +77,7 @@
         <x-card title="Purchase Analytics">
             <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div class="rounded-lg bg-slate-50 p-4 text-center">
-                    <div class="text-xl font-bold text-slate-900">₱{{ number_format($totalPurchases, 2) }}</div>
+                    <div class="text-xl font-bold text-slate-900">&#8369;{{ number_format($totalPurchases, 2) }}</div>
                     <div class="mt-1 text-xs text-slate-500">Total Purchases</div>
                 </div>
                 <div class="rounded-lg bg-slate-50 p-4 text-center">
@@ -85,7 +85,7 @@
                     <div class="mt-1 text-xs text-slate-500">Transactions</div>
                 </div>
                 <div class="rounded-lg bg-slate-50 p-4 text-center">
-                    <div class="text-xl font-bold text-slate-900">₱{{ number_format($averagePurchase, 2) }}</div>
+                    <div class="text-xl font-bold text-slate-900">&#8369;{{ number_format($averagePurchase, 2) }}</div>
                     <div class="mt-1 text-xs text-slate-500">Average</div>
                 </div>
             </div>
@@ -102,7 +102,7 @@
                 </div>
                 <div class="flex items-center justify-between py-3">
                     <dt class="text-sm text-slate-500">Average Value</dt>
-                    <dd class="text-sm font-semibold text-slate-900">₱{{ number_format($averagePurchase, 2) }}</dd>
+                    <dd class="text-sm font-semibold text-slate-900">&#8369;{{ number_format($averagePurchase, 2) }}</dd>
                 </div>
                 <div class="flex items-center justify-between py-3 last:pb-0">
                     <dt class="text-sm text-slate-500">Last Activity</dt>
@@ -227,6 +227,13 @@ const DOT = '<svg class="inline-block h-1.5 w-1.5" viewBox="0 0 1792 1792" fill=
 // Convert to array for easier filtering
 const allMembersData = Object.values(memberAnalyticsData);
 
+const memberPesoFormatter = new Intl.NumberFormat('en-PH', {
+    style: 'currency',
+    currency: 'PHP',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+});
+
 function filterMemberAnalytics() {
     const period = document.getElementById('periodFilter').value;
     const tableBody = document.getElementById('memberAnalyticsTable');
@@ -279,7 +286,7 @@ function filterMemberAnalytics() {
         // Stats cells
         const totalPurchasesCell = document.createElement('td');
         totalPurchasesCell.className = 'px-4 py-3 text-right w-[15%]';
-        totalPurchasesCell.textContent = `₱${member.total_purchases.toLocaleString()}`;
+        totalPurchasesCell.textContent = memberPesoFormatter.format(Number(member.total_purchases || 0));
         
         const transactionCountCell = document.createElement('td');
         transactionCountCell.className = 'px-4 py-3 text-right w-[15%]';
@@ -287,7 +294,7 @@ function filterMemberAnalytics() {
         
         const averagePurchaseCell = document.createElement('td');
         averagePurchaseCell.className = 'px-4 py-3 text-right w-[15%]';
-        averagePurchaseCell.textContent = member.purchase_count > 0 ? `₱${(member.total_purchases / member.purchase_count).toLocaleString()}` : '₱0';
+        averagePurchaseCell.textContent = memberPesoFormatter.format(member.purchase_count > 0 ? Number(member.total_purchases) / Number(member.purchase_count) : 0);
         
         const lastPurchaseCell = document.createElement('td');
         lastPurchaseCell.className = 'px-4 py-3 text-right w-[20%]';

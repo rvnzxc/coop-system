@@ -35,21 +35,7 @@
             </x-field>
 
             <x-field label="Category" name="category" required>
-                <select id="category" name="category" required class="{{ $inputClass }}">
-                    <option value="">Select Category</option>
-                    <option value="disposable">Disposable</option>
-                    <option value="condiments">Condiments</option>
-                    <option value="frozen">Frozen</option>
-                    <option value="canned">Canned</option>
-                    <option value="laundry">Laundry</option>
-                    <option value="personal-care">Personal Care</option>
-                    <option value="snacks">Snacks</option>
-                    <option value="ice-cream">Ice Cream</option>
-                    <option value="biscuits">Biscuits</option>
-                    <option value="beverages">Beverages</option>
-                    <option value="candy">Candy</option>
-                    <option value="essentials">Essentials</option>
-                </select>
+                @include('inventory._category-select', ['categories' => $categories])
             </x-field>
 
             <hr class="border-slate-100">
@@ -90,7 +76,7 @@
 
             <div class="flex gap-3 pt-2">
                 <x-button type="submit" color="primary" class="flex-1">
-                    <x-icon name="plus" class="h-3.5 w-3.5" /> Add Item
+                    <x-icon name="save" class="h-3.5 w-3.5" /> Save
                 </x-button>
                 <x-button type="button" color="secondary" onclick="location.href='{{ route('inventory.index') }}'">
                     Cancel
@@ -125,7 +111,7 @@
                 setStatus('No barcode yet — click Scan, then scan the product packaging.', 'text-slate-400');
                 setButton('Scan', 'fa-barcode');
             } else {
-                setStatus('Barcode captured: ' + field.value.trim() + ' — click Add Item to save.', 'font-medium text-emerald-600');
+                setStatus('Barcode captured: ' + field.value.trim() + ' — click Save to save.', 'font-medium text-emerald-600');
                 setButton('Scan again', 'fa-barcode');
             }
         }
@@ -150,7 +136,7 @@
 
         field.addEventListener('input', function () {
             if (field.value.trim() !== '') {
-                setStatus('Barcode captured: ' + field.value.trim() + ' — click Add Item to save.', 'font-medium text-emerald-600');
+                setStatus('Barcode captured: ' + field.value.trim() + ' — click Save to save.', 'font-medium text-emerald-600');
                 setButton('Scan again', 'fa-barcode');
             } else {
                 showIdle();

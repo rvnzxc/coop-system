@@ -6,8 +6,10 @@ use App\Models\AuditLog;
 use App\Models\Member;
 use App\Models\Sale;
 use App\Models\User;
+use App\Services\XlsxWriter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 
@@ -58,43 +60,82 @@ class TransactionController extends Controller
             ->orderByDesc('id')
             ->get();
 
-        $filename = 'transactions-'.now()->format('Ymd-His').'.csv';
+        if ($sales->isEmpty()) {
+            $message = 'No transactions to export.';
 
-        return response()->streamDownload(function () use ($sales) {
-            $handle = fopen('php://output', 'w');
-
-            fwrite($handle, "\xEF\xBB\xBF");
-
-            fputcsv($handle, [
-                'Transaction ID',
-                'Date & Time',
-                'Cashier',
-                'Member',
-                'Payment Method',
-                'Status',
-                'Total',
-                'Items',
-            ]);
-
-            foreach ($sales as $sale) {
-                $items = $sale->items->map(function ($item) {
-                    return $item->product_name.' x'.$item->quantity.' @ '.number_format((float) $item->unit_price, 2, '.', '');
-                })->implode('; ');
-
-                fputcsv($handle, [
-                    $this->csvValue((string) $sale->id),
-                    $this->csvValue($sale->created_at?->format('Y-m-d H:i:s')),
-                    $this->csvValue($sale->cashier_name),
-                    $this->csvValue($sale->member_name),
-                    $this->csvValue($sale->payment_method),
-                    $this->csvValue($sale->status_label),
-                    number_format((float) $sale->total, 2, '.', ''),
-                    $this->csvValue($items),
-                ]);
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $message], 422);
             }
 
-            fclose($handle);
-        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
+            return redirect()
+                ->route('transactions.index', $request->query())
+                ->with('error', $message);
+        }
+
+        $rows = [[
+            'Date / Time',
+            'Transaction ID',
+            'Cashier',
+            'Member',
+            'Payment',
+            'Total',
+            'Status',
+            'Items',
+        ]];
+
+        foreach ($sales as $sale) {
+            $date = $sale->created_at?->copy()->setTimezone('Asia/Manila');
+            $items = $sale->items
+                ->map(fn ($item) => $item->product_name.' x'.$item->quantity)
+                ->implode(', ');
+
+            $rows[] = [
+                $date
+                    ? [
+                        'value' => $this->excelDateTime($date),
+                        'type' => 'date',
+                        'style' => 'datetime',
+                        'display' => $date->format('M d, Y g:i A'),
+                    ]
+                    : ['value' => '', 'style' => 'body'],
+                ['value' => '#'.$sale->id, 'style' => 'body'],
+                ['value' => $sale->cashier_name, 'style' => 'body'],
+                ['value' => $sale->member_name, 'style' => 'body'],
+                ['value' => $sale->payment_method === 'credit' ? 'Credit' : 'Cash', 'style' => 'body'],
+                ['value' => (float) $sale->total, 'type' => 'number', 'style' => 'currency'],
+                ['value' => $sale->status_label, 'style' => 'body'],
+                ['value' => $items !== '' ? $items : '—', 'style' => 'body'],
+            ];
+        }
+
+        $lastDataRow = count($sales) + 1;
+        $rows[] = [
+            ['value' => 'TOTAL', 'style' => 'total'],
+            ['value' => '', 'style' => 'total'],
+            ['value' => '', 'style' => 'total'],
+            ['value' => '', 'style' => 'total'],
+            ['value' => '', 'style' => 'total'],
+            [
+                'value' => round((float) $sales->sum('total'), 2),
+                'type' => 'formula',
+                'formula' => 'SUM(F2:F'.$lastDataRow.')',
+                'style' => 'total_currency',
+            ],
+            ['value' => '', 'style' => 'total'],
+            ['value' => '', 'style' => 'total'],
+        ];
+
+        $contents = XlsxWriter::fromRows($rows, 'Transactions', [
+            'column_widths' => [22, 16, 20, 28, 12, 14, 14, 50],
+            'freeze_header' => true,
+        ]);
+
+        return response($contents, 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="'.$this->exportFilename($filters).'"',
+            'Content-Length' => (string) strlen($contents),
+            'Cache-Control' => 'no-store, no-cache, must-revalidate',
+        ]);
     }
 
     public function activity(Request $request)
@@ -111,6 +152,7 @@ class TransactionController extends Controller
 
         $logs = AuditLog::query()
             ->with('user')
+            ->whereNotIn('action', ['void', 'sale_voided'])
             ->when($userId, function (Builder $query) use ($userId) {
                 $query->where('user_id', $userId);
             })
@@ -221,15 +263,41 @@ class TransactionController extends Controller
 
     private function members()
     {
-        return Member::query()->orderBy('last_name')->orderBy('first_name')->get();
+        return Member::active()->orderBy('last_name')->orderBy('first_name')->get();
     }
 
-    private function csvValue(?string $value): string
+    private function exportFilename(array $filters): string
     {
-        $value = (string) $value;
+        $today = Carbon::now('Asia/Manila')->format('Y-m-d');
+        $from = $filters['date_from'];
+        $to = $filters['date_to'];
 
-        // Prevent spreadsheet formula injection for user-controlled values.
-        return preg_match('/^[=+\-@]/', $value) ? "'".$value : $value;
+        if ($from && $to) {
+            $suffix = $from.'_to_'.$to;
+        } elseif ($from) {
+            $suffix = $from.'_to_'.$today;
+        } elseif ($to) {
+            $suffix = 'up_to_'.$to;
+        } else {
+            $suffix = $today;
+        }
+
+        return 'CCFMPC_Transactions_'.$suffix.'.xlsx';
+    }
+
+    private function excelDateTime(\DateTimeInterface $date): float
+    {
+        $wallClock = Carbon::create(
+            (int) $date->format('Y'),
+            (int) $date->format('n'),
+            (int) $date->format('j'),
+            (int) $date->format('G'),
+            (int) $date->format('i'),
+            (int) $date->format('s'),
+            'UTC',
+        );
+
+        return ($wallClock->getTimestamp() / 86400) + 25569;
     }
 
     private function ensureAdmin(): void
